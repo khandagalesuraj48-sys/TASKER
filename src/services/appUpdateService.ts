@@ -39,6 +39,11 @@ export interface UpdatePluginInterface {
 export const UpdatePlugin = registerPlugin<UpdatePluginInterface>('UpdatePlugin');
 
 /**
+ * Detects if the current running platform is Android (native Capacitor).
+ */
+export const isAndroid = (): boolean => Capacitor.getPlatform() === 'android';
+
+/**
  * Validates that the APK URL is secure and matches trusted distribution sources.
  */
 export function isValidApkUrl(url: string): boolean {
@@ -66,21 +71,27 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
   if (Capacitor.isNativePlatform()) {
     try {
       const info = await App.getInfo();
-      const versionName = info.version || '1.0.3';
-      const versionCode = Number((info as any).build) || 4;
+      const versionName = info.version || '1.0.4';
+      const versionCode = Number((info as any).build) || 5;
       return { versionName, versionCode };
     } catch (e) {
       console.warn('App.getInfo failed, using fallback version:', e);
     }
   }
-  return { versionName: '1.0.3', versionCode: 4 };
+  return { versionName: '1.0.4', versionCode: 5 };
 }
 
 /**
  * Fetch the latest active release metadata from Supabase.
  * Read-only query against public.app_releases with graceful error fallback.
+ * Disabled on Web/Vercel as App Updates are Android-only.
  */
 export async function fetchLatestRelease(): Promise<AppRelease | null> {
+  // App updates are strictly Android-only. Do not check or query on Web/Vercel.
+  if (!isAndroid()) {
+    return null;
+  }
+
   if (!navigator.onLine || !isSupabaseConfigured()) {
     return null;
   }

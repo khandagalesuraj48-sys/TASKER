@@ -1,6 +1,7 @@
 // src/components/AppUpdateCard.tsx
 
 import React, { useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { Button } from './common/Button';
 import { UpdateModal } from './UpdateModal';
 import { useAppUpdate } from '../hooks/useAppUpdate';
@@ -8,10 +9,16 @@ import { Sparkles, Download } from 'lucide-react';
 
 /**
  * Non-blocking banner displayed when a newer APK version is available.
+ * Android-only. Never displayed on Web/Vercel.
  * Can be dismissed for the session, or clicked to view release notes / install.
  * If mandatory, automatically displays the modal.
  */
 export const AppUpdateCard: React.FC = () => {
+  // App updates are strictly Android-only. Never render on Web/Vercel.
+  if (Capacitor.getPlatform() !== 'android') {
+    return null;
+  }
+
   const {
     installedVersion,
     latestRelease,

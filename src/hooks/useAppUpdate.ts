@@ -35,9 +35,11 @@ export interface AppUpdateState {
 }
 
 export const useAppUpdate = (): AppUpdateState => {
+  const isAndroid = Capacitor.getPlatform() === 'android';
+
   const [installedVersion, setInstalledVersion] = useState<{ versionName: string; versionCode: number }>({
-    versionName: '1.0.3',
-    versionCode: 4,
+    versionName: '1.0.4',
+    versionCode: 5,
   });
   const [latestRelease, setLatestRelease] = useState<AppRelease | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);
@@ -66,7 +68,8 @@ export const useAppUpdate = (): AppUpdateState => {
   }, []);
 
   const checkForUpdate = useCallback(async () => {
-    if (isCheckingRef.current || isDownloadingRef.current) {
+    // App updates are strictly Android-only. Never check on Web/Vercel.
+    if (!isAndroid || isCheckingRef.current || isDownloadingRef.current) {
       return;
     }
 
@@ -97,9 +100,13 @@ export const useAppUpdate = (): AppUpdateState => {
       setIsChecking(false);
       isCheckingRef.current = false;
     }
-  }, []);
+  }, [isAndroid]);
 
   const downloadAndInstall = useCallback(async () => {
+    if (!isAndroid) {
+      return;
+    }
+
     if (!latestRelease || !latestRelease.apk_url) {
       setError('No valid release URL available to download.');
       return;
@@ -150,19 +157,24 @@ export const useAppUpdate = (): AppUpdateState => {
       setIsDownloading(false);
       isDownloadingRef.current = false;
     }
-  }, [latestRelease]);
+  }, [isAndroid, latestRelease]);
 
   const openPermissionSettings = useCallback(async () => {
+    if (!isAndroid) return;
     await openInstallPermissionSettings();
     setNeedsInstallPermission(false);
-  }, []);
+  }, [isAndroid]);
 
   const dismissBanner = useCallback(() => {
     setIsDismissed(true);
   }, []);
 
-  // Background/Foreground check: check on app resume if on native
+  // Background/Foreground check: check on app resume if on native Android
   useEffect(() => {
+    if (!isAndroid) {
+      return;
+    }
+
     let appStateListener: any = null;
 
     if (Capacitor.isNativePlatform()) {
@@ -186,10 +198,10 @@ export const useAppUpdate = (): AppUpdateState => {
         appStateListener.remove();
       }
     };
-  }, [checkForUpdate]);
+  }, [checkForUpdate, isAndroid]);
 
-  const isMandatory = Boolean(latestRelease?.is_mandatory && updateAvailable);
-  const showUpdateAvailable = updateAvailable && (!isDismissed || isMandatory);
+  const isMandatory = Boolean(isAndroid && latestRelease?.is_mandatory && updateAvailable);
+  const showUpdateAvailable = Boolean(isAndroid && updateAvailable && (!isDismissed || isMandatory));
 
   return {
     installedVersion,
