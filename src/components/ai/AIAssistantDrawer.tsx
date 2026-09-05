@@ -5,13 +5,14 @@ import {
   X,
   Send,
   Loader2,
-  Database,
   Trash2,
   ArrowRight,
+  Zap,
 } from 'lucide-react';
 import { askTaskerAI } from '../../services/aiService';
 import { AIMessage } from '../../types/task';
 import { useBackButton } from '../../hooks/useBackButton';
+import { useTask } from '../../context/TaskContext';
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -19,17 +20,19 @@ interface AIAssistantDrawerProps {
 }
 
 const INITIAL_SUGGESTIONS = [
-  'Disha ला call कधी करायचा आहे?',
+  'Add task: Call Rahul tomorrow at 5pm',
   'आज कोणते tasks आहेत?',
-  'माझे pending tasks कोणते?',
   'माझे urgent pending tasks कोणते?',
+  'Set reminder for Call Rahul in 15 mins',
+  'Complete task Call Rahul',
+  'Who is the CEO of Google?',
   'कोणते tasks overdue आहेत?',
-  'काल कोणते tasks complete झाले?',
-  'माझ्याकडे किती pending tasks आहेत?',
+  '15% of 8500 किती?',
 ];
 
 export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const { triggerRefresh, reloadStats } = useTask();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -42,7 +45,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
       id: 'welcome',
       role: 'assistant',
       content:
-        'नमस्कार! मी तुमचा **TASKER Task Assistant** आहे. मी थेट तुमच्या Supabase डेटाबेसवरील tasks वाचून उत्तरे देतो. खालीलपैकी कोणताही प्रश्न निवडा किंवा तुमचा प्रश्न विचारा:',
+        'नमस्कार! मी **TASKER AI 2.0** आहे — तुमचा universal smart assistant.\n\nमी तुमचे tasks तयार करू शकतो, पूर्ण करू शकतो, रिमाइंडर्स लावू शकतो आणि जगातील कोणत्याही प्रश्नाचे उत्तर देऊ शकतो. खालीलपैकी पर्याय निवडा किंवा टाइप करा:',
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -86,6 +89,11 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
     try {
       const response = await askTaskerAI(q);
 
+      if (response.actionTaken) {
+        triggerRefresh();
+        reloadStats();
+      }
+
       const assistantMsg: AIMessage = {
         id: 'assistant_' + Date.now(),
         role: 'assistant',
@@ -101,7 +109,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
         {
           id: 'err_' + Date.now(),
           role: 'assistant',
-          content: 'मला TASKER मध्ये ही माहिती सापडली नाही. कृपया प्रश्न पुन्हा तपासा.',
+          content: 'मला उत्तर देताना अडचण आली. कृपया प्रश्न पुन्हा विचारा.',
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -127,7 +135,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
       {
         id: 'welcome_reset',
         role: 'assistant',
-        content: 'चॅट साफ केली आहे. तुम्ही तुमच्या टास्कविषयी कोणताही प्रश्न पुन्हा विचारू शकता.',
+        content: 'चॅट साफ केली आहे. तुम्ही तुमच्या टास्कविषयी किंवा जगातील कोणत्याही विषयावर प्रश्न विचारू शकता.',
         timestamp: new Date().toISOString(),
       },
     ]);
@@ -150,12 +158,12 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">TASKER Assistant</h3>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">TASKER AI 2.0</h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
-                  Task-Aware
+                  Universal & Actions
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Grounding directly in your tasks</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Universal Knowledge • Live Actions • Task Aware</p>
             </div>
           </div>
 
@@ -184,8 +192,8 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
 
         {/* Realtime database status badge */}
         <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900/60 flex items-center gap-2 text-[11px] text-emerald-800 dark:text-emerald-300 shrink-0">
-          <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span className="truncate">Connected to live tasks. Zero hallucination safeguard active.</span>
+          <Zap className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="truncate">TASKER AI 2.0 active • Live database & universal web intelligence</span>
         </div>
 
         {/* Chat Messages Scrolling Area */}
@@ -246,7 +254,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
         {/* Quick Suggestion Pills */}
         <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            {INITIAL_SUGGESTIONS.slice(0, 4).map((s, idx) => (
+            {INITIAL_SUGGESTIONS.map((s, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(s)}
@@ -268,7 +276,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about tasks, deadlines, remarks..."
+              placeholder="Ask anything, or say 'Add task: ...', 'Complete task ...', 'Remind me...'"
               disabled={isSearching}
               className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             />

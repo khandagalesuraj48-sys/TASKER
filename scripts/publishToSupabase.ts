@@ -31,8 +31,8 @@ async function main() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || envMap['SUPABASE_SERVICE_ROLE_KEY'] || null;
 
   const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
-  const version = pkg.version || '1.0.4';
-  let versionCode = 5;
+  const version = pkg.version || '1.0.5';
+  let versionCode = 6;
   const gradlePath = path.join(rootDir, 'android', 'app', 'build.gradle');
   if (fs.existsSync(gradlePath)) {
     const gradleContent = fs.readFileSync(gradlePath, 'utf8');
@@ -47,13 +47,13 @@ async function main() {
   }
 
   const releaseNotes = `TASKER v${version} Production Release:
-- High-precision 1-minute reminders and quick schedule presets
-- Localized and timezone-accurate datetime formatting
-- Streamlined App Updates & Version settings center
-- Rock-solid background alarm scheduling and pending task synchronization
-- Configurable periodic pending tasks reminder (1h, 2h, 4h, 8h, daily) with auto-suppress at 0 tasks
-- Notification tap deep-linking to task detail and pending tasks list
-- Clean in-app App Updates & Version management`;
+- TASKER AI 2.0: Universal Assistant & Autonomous Actions
+- Natural Language Task Creation: automatically extracts titles, dates, priorities, and assignees
+- Natural Language Reminder Scheduling: sets background Android alarms with smart time parsing
+- Natural Language Task Completion & Updates: mark tasks complete or change priorities instantly
+- Universal Knowledge & Live Web Intelligence: answers general and world questions via Google Gemini and Wikipedia / Web fallback
+- Multilingual Support: English, Hindi, and Marathi (मराठी)
+- Dedicated Android In-App Updates System`;
 
   const githubReleaseUrl = `https://github.com/khandagalesuraj48-sys/TASKER/releases/tag/v${version}`;
 

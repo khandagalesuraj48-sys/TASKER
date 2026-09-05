@@ -2,11 +2,14 @@ import { supabase } from '../lib/supabase';
 import { TaskReference } from '../types/task';
 import { formatDateTime, formatDateOnly, isTaskOverdue, parseInTimezone } from '../lib/dateUtils';
 import { isToday, isYesterday, isTomorrow } from 'date-fns';
+import { executeAIAction } from './aiActionService';
+import { queryUniversalKnowledge } from './aiWebKnowledgeService';
 
 export interface AIResponse {
   answer: string;
   referencedTasks: TaskReference[];
   providerUsed: string;
+  actionTaken?: 'create' | 'complete' | 'reminder' | 'update' | 'delete' | null;
 }
 
 // AI Provider Interface to allow pluggable LLM integrations later
@@ -62,7 +65,7 @@ const translatePriorityMr = (p: string): string => {
 
 // Built-in Task-Aware Grounding Engine
 class TaskAwareGroundingEngine implements AIProvider {
-  name = 'TASKER Data-Grounded Engine (Zero-Hallucination)';
+  name = 'TASKER AI 2.0 (Task Grounded)';
 
   isAvailable() {
     return true;
@@ -388,14 +391,12 @@ class TaskAwareGroundingEngine implements AIProvider {
       return { answer: ans, referencedTasks, providerUsed: this.name };
     }
 
-    // 9. INFORMATION NOT FOUND IN TASKER — STRICT REQUIREMENT:
-    // "मला TASKER मध्ये ही माहिती सापडली नाही." (NO HALLUCINATIONS)
+    // 9. GENERAL / WORLD / WEB QUESTION — DELEGATE TO UNIVERSAL KNOWLEDGE ENGINE
+    const universal = await queryUniversalKnowledge(question);
     return {
-      answer: isMarathi
-        ? 'मला TASKER मध्ये ही माहिती सापडली नाही.'
-        : 'मला TASKER मध्ये ही माहिती सापडली नाही. (I could not find this information in TASKER.)',
+      answer: universal.answer,
       referencedTasks: [],
-      providerUsed: this.name,
+      providerUsed: universal.provider,
     };
   }
 }
@@ -408,16 +409,16 @@ export const askTaskerAI = async (question: string): Promise<AIResponse> => {
   const trimmed = question.trim();
   if (!trimmed) {
     return {
-      answer: 'कृपया तुमचा प्रश्न विचारा.',
+      answer: 'कृपया तुमचा प्रश्न विचारा किंवा कमांड द्या (उदा. "Add task: Call Rahul tomorrow at 5pm").',
       referencedTasks: [],
       providerUsed: activeProvider.name,
     };
   }
 
   // 1. Fetch live task data with relations from Supabase
-  // Note: Only fetching metadata (file_name, file_type), NEVER reading PDF or file contents!
+  let rawTasks: any[] = [];
   try {
-    const { data: rawTasks, error } = await supabase
+    const { data, error } = await supabase
       .from('tasks')
       .select(`
         *,
@@ -428,22 +429,38 @@ export const askTaskerAI = async (question: string): Promise<AIResponse> => {
       .eq('is_deleted', false)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.warn('Error querying tasks for AI:', error);
+    if (!error && data) {
+      rawTasks = data;
+    }
+  } catch (err) {
+    console.warn('Live task query warning:', err);
+  }
+
+  // 2. First Priority: Check for natural-language TASKER action commands (Create, Complete, Reminder, Update, Delete)
+  try {
+    const actionResult = await executeAIAction(trimmed, rawTasks);
+    if (actionResult.handled) {
       return {
-        answer: 'मला TASKER मध्ये ही माहिती सापडली नाही.',
-        referencedTasks: [],
-        providerUsed: activeProvider.name,
+        answer: actionResult.answer,
+        referencedTasks: actionResult.referencedTasks,
+        providerUsed: 'TASKER AI 2.0 (Action Engine)',
+        actionTaken: actionResult.actionType,
       };
     }
+  } catch (actionErr) {
+    console.warn('Action command execution error:', actionErr);
+  }
 
-    return await activeProvider.processQuery(trimmed, rawTasks || []);
+  // 3. Second Priority: Task-grounded queries or Universal Web / World Knowledge
+  try {
+    return await activeProvider.processQuery(trimmed, rawTasks);
   } catch (ex) {
-    console.error('AI assistant processing error:', ex);
+    console.error('AI assistant processing error, attempting universal fallback:', ex);
+    const universal = await queryUniversalKnowledge(trimmed);
     return {
-      answer: 'मला TASKER मध्ये ही माहिती सापडली नाही.',
+      answer: universal.answer,
       referencedTasks: [],
-      providerUsed: activeProvider.name,
+      providerUsed: universal.provider,
     };
   }
 };
