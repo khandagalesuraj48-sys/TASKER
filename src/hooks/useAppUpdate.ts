@@ -36,8 +36,8 @@ export interface AppUpdateState {
 
 export const useAppUpdate = (): AppUpdateState => {
   const [installedVersion, setInstalledVersion] = useState<{ versionName: string; versionCode: number }>({
-    versionName: '1.0.1',
-    versionCode: 2,
+    versionName: '1.0.2',
+    versionCode: 3,
   });
   const [latestRelease, setLatestRelease] = useState<AppRelease | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);

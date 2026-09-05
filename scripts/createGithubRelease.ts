@@ -63,6 +63,15 @@ function main(): void {
 
   console.log('\n[Supabase app_releases SQL Insert Statement]');
   console.log('--------------------------------------------------');
+  // Read versionCode from android/app/build.gradle
+  let versionCode = 3;
+  const gradlePath = path.join(rootDir, 'android', 'app', 'build.gradle');
+  if (fs.existsSync(gradlePath)) {
+    const gradleContent = fs.readFileSync(gradlePath, 'utf8');
+    const match = gradleContent.match(/versionCode\s+(\d+)/);
+    if (match) versionCode = parseInt(match[1], 10);
+  }
+
   const sql = `INSERT INTO public.app_releases (
     version_name,
     version_code,
@@ -72,10 +81,11 @@ function main(): void {
     is_mandatory
 ) VALUES (
     '${version}',
-    2,
+    ${versionCode},
     'TASKER v${version} In-App Android Update System:
 - Native OTA update installation without USB cable
-- Automatic update checks and release notes in Settings
+- Dedicated App Updates section in Settings
+- Direct APK download and official Android package installer handoff
 - Offline and network resilience
 - Security verification and non-blocking manual install prompt',
     '${releaseUrl}',
