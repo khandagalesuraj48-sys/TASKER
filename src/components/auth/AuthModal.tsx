@@ -18,7 +18,14 @@ import {
   HelpCircle,
 } from 'lucide-react';
 
-type AuthView = 'signin' | 'signup' | 'forgot_email' | 'forgot_code' | 'forgot_success';
+type AuthView =
+  | 'signin'
+  | 'signup'
+  | 'signup_confirmation'
+  | 'forgot_email'
+  | 'forgot_code'
+  | 'forgot_success'
+  | 'reset_new_password';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -39,6 +46,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     sendPasswordResetOtp,
     verifyPasswordResetOtp,
     updatePassword,
+    resetPasswordRecoveryState,
+    isPasswordRecovery,
   } = useAuth();
   const { showToast } = useToast();
 
@@ -54,6 +63,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [infoMsg, setInfoMsg] = useState<string>('');
   const [isEmailUnconfirmed, setIsEmailUnconfirmed] = useState<boolean>(false);
   const [resendingEmail, setResendingEmail] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (isPasswordRecovery) {
+      setView('reset_new_password');
+    }
+  }, [isPasswordRecovery]);
 
   if (!isOpen) return null;
 
@@ -72,23 +87,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     if (rawMsg.includes('email not confirmed') || code === 'email_not_confirmed') {
       setIsEmailUnconfirmed(true);
-      return 'Your email address is not verified yet. Please check your inbox (or spam) for the Supabase confirmation email and click the verification link.';
+      return 'Your email address is not verified yet. Please click the confirmation link sent to your inbox, or click "Resend Confirmation Email" below.';
     }
 
     if (rawMsg.includes('invalid login credentials') || code === 'invalid_credentials') {
       return 'Incorrect email or password. Please verify your credentials and try again.';
     }
 
-    if (rawMsg.includes('over_email_send_rate_limit') || rawMsg.includes('rate limit')) {
-      return 'Email rate limit reached (Supabase default mailer allows 3-4 emails/hour). Please wait a few minutes, or click the verification link already in your inbox.';
+    if (rawMsg.includes('over_email_send_rate_limit') || rawMsg.includes('rate limit') || rawMsg.includes('rate_limit')) {
+      return 'Supabase email rate limit reached (3-4 emails/hour on default mailer). Please wait a few minutes, or in your Supabase Dashboard toggle "Confirm email" OFF (Auth -> Providers -> Email) for instant signups.';
     }
 
     if (rawMsg.includes('provider is not enabled') || rawMsg.includes('unsupported provider')) {
-      return 'Google Sign-In is not enabled yet in the Supabase Dashboard. Go to Authentication -> Providers -> Google to enable it.';
+      return 'Google Sign-In is not enabled yet in the Supabase Dashboard. Go to Authentication -> Providers -> Google to provide your OAuth Client ID and Secret.';
     }
 
-    if (rawMsg.includes('already registered') || rawMsg.includes('user already exists')) {
-      return 'An account with this email already exists. Please switch to Sign In.';
+    if (rawMsg.includes('already registered') || rawMsg.includes('user already exists') || rawMsg.includes('already exists')) {
+      return 'An account with this email address already exists. Please switch to Sign In.';
     }
 
     return err?.message || 'Authentication failed. Please check your details and try again.';
@@ -135,14 +150,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       const result = await signUpWithEmail(email, password, name);
       if (result.needsEmailConfirmation) {
         setIsEmailUnconfirmed(true);
-        setInfoMsg(
-          `Account created successfully! We sent a verification email to ${email}. Please check your inbox and click the confirmation link before signing in.`
-        );
-        setView('signin');
+        setView('signup_confirmation');
       } else {
         showToast('Account created and signed in!', 'success');
         onClose?.();
       }
+    } catch (err: any) {
+      setErrorMsg(parseAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPasswordDirect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password || password.length < 6) {
+      setErrorMsg('New password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match.');
+      return;
+    }
+
+    setErrorMsg('');
+    setInfoMsg('');
+    setLoading(true);
+
+    try {
+      await updatePassword(password);
+      resetPasswordRecoveryState();
+      showToast('Password updated successfully!', 'success');
+      setView('forgot_success');
     } catch (err: any) {
       setErrorMsg(parseAuthError(err));
     } finally {
@@ -496,6 +535,70 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
+          {/* SIGN UP CONFIRMATION VIEW */}
+          {view === 'signup_confirmation' && (
+            <div className="text-center py-2 animate-in fade-in zoom-in-95 duration-200">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 mb-4 ring-8 ring-blue-50/50">
+                <Mail className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-1.5">Check Your Email</h3>
+              <p className="text-xs text-slate-500 mb-3 max-w-xs mx-auto leading-relaxed">
+                We've sent an activation link to verify your email address:
+              </p>
+              <div className="inline-block px-3.5 py-1.5 bg-slate-100 rounded-lg text-xs font-mono font-bold text-slate-800 mb-5 border border-slate-200 break-all">
+                {email}
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-left mb-5 space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-800">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Activation Required Before Login</span>
+                </div>
+                <p className="text-[11px] text-amber-700 leading-relaxed pl-6">
+                  Please open the confirmation email and click the verification link. If you don't see it within 2 minutes, be sure to check your <strong>Spam / Junk</strong> folder.
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('signin');
+                    resetForm();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
+                >
+                  <span>I've Verified — Proceed to Sign In</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={resendingEmail}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{resendingEmail ? 'Sending new link...' : 'Resend Verification Email'}</span>
+                </button>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                <span>Want to use a different email? </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('signup');
+                    resetForm();
+                  }}
+                  className="text-blue-600 hover:underline font-semibold"
+                >
+                  Back to Sign Up
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* FORGOT PASSWORD: STEP 1 - ENTER EMAIL */}
           {view === 'forgot_email' && (
             <div>
@@ -616,6 +719,67 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     Cancel
                   </button>
                 </div>
+              </form>
+            </div>
+          )}
+
+          {/* RESET NEW PASSWORD VIEW (FOR EMAIL LINK CALLBACK / RECOVERY) */}
+          {view === 'reset_new_password' && (
+            <div className="animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-2 mb-2">
+                <KeyRound className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-base font-bold text-slate-900">Set New Password</h3>
+              </div>
+              <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+                Enter your new password to regain access to your personal TASKER workspace.
+              </p>
+
+              <form onSubmit={handleResetPasswordDirect} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    New Password (min 6 characters)
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="w-full pl-9 pr-10 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    required
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Updating Password...' : 'Save New Password & Continue'}
+                </button>
               </form>
             </div>
           )}

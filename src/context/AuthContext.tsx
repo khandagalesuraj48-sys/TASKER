@@ -12,6 +12,7 @@ interface AuthContextValue {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isPasswordRecovery: boolean;
   userEmail: string;
   displayName: string;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -21,6 +22,7 @@ interface AuthContextValue {
   sendPasswordResetOtp: (email: string) => Promise<void>;
   verifyPasswordResetOtp: (email: string, token: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
+  resetPasswordRecoveryState: () => void;
   signOut: () => Promise<void>;
 }
 
@@ -30,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState<boolean>(false);
 
   const isConfigured = isSupabaseConfigured();
 
@@ -52,10 +55,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 2. Listen to Auth State Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         setIsLoading(false);
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+        }
       }
     );
 
@@ -101,6 +107,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
       if (error) throw error;
+
+      // When email confirmation is active in Supabase, an existing user returns identities: [] without an error
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        throw new Error('An account with this email address already exists. Please switch to Sign In.');
+      }
 
       const hasSession = Boolean(data.session);
       if (hasSession) {
@@ -175,6 +186,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       password: newPassword,
     });
     if (error) throw error;
+    setIsPasswordRecovery(false);
+  };
+
+  const resetPasswordRecoveryState = (): void => {
+    setIsPasswordRecovery(false);
   };
 
   const signOut = async (): Promise<void> => {
@@ -183,6 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);
+      setIsPasswordRecovery(false);
     } finally {
       setIsLoading(false);
     }
@@ -213,6 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         isLoading,
         isAuthenticated,
+        isPasswordRecovery,
         userEmail,
         displayName,
         signInWithEmail,
@@ -222,6 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sendPasswordResetOtp,
         verifyPasswordResetOtp,
         updatePassword,
+        resetPasswordRecoveryState,
         signOut,
       }}
     >

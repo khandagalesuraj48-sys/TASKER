@@ -38,7 +38,7 @@ export const TaskDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { triggerRefresh } = useTask();
+  const { refreshKey, triggerRefresh } = useTask();
 
   const [task, setTask] = useState<Task | null>(null);
   const [history, setHistory] = useState<TaskStatusHistory[]>([]);
@@ -80,7 +80,7 @@ export const TaskDetailPage: React.FC = () => {
 
   useEffect(() => {
     loadTaskData();
-  }, [loadTaskData]);
+  }, [loadTaskData, refreshKey]);
 
   const handleSoftDelete = async () => {
     if (!task) return;
