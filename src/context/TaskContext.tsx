@@ -116,8 +116,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsUniversalSearchOpen(false);
       setIsAIDrawerOpen(false);
       setIsCreateModalOpen(false);
+      triggerRefresh();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, triggerRefresh]);
 
   // Supabase Realtime Subscription: Instant synchronization across devices without page reload
   useEffect(() => {

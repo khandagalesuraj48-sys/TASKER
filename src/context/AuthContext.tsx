@@ -1,6 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+
+interface SignUpResult {
+  needsEmailConfirmation: boolean;
+  user: User | null;
+}
 
 interface AuthContextValue {
   user: User | null;
@@ -10,7 +15,8 @@ interface AuthContextValue {
   userEmail: string;
   displayName: string;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string, name?: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, name?: string) => Promise<SignUpResult>;
+  resendConfirmationEmail: (email: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   sendPasswordResetOtp: (email: string) => Promise<void>;
   verifyPasswordResetOtp: (email: string, token: string) => Promise<void>;
@@ -27,50 +33,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isConfigured = isSupabaseConfigured();
 
-  // Try adopting legacy tasks for newly signed-in user
-  const tryAdoptLegacyTasks = useCallback(async () => {
-    try {
-      await supabase.rpc('adopt_legacy_tasks');
-    } catch {
-      // Ignored if migration 003 RPC is not applied yet
-    }
-  }, []);
-
   useEffect(() => {
     if (!isConfigured) {
       setIsLoading(false);
       return;
     }
 
-    // 1. Check existing session
+    // 1. Initial Session Check
     supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
       if (!error && currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        tryAdoptLegacyTasks();
       }
       setIsLoading(false);
     }).catch(() => {
       setIsLoading(false);
     });
 
-    // 2. Listen to auth state changes
+    // 2. Listen to Auth State Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      (_event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         setIsLoading(false);
-
-        if (event === 'SIGNED_IN' && newSession?.user) {
-          await tryAdoptLegacyTasks();
-        }
       }
     );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [isConfigured, tryAdoptLegacyTasks]);
+  }, [isConfigured]);
 
   const signInWithEmail = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
@@ -82,48 +74,85 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
       setSession(data.session);
       setUser(data.user);
-      await tryAdoptLegacyTasks();
     } finally {
       setIsLoading(false);
     }
   };
 
-  const signUpWithEmail = async (email: string, password: string, name?: string): Promise<void> => {
+  const signUpWithEmail = async (
+    email: string,
+    password: string,
+    name?: string
+  ): Promise<SignUpResult> => {
     setIsLoading(true);
     try {
+      const redirectUrl = window.location.origin.includes('localhost')
+        ? window.location.origin
+        : 'https://mytasker-dun.vercel.app';
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             display_name: name?.trim() || email.split('@')[0],
           },
         },
       });
       if (error) throw error;
-      setSession(data.session);
-      setUser(data.user);
-      if (data.session) {
-        await tryAdoptLegacyTasks();
+
+      const hasSession = Boolean(data.session);
+      if (hasSession) {
+        setSession(data.session);
+        setUser(data.user);
       }
+
+      return {
+        needsEmailConfirmation: !hasSession,
+        user: data.user,
+      };
     } finally {
       setIsLoading(false);
     }
   };
 
+  const resendConfirmationEmail = async (email: string): Promise<void> => {
+    const redirectUrl = window.location.origin.includes('localhost')
+      ? window.location.origin
+      : 'https://mytasker-dun.vercel.app';
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: {
+        emailRedirectTo: redirectUrl,
+      },
+    });
+    if (error) throw error;
+  };
+
   const signInWithGoogle = async (): Promise<void> => {
+    const redirectUrl = window.location.origin.includes('localhost')
+      ? window.location.origin
+      : 'https://mytasker-dun.vercel.app';
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: redirectUrl,
       },
     });
     if (error) throw error;
   };
 
   const sendPasswordResetOtp = async (email: string): Promise<void> => {
+    const redirectUrl = window.location.origin.includes('localhost')
+      ? window.location.origin
+      : 'https://mytasker-dun.vercel.app';
+
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: window.location.origin,
+      redirectTo: redirectUrl,
     });
     if (error) throw error;
   };
@@ -188,6 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName,
         signInWithEmail,
         signUpWithEmail,
+        resendConfirmationEmail,
         signInWithGoogle,
         sendPasswordResetOtp,
         verifyPasswordResetOtp,

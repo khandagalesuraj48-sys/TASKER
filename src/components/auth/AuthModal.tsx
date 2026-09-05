@@ -14,6 +14,8 @@ import {
   EyeOff,
   Clock,
   X,
+  Send,
+  HelpCircle,
 } from 'lucide-react';
 
 type AuthView = 'signin' | 'signup' | 'forgot_email' | 'forgot_code' | 'forgot_success';
@@ -32,6 +34,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const {
     signInWithEmail,
     signUpWithEmail,
+    resendConfirmationEmail,
     signInWithGoogle,
     sendPasswordResetOtp,
     verifyPasswordResetOtp,
@@ -48,14 +51,47 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [infoMsg, setInfoMsg] = useState<string>('');
+  const [isEmailUnconfirmed, setIsEmailUnconfirmed] = useState<boolean>(false);
+  const [resendingEmail, setResendingEmail] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
   const resetForm = () => {
     setErrorMsg('');
+    setInfoMsg('');
+    setIsEmailUnconfirmed(false);
     setPassword('');
     setConfirmPassword('');
     setOtpCode('');
+  };
+
+  const parseAuthError = (err: any): string => {
+    const rawMsg = (err?.message || '').toLowerCase();
+    const code = err?.code || '';
+
+    if (rawMsg.includes('email not confirmed') || code === 'email_not_confirmed') {
+      setIsEmailUnconfirmed(true);
+      return 'Your email address is not verified yet. Please check your inbox (or spam) for the Supabase confirmation email and click the verification link.';
+    }
+
+    if (rawMsg.includes('invalid login credentials') || code === 'invalid_credentials') {
+      return 'Incorrect email or password. Please verify your credentials and try again.';
+    }
+
+    if (rawMsg.includes('over_email_send_rate_limit') || rawMsg.includes('rate limit')) {
+      return 'Email rate limit reached (Supabase default mailer allows 3-4 emails/hour). Please wait a few minutes, or click the verification link already in your inbox.';
+    }
+
+    if (rawMsg.includes('provider is not enabled') || rawMsg.includes('unsupported provider')) {
+      return 'Google Sign-In is not enabled yet in the Supabase Dashboard. Go to Authentication -> Providers -> Google to enable it.';
+    }
+
+    if (rawMsg.includes('already registered') || rawMsg.includes('user already exists')) {
+      return 'An account with this email already exists. Please switch to Sign In.';
+    }
+
+    return err?.message || 'Authentication failed. Please check your details and try again.';
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -65,13 +101,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
     setErrorMsg('');
+    setInfoMsg('');
+    setIsEmailUnconfirmed(false);
     setLoading(true);
+
     try {
       await signInWithEmail(email, password);
       showToast('Signed in successfully!', 'success');
       onClose?.();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Invalid credentials or login failed.');
+      setErrorMsg(parseAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -88,25 +127,52 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
     setErrorMsg('');
+    setInfoMsg('');
+    setIsEmailUnconfirmed(false);
     setLoading(true);
+
     try {
-      await signUpWithEmail(email, password, name);
-      showToast('Account created successfully! Check email if confirmation is required.', 'success');
-      onClose?.();
+      const result = await signUpWithEmail(email, password, name);
+      if (result.needsEmailConfirmation) {
+        setIsEmailUnconfirmed(true);
+        setInfoMsg(
+          `Account created successfully! We sent a verification email to ${email}. Please check your inbox and click the confirmation link before signing in.`
+        );
+        setView('signin');
+      } else {
+        showToast('Account created and signed in!', 'success');
+        onClose?.();
+      }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Sign up failed.');
+      setErrorMsg(parseAuthError(err));
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResendConfirmation = async () => {
+    if (!email) return;
+    setResendingEmail(true);
+    setErrorMsg('');
+    try {
+      await resendConfirmationEmail(email);
+      showToast('Confirmation email resent! Please check your inbox.', 'info');
+      setInfoMsg(`A new confirmation email has been sent to ${email}.`);
+    } catch (err: any) {
+      setErrorMsg(parseAuthError(err));
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setErrorMsg('');
+    setInfoMsg('');
     setLoading(true);
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Google Sign-in failed.');
+      setErrorMsg(parseAuthError(err));
       setLoading(false);
     }
   };
@@ -118,13 +184,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
     setErrorMsg('');
+    setInfoMsg('');
     setLoading(true);
+
     try {
       await sendPasswordResetOtp(email);
       showToast('Verification code sent to your email! Valid for 10 minutes.', 'info');
       setView('forgot_code');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Unable to send verification code. Check email address.');
+      setErrorMsg(parseAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -133,7 +201,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleVerifyAndResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpCode || otpCode.trim().length < 6) {
-      setErrorMsg('Please enter the valid 6-digit verification code.');
+      setErrorMsg('Please enter the 6-digit verification code sent to your email.');
       return;
     }
     if (!password || password.length < 6) {
@@ -146,7 +214,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     setErrorMsg('');
+    setInfoMsg('');
     setLoading(true);
+
     try {
       // 1. Verify OTP with Supabase Auth recovery type
       await verifyPasswordResetOtp(email, otpCode.trim());
@@ -156,9 +226,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setView('forgot_success');
     } catch (err: any) {
       setErrorMsg(
-        err.message?.includes('expired')
-          ? 'Verification code has expired (valid 10 minutes). Please request a new one.'
-          : err.message || 'Verification failed. Please check the code.'
+        err.message?.toLowerCase().includes('expired')
+          ? 'Verification code has expired (valid for 10 minutes). Please request a new code.'
+          : parseAuthError(err)
       );
     } finally {
       setLoading(false);
@@ -169,7 +239,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
       <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header Branding */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 px-6 py-6 text-white text-center relative">
+        <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 px-6 py-6 text-white text-center relative">
           {canDismiss && onClose && (
             <button
               type="button"
@@ -189,10 +259,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Form Body */}
         <div className="p-6">
+          {/* Info Banner (e.g. email confirmation notice) */}
+          {infoMsg && (
+            <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span>{infoMsg}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Error Banner */}
           {errorMsg && (
-            <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
+            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span>{errorMsg}</span>
+                {isEmailUnconfirmed && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={handleResendConfirmation}
+                      disabled={resendingEmail}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 font-semibold rounded text-[11px] transition-colors"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>{resendingEmail ? 'Sending...' : 'Resend Confirmation Email'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -307,6 +403,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
+
+              {/* Helpful Hint on Email Confirmation */}
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-400">
+                <HelpCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>If email verification is enabled, confirm your address before sign in.</span>
+              </div>
             </div>
           )}
 
