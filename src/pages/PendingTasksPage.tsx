@@ -1,0 +1,158 @@
+import React, { useEffect, useState } from 'react';
+import { getTasks } from '../services/taskService';
+import { Task, TaskFilterOptions } from '../types/task';
+import { TaskCard } from '../components/tasks/TaskCard';
+import { TaskTable } from '../components/tasks/TaskTable';
+import { TaskFormModal } from '../components/tasks/TaskFormModal';
+import { FilterPanel } from '../components/tasks/FilterPanel';
+import { EmptyState } from '../components/common/EmptyState';
+import { CardSkeleton, TableSkeleton } from '../components/common/LoadingSkeleton';
+import { Button } from '../components/common/Button';
+import { useTask } from '../context/TaskContext';
+import { Clock, LayoutGrid, List, Plus } from 'lucide-react';
+
+export const PendingTasksPage: React.FC = () => {
+  const { refreshKey, openCreateModal, globalSearch } = useTask();
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+
+  const [filters, setFilters] = useState<TaskFilterOptions>({
+    status: 'all',
+    priority: 'all',
+    person: '',
+    sortBy: 'pending_duration', // Default: longest pending first
+    hasAttachments: false,
+  });
+
+  const loadPendingTasks = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getTasks({
+        ...filters,
+        includeDeleted: false,
+        search: globalSearch,
+      });
+
+      // Filter only incomplete tasks
+      const incomplete = data.filter((t: Task) =>
+        ['pending', 'in_progress', 'partial'].includes(t.status)
+      );
+
+      setTasks(incomplete);
+    } catch (err) {
+      console.error('Failed to load pending tasks:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPendingTasks();
+  }, [refreshKey, filters, globalSearch]);
+
+  const handleResetFilters = () => {
+    setFilters({
+      status: 'all',
+      priority: 'all',
+      person: '',
+      sortBy: 'pending_duration',
+      hasAttachments: false,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Clock className="w-6 h-6 text-amber-500" />
+            <span>Pending Work</span>
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            All incomplete tasks currently pending, in progress, or partially finished
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center rounded-lg border border-slate-200 bg-white p-1">
+            <button
+              onClick={() => setViewMode('card')}
+              className={`p-1.5 rounded-md ${
+                viewMode === 'card' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'
+              }`}
+              title="Card view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-md ${
+                viewMode === 'table' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'
+              }`}
+              title="Table view"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+
+          <Button onClick={() => openCreateModal({ status: 'pending' })} leftIcon={<Plus className="w-4 h-4" />}>
+            + Add Task
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter Panel */}
+      <FilterPanel
+        filters={filters}
+        onChange={setFilters}
+        onReset={handleResetFilters}
+      />
+
+      {/* Task List */}
+      {isLoading ? (
+        viewMode === 'card' ? <CardSkeleton count={4} /> : <TableSkeleton rows={5} />
+      ) : tasks.length === 0 ? (
+        <EmptyState
+          icon={<Clock className="w-10 h-10 text-amber-400" />}
+          title="🎉 No pending tasks found"
+          description="Everything is either completed or no tasks match your current filter criteria."
+          actionText="+ Add Task"
+          onAction={() => openCreateModal({ status: 'pending' })}
+        />
+      ) : viewMode === 'card' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {tasks.map((task: Task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onEdit={(t: Task) => setTaskToEdit(t)}
+              onRefresh={loadPendingTasks}
+            />
+          ))}
+        </div>
+      ) : (
+        <TaskTable
+          tasks={tasks}
+          onEdit={(t: Task) => setTaskToEdit(t)}
+          onRefresh={loadPendingTasks}
+        />
+      )}
+
+      {/* Edit Task Modal */}
+      {taskToEdit && (
+        <TaskFormModal
+          isOpen={Boolean(taskToEdit)}
+          onClose={() => setTaskToEdit(null)}
+          taskToEdit={taskToEdit}
+          onSuccess={loadPendingTasks}
+        />
+      )}
+    </div>
+  );
+};
+
