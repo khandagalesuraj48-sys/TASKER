@@ -56,13 +56,13 @@ export const ReminderBanner: React.FC = () => {
   };
 
   return (
-    <div className="bg-amber-500 text-slate-950 px-4 py-2.5 shadow-md flex items-center justify-between flex-wrap gap-2 animate-in slide-in-from-top">
+    <div className="bg-amber-500 dark:bg-amber-500 text-slate-950 px-4 py-2.5 shadow-md flex items-center justify-between flex-wrap gap-2 animate-in slide-in-from-top">
       <div className="flex items-center gap-2.5 min-w-0">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-amber-950 animate-bounce shrink-0">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 dark:bg-amber-300 text-amber-950 animate-bounce shrink-0">
           <Bell className="w-4 h-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-bold leading-none truncate">
+          <p className="text-xs font-bold leading-none truncate text-slate-950">
             Reminder: {current.task.title}
           </p>
           <p className="text-[11px] text-amber-950/80 mt-0.5 flex items-center gap-1">
@@ -81,7 +81,7 @@ export const ReminderBanner: React.FC = () => {
         <button
           onClick={handleOpenTask}
           disabled={isProcessing}
-          className="px-2.5 py-1 rounded bg-slate-900 text-white hover:bg-slate-800 transition-colors flex items-center gap-1"
+          className="px-2.5 py-1 rounded bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900 transition-colors flex items-center gap-1"
         >
           <span>Open Task</span>
           <ArrowRight className="w-3 h-3" />
@@ -90,7 +90,7 @@ export const ReminderBanner: React.FC = () => {
         <button
           onClick={handleSnooze}
           disabled={isProcessing}
-          className="px-2.5 py-1 rounded bg-white text-slate-800 hover:bg-slate-100 transition-colors"
+          className="px-2.5 py-1 rounded bg-white text-slate-800 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
           Snooze 15m
         </button>
@@ -98,7 +98,7 @@ export const ReminderBanner: React.FC = () => {
         <button
           onClick={handleDismiss}
           disabled={isProcessing}
-          className="px-2 py-1 text-amber-950 hover:bg-amber-600/20 rounded transition-colors"
+          className="px-2 py-1 text-amber-950 hover:bg-amber-600/20 dark:hover:bg-amber-700/30 rounded transition-colors"
           title="Dismiss this reminder"
         >
           Dismiss

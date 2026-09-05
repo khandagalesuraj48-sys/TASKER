@@ -48,10 +48,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       {/* Derived OVERDUE badge */}
       {isOverdue && (
         <span
-          className={`inline-flex items-center gap-1 font-semibold rounded-full border bg-rose-50 text-rose-700 border-rose-200 uppercase tracking-wider ${sizeClasses}`}
+          className={`inline-flex items-center gap-1 font-semibold rounded-full border bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/60 uppercase tracking-wider ${sizeClasses}`}
           title="Due date has passed"
         >
-          <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+          <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
           <span>OVERDUE</span>
         </span>
       )}

@@ -26,18 +26,18 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     (filters.sortBy && filters.sortBy !== 'newest' ? 1 : 0);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-2xs">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
       {/* Toggle button row */}
       <div className="flex items-center justify-between px-4 py-2.5">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
+          className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-100"
         >
-          <Filter className="w-4 h-4 text-slate-500" />
+          <Filter className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           <span>Filters & Sorting</span>
           {activeFiltersCount > 0 && (
-            <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-semibold">
+            <span className="bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs px-2 py-0.5 rounded-full font-semibold">
               {activeFiltersCount}
             </span>
           )}
@@ -47,7 +47,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <button
             type="button"
             onClick={onReset}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-rose-600 transition-colors"
+            className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset All</span>
@@ -57,17 +57,17 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
       {/* Expandable filters body */}
       {isOpen && (
-        <div className="border-t border-slate-100 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+        <div className="border-t border-slate-100 dark:border-slate-800 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           {/* Status Filter */}
           {!hideStatusFilter && (
             <div>
-              <label className="block font-medium text-slate-700 mb-1.5">Status</label>
+              <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1.5">Status</label>
               <select
                 value={filters.status || 'all'}
                 onChange={(e) =>
                   onChange({ ...filters, status: e.target.value as TaskStatus | 'all' })
                 }
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -81,13 +81,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
           {/* Priority Filter */}
           <div>
-            <label className="block font-medium text-slate-700 mb-1.5">Priority</label>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1.5">Priority</label>
             <select
               value={filters.priority || 'all'}
               onChange={(e) =>
                 onChange({ ...filters, priority: e.target.value as TaskPriority | 'all' })
               }
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="all">All Priorities</option>
               <option value="urgent">Urgent</option>
@@ -99,25 +99,25 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
           {/* Pending With Person Filter */}
           <div>
-            <label className="block font-medium text-slate-700 mb-1.5">Pending With / Person</label>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1.5">Pending With / Person</label>
             <input
               type="text"
               value={filters.person || ''}
               onChange={(e) => onChange({ ...filters, person: e.target.value })}
               placeholder="e.g. Rahul, Vendor"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
           {/* Sorting */}
           <div>
-            <label className="block font-medium text-slate-700 mb-1.5">Sort By</label>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1.5">Sort By</label>
             <select
               value={filters.sortBy || 'newest'}
               onChange={(e) =>
                 onChange({ ...filters, sortBy: e.target.value as SortField })
               }
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -129,17 +129,17 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
 
           {/* Attachment Toggle */}
-          <div className="sm:col-span-2 lg:col-span-4 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <label className="inline-flex items-center gap-2 cursor-pointer text-slate-700 select-none">
+          <div className="sm:col-span-2 lg:col-span-4 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <label className="inline-flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300 select-none">
               <input
                 type="checkbox"
                 checked={Boolean(filters.hasAttachments)}
                 onChange={(e) =>
                   onChange({ ...filters, hasAttachments: e.target.checked })
                 }
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                className="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4"
               />
-              <Paperclip className="w-3.5 h-3.5 text-slate-500" />
+              <Paperclip className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               <span>Only tasks with attachments</span>
             </label>
 

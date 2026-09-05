@@ -77,6 +77,61 @@ export const uploadAttachment = async (
   return record as TaskAttachment;
 };
 
+export interface FileUploadProgress {
+  fileName: string;
+  fileSize: number;
+  status: 'pending' | 'uploading' | 'completed' | 'error';
+  progress: number;
+  error?: string;
+  attachment?: TaskAttachment;
+}
+
+/**
+ * Uploads multiple files sequentially with progress reporting.
+ */
+export const uploadMultipleAttachments = async (
+  taskId: string,
+  files: File[],
+  onProgress?: (progressMap: Record<string, FileUploadProgress>) => void,
+  uploader?: string
+): Promise<{ successful: TaskAttachment[]; failedCount: number }> => {
+  const successful: TaskAttachment[] = [];
+  const progressMap: Record<string, FileUploadProgress> = {};
+  let failedCount = 0;
+
+  for (const f of files) {
+    progressMap[f.name] = {
+      fileName: f.name,
+      fileSize: f.size,
+      status: 'pending',
+      progress: 0,
+    };
+  }
+  onProgress?.({ ...progressMap });
+
+  for (const file of files) {
+    try {
+      progressMap[file.name].status = 'uploading';
+      progressMap[file.name].progress = 30;
+      onProgress?.({ ...progressMap });
+
+      const attachment = await uploadAttachment(taskId, file, uploader);
+      progressMap[file.name].status = 'completed';
+      progressMap[file.name].progress = 100;
+      progressMap[file.name].attachment = attachment;
+      successful.push(attachment);
+      onProgress?.({ ...progressMap });
+    } catch (err: any) {
+      failedCount++;
+      progressMap[file.name].status = 'error';
+      progressMap[file.name].error = err.message || 'Upload failed';
+      onProgress?.({ ...progressMap });
+    }
+  }
+
+  return { successful, failedCount };
+};
+
 /**
  * Generates a temporary signed URL for viewing or downloading a file from the private bucket.
  * Default expiration is 1 hour (3600 seconds).

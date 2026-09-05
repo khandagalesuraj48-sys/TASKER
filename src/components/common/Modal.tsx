@@ -47,44 +47,51 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Modal dialog wrapper */}
-      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-        <div
-          className={`relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full ${maxWidthClasses[maxWidth]} border border-slate-200`}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-        >
-          {/* Header */}
-          {(title || subtitle) && (
-            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
-              <div>
-                {title && <h3 className="text-lg font-semibold text-slate-900">{title}</h3>}
-                {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
-              </div>
-              <button
-                onClick={onClose}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <div
+        className={`relative transform overflow-hidden rounded-2xl bg-white dark:bg-slate-900 text-left shadow-2xl transition-all w-full ${maxWidthClasses[maxWidth]} max-h-[calc(100dvh-2rem)] flex flex-col border border-slate-200 dark:border-slate-800 z-10`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* Header */}
+        {(title || subtitle) && (
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-5 sm:px-6 py-4 shrink-0 bg-slate-50/50 dark:bg-slate-800/40">
+            <div className="min-w-0 pr-4">
+              {title && (
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
+                  {title}
+                </h3>
+              )}
+              {subtitle && (
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {subtitle}
+                </p>
+              )}
             </div>
-          )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
 
-          {/* Body */}
-          <div className="px-6 py-5">{children}</div>
+        {/* Body (Scrollable) */}
+        <div className="px-5 sm:px-6 py-5 overflow-y-auto flex-1">
+          {children}
         </div>
       </div>
     </div>
   );
 };
-

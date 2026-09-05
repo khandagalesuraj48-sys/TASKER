@@ -13,6 +13,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   isPasswordRecovery: boolean;
+  isOtpVerified: boolean;
   userEmail: string;
   displayName: string;
   validatePasswordAndSendOtp: (email: string, password: string) => Promise<void>;
@@ -35,6 +36,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState<boolean>(false);
+  const [isOtpVerified, setIsOtpVerified] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('tasker_otp_verified') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   const isConfigured = isSupabaseConfigured();
 
@@ -49,9 +57,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!error && currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
+        // Only mark verified if sessionStorage explicitly contains the verification token
+        try {
+          const verifiedInSession = sessionStorage.getItem('tasker_otp_verified') === 'true';
+          setIsOtpVerified(verifiedInSession);
+        } catch {
+          setIsOtpVerified(false);
+        }
+      } else {
+        setIsOtpVerified(false);
       }
       setIsLoading(false);
     }).catch(() => {
+      setIsOtpVerified(false);
       setIsLoading(false);
     });
 
@@ -63,6 +81,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         if (event === 'PASSWORD_RECOVERY') {
           setIsPasswordRecovery(true);
+        }
+        if (event === 'SIGNED_OUT') {
+          setIsOtpVerified(false);
+          try {
+            sessionStorage.removeItem('tasker_otp_verified');
+          } catch {}
         }
       }
     );
@@ -76,6 +100,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const cleanEmail = email.trim();
+
+      // Ensure session is marked unverified before initiating OTP
+      setIsOtpVerified(false);
+      try {
+        sessionStorage.removeItem('tasker_otp_verified');
+      } catch {}
 
       // Step 1: Validate credentials with Supabase Auth
       const { error: passErr } = await supabase.auth.signInWithPassword({
@@ -125,6 +155,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (rpcErr) {
           console.warn('complete_login_challenge error:', rpcErr);
         }
+
+        // HARD AUTHENTICATION GATE: Now and only now mark session verified
+        try {
+          sessionStorage.setItem('tasker_otp_verified', 'true');
+        } catch {}
+        setIsOtpVerified(true);
         setSession(data.session);
         setUser(data.user);
       }
@@ -172,6 +208,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (rpcErr) {
           console.warn('complete_login_challenge on signup:', rpcErr);
         }
+        try {
+          sessionStorage.setItem('tasker_otp_verified', 'true');
+        } catch {}
+        setIsOtpVerified(true);
         setSession(verifyRes.data.session);
         setUser(verifyRes.data.user);
       }
@@ -292,6 +332,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch {
         // ignore
       }
+      try {
+        sessionStorage.removeItem('tasker_otp_verified');
+      } catch {}
+      setIsOtpVerified(false);
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);
@@ -316,8 +360,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   const isAuthenticated = useMemo(() => {
-    return Boolean(user && session);
-  }, [user, session]);
+    return Boolean(user && session && isOtpVerified);
+  }, [user, session, isOtpVerified]);
 
   return (
     <AuthContext.Provider
@@ -327,6 +371,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isAuthenticated,
         isPasswordRecovery,
+        isOtpVerified,
         userEmail,
         displayName,
         validatePasswordAndSendOtp,

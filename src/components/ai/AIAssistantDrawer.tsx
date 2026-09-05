@@ -5,17 +5,12 @@ import {
   X,
   Send,
   Loader2,
-  Calendar,
-  ArrowRight,
   Database,
   Trash2,
-  HelpCircle,
+  ArrowRight,
 } from 'lucide-react';
 import { askTaskerAI } from '../../services/aiService';
 import { AIMessage } from '../../types/task';
-import { StatusBadge } from '../common/StatusBadge';
-import { PriorityBadge } from '../common/PriorityBadge';
-import { formatDateTime } from '../../lib/dateUtils';
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -49,9 +44,39 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
   ]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
 
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Android back button handling: close AI drawer first before navigating away
+  useEffect(() => {
+    if (!isOpen) return;
+
+    window.history.pushState({ taskerAiModal: true }, '');
+
+    const handlePopState = () => {
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isOpen, onClose]);
+
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setTimeout(() => inputRef.current?.focus(), 150);
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [isOpen, messages]);
@@ -83,13 +108,13 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           id: 'err_' + Date.now(),
           role: 'assistant',
-          content: 'मला TASKER मध्ये ही माहिती सापडली नाही.',
+          content: 'मला TASKER मध्ये ही माहिती सापडली नाही. कृपया प्रश्न पुन्हा तपासा.',
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -124,153 +149,149 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
+      {/* Backdrop (Click to close) */}
+      <div className="hidden sm:block absolute inset-0" onClick={onClose} aria-hidden="true" />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md sm:max-w-lg bg-white shadow-2xl border-l border-slate-200 flex flex-col">
-          {/* Header */}
-          <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-linear-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-slate-900 text-sm">TASKER AI Assistant</h3>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                    Task-Aware
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500">Answers strictly from your Supabase task records</p>
-              </div>
+      {/* Main Drawer: Fullscreen on mobile, 440px slide-over on desktop */}
+      <div className="relative w-full sm:max-w-md md:max-w-lg h-full max-h-[100dvh] bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col z-10">
+        {/* Top Header - ALWAYS VISIBLE CLOSE BUTTON */}
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/80 backdrop-blur-sm flex items-center justify-between shrink-0 pt-safe">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-md">
+              <Sparkles className="w-5 h-5" />
             </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleClearHistory}
-                title="Clear chat history"
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100"
-                aria-label="Close drawer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">TASKER Assistant</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                  Task-Aware
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Grounding directly in your tasks</p>
             </div>
           </div>
 
-          {/* Database Grounding Notice */}
-          <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2 text-[11px] text-emerald-800">
-            <Database className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>Directly connected to live Supabase tasks. Zero hallucination safeguard active.</span>
-          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleClearHistory}
+              title="Clear chat history"
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 min-w-[38px] min-h-[38px] flex items-center justify-center"
+              aria-label="Clear chat"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
 
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((msg) => (
+            {/* UNBLOCKABLE CLOSE BUTTON */}
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors shadow-2xs"
+              aria-label="Close assistant"
+              title="Close assistant (Esc)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Realtime database status badge */}
+        <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900/60 flex items-center gap-2 text-[11px] text-emerald-800 dark:text-emerald-300 shrink-0">
+          <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="truncate">Connected to live tasks. Zero hallucination safeguard active.</span>
+        </div>
+
+        {/* Chat Messages Scrolling Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+            >
               <div
-                key={msg.id}
-                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                className={`max-w-[88%] rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-blue-600 text-white rounded-br-xs shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-xs border border-slate-200/60 dark:border-slate-700/60'
+                }`}
               >
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-xs shadow-xs'
-                      : 'bg-slate-100 text-slate-800 rounded-bl-xs border border-slate-200/60'
-                  }`}
-                >
-                  <p className="whitespace-pre-line">{msg.content}</p>
-                </div>
+                <p className="whitespace-pre-line">{msg.content}</p>
+              </div>
 
-                {/* Clickable Referenced Tasks */}
-                {msg.referencedTasks && msg.referencedTasks.length > 0 && (
-                  <div className="mt-2 w-full max-w-[90%] space-y-1.5">
-                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider pl-1">
-                      Related Tasks (Click to open):
-                    </p>
-                    {msg.referencedTasks.map((refTask) => (
-                      <div
-                        key={refTask.id}
-                        onClick={() => handleTaskClick(refTask.id)}
-                        className="p-2.5 rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 shadow-xs cursor-pointer transition-all flex items-center justify-between gap-2"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <StatusBadge status={refTask.status} size="sm" />
-                            <PriorityBadge priority={refTask.priority} size="sm" />
-                          </div>
-                          <h5 className="font-semibold text-xs text-slate-900 truncate">
-                            {refTask.title}
-                          </h5>
-                          {refTask.due_date && (
-                            <p className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1">
-                              <Calendar className="w-2.5 h-2.5" />
-                              {formatDateTime(refTask.due_date)}
-                            </p>
-                          )}
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-blue-600 shrink-0" />
+              {/* Clickable Referenced Tasks */}
+              {msg.referencedTasks && msg.referencedTasks.length > 0 && (
+                <div className="mt-2.5 w-full max-w-[90%] space-y-1.5">
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider pl-1">
+                    Related Tasks:
+                  </p>
+                  {msg.referencedTasks.map((refTask) => (
+                    <div
+                      key={refTask.id}
+                      onClick={() => handleTaskClick(refTask.id)}
+                      className="p-3 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 shadow-2xs cursor-pointer transition-all flex items-center justify-between gap-2 group"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          {refTask.title}
+                        </p>
+                        <p className="text-[10px] text-slate-400 capitalize">
+                          Status: {refTask.status.replace('_', ' ')} • Priority: {refTask.priority}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {isSearching && (
-              <div className="flex items-center gap-2 text-slate-400 text-xs pl-2 py-2">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                <span>Searching TASKER database...</span>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Suggestion Chips */}
-          <div className="px-4 py-2 bg-slate-50/60 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            <span className="text-[11px] text-slate-400 font-medium shrink-0 flex items-center gap-1">
-              <HelpCircle className="w-3 h-3" /> Quick:
-            </span>
-            {INITIAL_SUGGESTIONS.map((sug, i) => (
-              <button
-                key={i}
-                onClick={() => handleSend(sug)}
-                disabled={isSearching}
-                className="text-xs px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-600 hover:border-blue-400 hover:text-blue-700 whitespace-nowrap transition-colors shrink-0 disabled:opacity-50"
-              >
-                {sug}
-              </button>
-            ))}
-          </div>
-
-          {/* Input Box */}
-          <div className="p-3 border-t border-slate-200 bg-white">
-            <div className="relative flex items-center">
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputQuery}
-                onChange={(e) => setInputQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about any task (e.g. Disha ला call कधी करायचा आहे?)..."
-                disabled={isSearching}
-                className="w-full pl-3 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white text-slate-900 placeholder-slate-400"
-              />
-              <button
-                onClick={() => handleSend()}
-                disabled={!inputQuery.trim() || isSearching}
-                className="absolute right-1.5 p-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-colors"
-                aria-label="Send query"
-              >
-                <Send className="w-4 h-4" />
-              </button>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+          ))}
+
+          {isSearching && (
+            <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 w-fit text-xs text-slate-500 dark:text-slate-400">
+              <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+              <span>Checking your tasks...</span>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Quick Suggestion Pills */}
+        <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-850/50 shrink-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {INITIAL_SUGGESTIONS.slice(0, 4).map((s, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSend(s)}
+                disabled={isSearching}
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap transition-colors shrink-0 shadow-2xs"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sticky Input Footer */}
+        <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pb-safe shrink-0">
+          <div className="flex items-center gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputQuery}
+              onChange={(e) => setInputQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about tasks, deadlines, remarks..."
+              disabled={isSearching}
+              className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            />
+            <button
+              onClick={() => handleSend()}
+              disabled={isSearching || !inputQuery.trim()}
+              className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all min-w-[42px] min-h-[42px] flex items-center justify-center"
+              aria-label="Send message"
+            >
+              {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </button>
           </div>
         </div>
       </div>

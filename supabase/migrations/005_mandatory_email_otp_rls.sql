@@ -431,3 +431,4 @@ BEGIN
     ORDER BY m.task_id, m.rank_score ASC;
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+

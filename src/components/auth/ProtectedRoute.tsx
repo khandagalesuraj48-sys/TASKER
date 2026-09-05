@@ -12,12 +12,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 dark:bg-[#090d16]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md animate-bounce">
             <Sparkles className="w-5 h-5" />
           </div>
-          <p className="text-xs font-semibold text-slate-600">Loading TASKER...</p>
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Loading TASKER...</p>
         </div>
       </div>
     );

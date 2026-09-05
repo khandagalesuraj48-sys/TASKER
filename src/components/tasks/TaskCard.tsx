@@ -104,8 +104,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     <>
       <div
         onClick={handleCardClick}
-        className={`group relative rounded-xl border border-slate-200 bg-white p-4 sm:p-5 transition-all shadow-2xs hover:shadow-md hover:border-blue-200 ${
-          isBin ? 'opacity-90 bg-slate-50/70' : 'cursor-pointer'
+        className={`group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 transition-all shadow-2xs hover:shadow-md dark:hover:shadow-slate-950/50 hover:border-blue-200 dark:hover:border-blue-900/50 ${
+          isBin ? 'opacity-90 bg-slate-50/70 dark:bg-slate-900/40' : 'cursor-pointer'
         }`}
       >
         {/* Top Meta Header: Status, Overdue, Priority, Menu */}
@@ -120,7 +120,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-xl min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               aria-label="Actions"
             >
               <MoreVertical className="w-4 h-4" />
@@ -128,7 +128,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
             {menuOpen && (
               <div
-                className="absolute right-0 top-7 z-20 w-44 rounded-lg border border-slate-200 bg-white py-1 shadow-lg text-xs"
+                className="absolute right-0 top-9 z-20 w-48 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-1.5 shadow-xl text-xs"
                 onClick={(e) => {
                   e.stopPropagation();
                   setMenuOpen(false);
@@ -138,29 +138,29 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   <>
                     <button
                       onClick={() => navigate(`/tasks/${task.id}`)}
-                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      className="w-full px-3.5 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2"
                     >
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                       <span>Open Details</span>
                     </button>
                     <button
                       onClick={() => onEdit?.(task)}
-                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      className="w-full px-3.5 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2"
                     >
-                      <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                      <Edit2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                       <span>Edit Task</span>
                     </button>
                     <button
                       onClick={() => setStatusModalOpen(true)}
-                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      className="w-full px-3.5 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                       <span>Change Status</span>
                     </button>
-                    <div className="my-1 border-t border-slate-100" />
+                    <div className="my-1 border-t border-slate-100 dark:border-slate-700/60" />
                     <button
                       onClick={() => setDeleteConfirmOpen(true)}
-                      className="w-full px-3 py-2 text-left text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                      className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
                     >
                       <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                       <span>Move to Bin</span>
@@ -170,14 +170,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   <>
                     <button
                       onClick={handleRestore}
-                      className="w-full px-3 py-2 text-left text-emerald-600 hover:bg-emerald-50 flex items-center gap-2"
+                      className="w-full px-3.5 py-2 text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center gap-2"
                     >
                       <RotateCcw className="w-3.5 h-3.5 text-emerald-500" />
                       <span>Restore Task</span>
                     </button>
                     <button
                       onClick={() => setPermDeleteConfirmOpen(true)}
-                      className="w-full px-3 py-2 text-left text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                      className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
                     >
                       <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                       <span>Delete Permanently</span>
@@ -191,11 +191,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
         {/* Title and description */}
         <div className="mt-3">
-          <h3 className="text-sm sm:text-base font-semibold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
+          <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             {task.title}
           </h3>
           {task.description && (
-            <p className="mt-1 text-xs text-slate-500 line-clamp-2 leading-relaxed">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
               {task.description}
             </p>
           )}
@@ -203,33 +203,33 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
         {/* Person / Pending With */}
         {task.person_name && (
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-600">
-            <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+            <User className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
             <span>
-              Pending with: <strong className="text-slate-800">{task.person_name}</strong>
+              Pending with: <strong className="text-slate-800 dark:text-slate-200">{task.person_name}</strong>
             </span>
           </div>
         )}
 
         {/* Date Row: Due Date, Pending Since */}
-        <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+        <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-3">
             {task.due_date ? (
               <span
                 className={`flex items-center gap-1 font-medium ${
-                  overdue ? 'text-rose-600 font-semibold' : 'text-slate-600'
+                  overdue ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                 <span>Due: {formatDateOnly(task.due_date)}</span>
               </span>
             ) : (
-              <span className="text-slate-400 text-[11px]">No due date</span>
+              <span className="text-slate-400 dark:text-slate-500 text-[11px]">No due date</span>
             )}
 
             {task.status === 'pending' && task.pending_since && (
               <span
-                className="flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[11px]"
+                className="flex items-center gap-1 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded text-[11px]"
                 title={`Pending since ${formatDateTime(task.pending_since)}`}
               >
                 <Clock className="w-3 h-3 text-amber-500" />
@@ -239,23 +239,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </div>
 
           {/* Indicators: Attachments & Notes */}
-          <div className="flex items-center gap-2.5 text-[11px] text-slate-400">
+          <div className="flex items-center gap-2.5 text-[11px] text-slate-400 dark:text-slate-500">
             {(task.attachments_count ?? 0) > 0 && (
               <span
-                className="flex items-center gap-1 text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded"
+                className="flex items-center gap-1 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md"
                 title={`${task.attachments_count} attachments`}
               >
-                <Paperclip className="w-3 h-3 text-slate-500" />
+                <Paperclip className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                 <span>{task.attachments_count}</span>
               </span>
             )}
 
             {(task.notes_count ?? 0) > 0 && (
               <span
-                className="flex items-center gap-1 text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded"
+                className="flex items-center gap-1 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md"
                 title={`${task.notes_count} notes`}
               >
-                <MessageSquare className="w-3 h-3 text-slate-500" />
+                <MessageSquare className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                 <span>{task.notes_count}</span>
               </span>
             )}
@@ -264,9 +264,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
         {/* Completion Info if Completed */}
         {task.status === 'completed' && task.completed_at && (
-          <div className="mt-2 text-[11px] text-emerald-700 bg-emerald-50/70 px-2.5 py-1 rounded border border-emerald-100 flex items-center justify-between">
+          <div className="mt-2 text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 px-2.5 py-1 rounded-xl border border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between">
             <span>Completed on: {formatDateTime(task.completed_at)}</span>
-            <span>By: <strong>{task.completed_by || 'Pawan'}</strong></span>
+            <span>By: <strong>{task.completed_by || 'User'}</strong></span>
           </div>
         )}
       </div>

@@ -18,7 +18,7 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ history }) => {
   }
 
   return (
-    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
       {history.map((record, index) => {
         const newCfg = STATUS_CONFIG[record.new_status] || STATUS_CONFIG.pending;
         const oldCfg = record.old_status ? STATUS_CONFIG[record.old_status] : null;
@@ -30,19 +30,19 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ history }) => {
             <div
               className={`absolute -left-6 top-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                 isLatest
-                  ? 'bg-blue-600 border-white ring-2 ring-blue-500/30 text-white'
-                  : 'bg-white border-slate-300 text-slate-400'
+                  ? 'bg-blue-600 border-white dark:border-slate-900 ring-2 ring-blue-500/30 text-white'
+                  : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-400 dark:text-slate-500'
               }`}
             >
               <div
                 className={`w-2 h-2 rounded-full ${
-                  isLatest ? 'bg-white' : 'bg-slate-400'
+                  isLatest ? 'bg-white' : 'bg-slate-400 dark:bg-slate-600'
                 }`}
               />
             </div>
 
             {/* Event Card */}
-            <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-2xs">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-2xs">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {/* Transition badges */}
                 <div className="flex items-center gap-2 text-xs">
@@ -53,9 +53,9 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ history }) => {
                       {oldCfg.label}
                     </span>
                   ) : (
-                    <span className="text-slate-400 italic text-[11px]">Created</span>
+                    <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">Created</span>
                   )}
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
                   <span
                     className={`px-2 py-0.5 rounded-full border ${newCfg.badgeBg} ${newCfg.badgeText} ${newCfg.badgeBorder} font-semibold`}
                   >
@@ -64,24 +64,24 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ history }) => {
                 </div>
 
                 {/* Date & Time */}
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                   <span>{formatDateTime(record.changed_at)}</span>
                 </div>
               </div>
 
               {/* Actor */}
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-600">
-                <User className="w-3.5 h-3.5 text-slate-400" />
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                <User className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                 <span>
-                  Changed by: <strong className="text-slate-800">{record.changed_by}</strong>
+                  Changed by: <strong className="text-slate-800 dark:text-slate-200">{record.changed_by}</strong>
                 </span>
               </div>
 
               {/* Remark */}
               {record.remarks && (
-                <div className="mt-2 text-xs bg-slate-50 rounded p-2 text-slate-700 border border-slate-100 flex items-start gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                <div className="mt-2 text-xs bg-slate-50 dark:bg-slate-800/60 rounded-lg p-2.5 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800 flex items-start gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
                   <p className="whitespace-pre-line leading-relaxed">{record.remarks}</p>
                 </div>
               )}

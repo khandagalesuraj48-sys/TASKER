@@ -91,9 +91,9 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
-        <table className="w-full text-left text-xs text-slate-700">
-          <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs">
+        <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+          <thead className="bg-slate-50 dark:bg-slate-800/60 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
             <tr>
               <th scope="col" className="px-4 py-3">Task</th>
               <th scope="col" className="px-4 py-3">Status</th>
@@ -105,23 +105,23 @@ export const TaskTable: React.FC<TaskTableProps> = ({
               <th scope="col" className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {tasks.map((task) => {
               const overdue = isTaskOverdue(task.due_date, task.status);
 
               return (
                 <tr
                   key={task.id}
-                  className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                  className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
                   onClick={() => !isBin && navigate(`/tasks/${task.id}`)}
                 >
                   {/* Title & Description */}
                   <td className="px-4 py-3 max-w-xs sm:max-w-sm">
-                    <p className="font-semibold text-slate-900 truncate hover:text-blue-600">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100 truncate hover:text-blue-600 dark:hover:text-blue-400">
                       {task.title}
                     </p>
                     {task.description && (
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
                         {task.description}
                       </p>
                     )}
@@ -140,51 +140,51 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                   {/* Pending With */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     {task.person_name ? (
-                      <span className="font-medium text-slate-800">{task.person_name}</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">{task.person_name}</span>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-400 dark:text-slate-500">—</span>
                     )}
                   </td>
 
                   {/* Due Date */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     {task.due_date ? (
-                      <span className={overdue ? 'text-rose-600 font-semibold' : 'text-slate-600'}>
+                      <span className={overdue ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-600 dark:text-slate-300'}>
                         {formatDateOnly(task.due_date)}
                       </span>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-400 dark:text-slate-500">—</span>
                     )}
                   </td>
 
                   {/* Pending Since */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     {task.status === 'pending' && task.pending_since ? (
-                      <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[11px]">
+                      <span className="text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded text-[11px]">
                         {formatRelativePending(task.pending_since)}
                       </span>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-400 dark:text-slate-500">—</span>
                     )}
                   </td>
 
                   {/* Attachments / Notes Counter */}
                   <td className="px-4 py-3 text-center whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-2 text-slate-500">
+                    <div className="flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400">
                       {(task.attachments_count ?? 0) > 0 && (
-                        <span className="flex items-center gap-1 text-[11px]">
-                          <Paperclip className="w-3 h-3 text-slate-400" />
+                        <span className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300">
+                          <Paperclip className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                           <span>{task.attachments_count}</span>
                         </span>
                       )}
                       {(task.notes_count ?? 0) > 0 && (
-                        <span className="flex items-center gap-1 text-[11px]">
-                          <MessageSquare className="w-3 h-3 text-slate-400" />
+                        <span className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300">
+                          <MessageSquare className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                           <span>{task.notes_count}</span>
                         </span>
                       )}
                       {!(task.attachments_count) && !(task.notes_count) && (
-                        <span className="text-slate-300">—</span>
+                        <span className="text-slate-300 dark:text-slate-600">—</span>
                       )}
                     </div>
                   </td>
@@ -198,43 +198,43 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                       <button
                         type="button"
                         onClick={() => setOpenActionId(openActionId === task.id ? null : task.id)}
-                        className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        className="p-1 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
 
                       {openActionId === task.id && (
                         <div
-                          className="absolute right-0 top-6 z-20 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg text-xs"
+                          className="absolute right-0 top-6 z-20 w-44 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-1.5 shadow-xl text-xs"
                           onClick={() => setOpenActionId(null)}
                         >
                           {!isBin ? (
                             <>
                               <button
                                 onClick={() => navigate(`/tasks/${task.id}`)}
-                                className="w-full px-3 py-1.5 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                className="w-full px-3.5 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2"
                               >
-                                <Eye className="w-3.5 h-3.5 text-slate-400" />
+                                <Eye className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                                 <span>Details</span>
                               </button>
                               <button
                                 onClick={() => onEdit?.(task)}
-                                className="w-full px-3 py-1.5 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                className="w-full px-3.5 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2"
                               >
-                                <Edit2 className="w-3.5 h-3.5 text-slate-400" />
+                                <Edit2 className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                                 <span>Edit</span>
                               </button>
                               <button
                                 onClick={() => setActiveTaskForStatus(task)}
-                                className="w-full px-3 py-1.5 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                className="w-full px-3.5 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2"
                               >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                                 <span>Change Status</span>
                               </button>
-                              <div className="my-1 border-t border-slate-100" />
+                              <div className="my-1 border-t border-slate-100 dark:border-slate-700/60" />
                               <button
                                 onClick={() => setTaskToDelete(task)}
-                                className="w-full px-3 py-1.5 text-left text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                                className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
                               >
                                 <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                                 <span>Move to Bin</span>
@@ -244,17 +244,17 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                             <>
                               <button
                                 onClick={() => handleRestore(task)}
-                                className="w-full px-3 py-1.5 text-left text-emerald-600 hover:bg-emerald-50 flex items-center gap-2"
+                                className="w-full px-3.5 py-2 text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center gap-2"
                               >
                                 <RotateCcw className="w-3.5 h-3.5 text-emerald-500" />
-                                <span>Restore</span>
+                                <span>Restore Task</span>
                               </button>
                               <button
                                 onClick={() => setTaskToPermDelete(task)}
-                                className="w-full px-3 py-1.5 text-left text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                                className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
                               >
                                 <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                <span>Delete Forever</span>
+                                <span>Delete Permanently</span>
                               </button>
                             </>
                           )}

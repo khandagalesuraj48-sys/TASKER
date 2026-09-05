@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -24,21 +24,21 @@ interface UniversalSearchModalProps {
 const getMatchBadge = (field: MatchFieldCategory) => {
   switch (field) {
     case 'title_exact':
-      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Exact Title</span>;
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">Exact Title</span>;
     case 'title':
-      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800">Title</span>;
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300">Title</span>;
     case 'description':
-      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-purple-100 text-purple-800">Description</span>;
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300">Description</span>;
     case 'note':
-      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800">Notes / Remarks</span>;
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">Notes / Remarks</span>;
     case 'person':
-      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-100 text-sky-800">Person</span>;
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300">Person</span>;
     case 'status_priority':
-      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">Status / Priority</span>;
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300">Status / Priority</span>;
     case 'status_history':
-      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-orange-100 text-orange-800">Status History</span>;
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300">Status History</span>;
     case 'attachment':
-      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-rose-100 text-rose-800">Attachment File</span>;
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300">Attachment File</span>;
     default:
       return null;
   }
@@ -118,47 +118,47 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20 px-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20 px-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs transition-opacity animate-in fade-in"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80vh]"
+        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[80vh]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         {/* Search Input Bar */}
-        <div className="relative flex items-center px-4 border-b border-slate-200 bg-slate-50/50">
-          <Search className="w-5 h-5 text-slate-400 shrink-0 mr-3" />
+        <div className="relative flex items-center px-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+          <Search className="w-5 h-5 text-slate-400 dark:text-slate-500 shrink-0 mr-3" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search across tasks, descriptions, notes, history, and attachments..."
-            className="w-full py-4 text-base bg-transparent text-slate-900 placeholder-slate-400 focus:outline-none"
+            className="w-full py-4 text-base bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none"
           />
           {isLoading && (
-            <Loader2 className="w-4 h-4 text-blue-600 animate-spin mr-2 shrink-0" />
+            <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin mr-2 shrink-0" />
           )}
           {query && !isLoading && (
             <button
               onClick={() => setQuery('')}
-              className="p-1 text-slate-400 hover:text-slate-600 rounded-md"
+              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md"
               aria-label="Clear query"
             >
               <X className="w-4 h-4" />
             </button>
           )}
-          <span className="hidden sm:inline-block ml-3 px-2 py-0.5 text-[11px] font-mono text-slate-400 bg-slate-200/70 rounded">
+          <span className="hidden sm:inline-block ml-3 px-2 py-0.5 text-[11px] font-mono text-slate-400 dark:text-slate-400 bg-slate-200/70 dark:bg-slate-800 rounded">
             ESC
           </span>
         </div>
 
         {/* Results / Feedback Section */}
-        <div className="overflow-y-auto flex-1 p-2 divide-y divide-slate-100">
+        <div className="overflow-y-auto flex-1 p-2 divide-y divide-slate-100 dark:divide-slate-800">
           {/* Loading state */}
           {isLoading && results.length === 0 && (
-            <div className="p-8 text-center text-slate-400 text-sm">
+            <div className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />
               Searching database...
             </div>
@@ -166,33 +166,33 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
 
           {/* Empty state: No query entered */}
           {!query.trim() && (
-            <div className="p-8 text-center text-slate-500">
-              <div className="w-12 h-12 mx-auto rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-3">
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+              <div className="w-12 h-12 mx-auto rounded-full bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-3">
                 <Search className="w-6 h-6" />
               </div>
-              <h3 className="font-semibold text-slate-800 text-sm">Universal Task Search</h3>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-sm">Universal Task Search</h3>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
                 Search task titles, full descriptions, assignees, remarks, status change history, and attachment filenames.
               </p>
               <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">e.g. Disha</span>
-                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">e.g. project requirements</span>
-                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">e.g. urgent</span>
-                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">e.g. .pdf</span>
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">e.g. Disha</span>
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">e.g. project requirements</span>
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">e.g. urgent</span>
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">e.g. .pdf</span>
               </div>
             </div>
           )}
 
           {/* No results state */}
           {query.trim() && !isLoading && results.length === 0 && (
-            <div className="p-8 text-center text-slate-500">
-              <p className="text-sm font-medium text-slate-700">No matching tasks found</p>
-              <p className="text-xs text-slate-400 mt-1">
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">No matching tasks found</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                 No tasks, notes, history remarks, or attachment filenames matched "{query}".
               </p>
               <button
                 onClick={() => setQuery('')}
-                className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                className="mt-3 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
               >
                 Clear Search
               </button>
@@ -207,8 +207,8 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
                 key={res.task.id}
                 onClick={() => handleSelectTask(res.task.id)}
                 onMouseEnter={() => setSelectedIndex(index)}
-                className={`p-3 rounded-lg cursor-pointer transition-colors flex items-start justify-between gap-3 ${
-                  isSelected ? 'bg-blue-50/80 border border-blue-200' : 'hover:bg-slate-50'
+                className={`p-3 rounded-xl cursor-pointer transition-colors flex items-start justify-between gap-3 ${
+                  isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                 }`}
               >
                 <div className="flex-1 min-w-0">
@@ -217,26 +217,26 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
                     <StatusBadge status={res.task.status} size="sm" />
                     <PriorityBadge priority={res.task.priority} size="sm" />
                     {(res.task.attachments_count ?? 0) > 0 && (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-medium">
-                        <Paperclip className="w-3 h-3 text-slate-400" />
+                      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        <Paperclip className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                         {res.task.attachments_count}
                       </span>
                     )}
                   </div>
 
-                  <h4 className="text-sm font-semibold text-slate-900 truncate">
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                     {res.task.title}
                   </h4>
 
                   {/* Matching Excerpt */}
                   {res.snippet && (
-                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
-                      <span className="font-medium text-slate-600">Match:</span> {res.snippet}
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
+                      <span className="font-medium text-slate-600 dark:text-slate-300">Match:</span> {res.snippet}
                     </p>
                   )}
 
                   {/* Context bar */}
-                  <div className="flex items-center gap-4 mt-2 text-[11px] text-slate-400">
+                  <div className="flex items-center gap-4 mt-2 text-[11px] text-slate-400 dark:text-slate-500">
                     {res.task.due_date && (
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -252,8 +252,8 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
                   </div>
                 </div>
 
-                <div className="shrink-0 pt-1 text-slate-400">
-                  <ArrowRight className={`w-4 h-4 ${isSelected ? 'text-blue-600 translate-x-0.5' : ''} transition-transform`} />
+                <div className="shrink-0 pt-1 text-slate-400 dark:text-slate-500">
+                  <ArrowRight className={`w-4 h-4 ${isSelected ? 'text-blue-600 dark:text-blue-400 translate-x-0.5' : ''} transition-transform`} />
                 </div>
               </div>
             );
@@ -262,7 +262,7 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
 
         {/* Modal Footer */}
         {results.length > 0 && (
-          <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-400">
+          <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
             <span>
               Found <strong>{results.length}</strong> {results.length === 1 ? 'task' : 'tasks'}
             </span>

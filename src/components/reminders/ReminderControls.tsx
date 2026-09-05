@@ -45,16 +45,16 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-4 space-y-3">
       {/* Header & Toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {value.is_enabled ? (
-            <Bell className="w-4 h-4 text-blue-600" />
+            <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           ) : (
-            <BellOff className="w-4 h-4 text-slate-400" />
+            <BellOff className="w-4 h-4 text-slate-400 dark:text-slate-500" />
           )}
-          <span className="text-sm font-semibold text-slate-800">Smart Reminder</span>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Smart Reminder</span>
         </div>
 
         <label className="relative inline-flex items-center cursor-pointer">
@@ -64,31 +64,31 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
             onChange={(e) => handleToggle(e.target.checked)}
             className="sr-only peer"
           />
-          <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+          <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 dark:after:border-slate-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
         </label>
       </div>
 
       {value.is_enabled && (
-        <div className="space-y-3 pt-2 border-t border-slate-200/60 animate-in fade-in">
+        <div className="space-y-3 pt-2 border-t border-slate-200/60 dark:border-slate-800/80 animate-in fade-in">
           {/* Reminder Trigger Time */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
               Reminder Date & Time
             </label>
             <div className="relative">
-              <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+              <Clock className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-2.5 pointer-events-none" />
               <input
                 type="datetime-local"
                 value={value.remind_at ? formatInputDate(value.remind_at) : ''}
                 onChange={handleDateChange}
-                className="w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none"
               />
             </div>
           </div>
 
           {/* Recurrence Selector */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
               Repeat Recurrence
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-xs">
@@ -108,7 +108,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                   className={`py-1.5 px-2 rounded-md border text-center font-medium transition-colors ${
                     value.recurrence_type === opt.key
                       ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60'
                   }`}
                 >
                   {opt.label}
@@ -120,20 +120,20 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
           {/* Custom Interval if selected */}
           {value.recurrence_type === 'custom' && (
             <div className="flex items-center gap-2 pt-1">
-              <label className="text-xs text-slate-600 whitespace-nowrap">Repeat every:</label>
+              <label className="text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">Repeat every:</label>
               <input
                 type="number"
                 min="5"
                 max="1440"
                 value={value.custom_interval_minutes || 60}
                 onChange={(e) => handleCustomIntervalChange(parseInt(e.target.value, 10) || 60)}
-                className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
+                className="w-20 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-800 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none"
               />
-              <span className="text-xs text-slate-500">minutes</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">minutes</span>
             </div>
           )}
 
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">
             ℹ When the task is completed or deleted, all future reminders automatically stop.
           </p>
         </div>

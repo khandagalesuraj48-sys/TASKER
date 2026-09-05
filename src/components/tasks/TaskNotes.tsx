@@ -4,6 +4,7 @@ import { addNote, deleteNote } from '../../services/notesService';
 import { formatDateTime } from '../../lib/dateUtils';
 import { Button } from '../common/Button';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import { DEFAULT_USER_NAME } from '../../constants';
 import { Send, Trash2, Clock, User } from 'lucide-react';
 
@@ -17,6 +18,8 @@ export const TaskNotes: React.FC<TaskNotesProps> = ({ taskId, notes, onNotesUpda
   const [noteText, setNoteText] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { showToast } = useToast();
+  const { displayName, userEmail } = useAuth();
+  const currentAuthor = displayName || userEmail || DEFAULT_USER_NAME;
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +27,7 @@ export const TaskNotes: React.FC<TaskNotesProps> = ({ taskId, notes, onNotesUpda
 
     setIsSubmitting(true);
     try {
-      await addNote(taskId, noteText, DEFAULT_USER_NAME);
+      await addNote(taskId, noteText, currentAuthor);
       setNoteText('');
       showToast('Note added successfully.', 'success');
       onNotesUpdated();
@@ -55,7 +58,7 @@ export const TaskNotes: React.FC<TaskNotesProps> = ({ taskId, notes, onNotesUpda
             onChange={(e) => setNoteText(e.target.value)}
             placeholder="Add an update or remark (e.g. 'Called vendor today', 'Waiting for approval')..."
             rows={2}
-            className="w-full rounded-lg border border-slate-200 p-3 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <div className="flex justify-end">
@@ -74,36 +77,36 @@ export const TaskNotes: React.FC<TaskNotesProps> = ({ taskId, notes, onNotesUpda
       {/* Notes listing */}
       <div className="space-y-2.5">
         {notes.length === 0 ? (
-          <div className="p-4 text-center rounded-lg border border-dashed border-slate-200 text-xs text-slate-400">
+          <div className="p-5 text-center rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-xs text-slate-400 dark:text-slate-500">
             No notes or updates added yet.
           </div>
         ) : (
           notes.map((n) => (
             <div
               key={n.id}
-              className="group p-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors"
+              className="group p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-2xs"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-3 text-[11px] text-slate-500">
-                  <span className="flex items-center gap-1 font-semibold text-slate-700">
-                    <User className="w-3 h-3 text-slate-400" />
+                <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
+                    <User className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                     {n.created_by}
                   </span>
                   <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-400" />
+                    <Clock className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                     {formatDateTime(n.created_at)}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleDeleteNote(n.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-opacity"
                   title="Delete note"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <p className="mt-1.5 text-xs text-slate-800 whitespace-pre-line leading-relaxed">
+              <p className="mt-1.5 text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line leading-relaxed">
                 {n.note}
               </p>
             </div>

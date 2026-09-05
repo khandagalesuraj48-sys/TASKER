@@ -32,7 +32,7 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 font-medium rounded-md border capitalize ${config.badgeBg} ${config.badgeText} ${config.badgeBorder} ${sizeClasses} ${className}`}
+      className={`inline-flex items-center gap-1 font-semibold rounded-lg border capitalize ${config.badgeBg} ${config.badgeText} ${config.badgeBorder} dark:bg-slate-800/80 dark:border-slate-700/80 ${sizeClasses} ${className}`}
     >
       {getPriorityIcon()}
       <span>{config.label}</span>

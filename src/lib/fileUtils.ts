@@ -1,4 +1,19 @@
-import { ALLOWED_EXTENSIONS, MAX_FILE_SIZE_BYTES } from '../constants';
+import {
+  ALLOWED_EXTENSIONS,
+  BLOCKED_EXTENSIONS,
+  BLOCKED_MIME_TYPES,
+  MAX_FILE_SIZE_BYTES,
+} from '../constants';
+
+export type FileCategory =
+  | 'image'
+  | 'pdf'
+  | 'audio'
+  | 'video'
+  | 'spreadsheet'
+  | 'document'
+  | 'archive'
+  | 'other';
 
 /**
  * Format bytes into human readable format: e.g. 1.5 MB
@@ -21,33 +36,11 @@ export const getFileExtension = (filename: string): string => {
 };
 
 /**
- * Validate file before upload
- */
-export const validateFile = (file: File): { valid: boolean; error?: string } => {
-  const ext = getFileExtension(file.name);
-  if (!ALLOWED_EXTENSIONS.includes(ext)) {
-    return {
-      valid: false,
-      error: `File type ".${ext}" is not supported. Supported: ${ALLOWED_EXTENSIONS.join(', ')}`,
-    };
-  }
-
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    return {
-      valid: false,
-      error: `File size exceeds the 25MB limit (${formatFileSize(file.size)})`,
-    };
-  }
-
-  return { valid: true };
-};
-
-/**
  * Checks if the file is an image
  */
 export const isImageFile = (filename: string): boolean => {
   const ext = getFileExtension(filename);
-  return ['jpg', 'jpeg', 'png'].includes(ext);
+  return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'bmp', 'ico'].includes(ext);
 };
 
 /**
@@ -56,6 +49,100 @@ export const isImageFile = (filename: string): boolean => {
 export const isPdfFile = (filename: string): boolean => {
   const ext = getFileExtension(filename);
   return ext === 'pdf';
+};
+
+/**
+ * Checks if the file is an Audio file
+ */
+export const isAudioFile = (filename: string): boolean => {
+  const ext = getFileExtension(filename);
+  return ['mp3', 'wav', 'm4a', 'ogg', 'flac', 'aac'].includes(ext);
+};
+
+/**
+ * Checks if the file is a Video file
+ */
+export const isVideoFile = (filename: string): boolean => {
+  const ext = getFileExtension(filename);
+  return ['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext);
+};
+
+/**
+ * Checks if the file is a Spreadsheet
+ */
+export const isSpreadsheetFile = (filename: string): boolean => {
+  const ext = getFileExtension(filename);
+  return ['xls', 'xlsx', 'csv', 'ods'].includes(ext);
+};
+
+/**
+ * Checks if the file is a Document
+ */
+export const isDocumentFile = (filename: string): boolean => {
+  const ext = getFileExtension(filename);
+  return ['doc', 'docx', 'txt', 'rtf', 'odt', 'ppt', 'pptx'].includes(ext);
+};
+
+/**
+ * Checks if the file is an Archive
+ */
+export const isArchiveFile = (filename: string): boolean => {
+  const ext = getFileExtension(filename);
+  return ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext);
+};
+
+/**
+ * Get category descriptor for any file
+ */
+export const getFileCategory = (filename: string): FileCategory => {
+  if (isImageFile(filename)) return 'image';
+  if (isPdfFile(filename)) return 'pdf';
+  if (isAudioFile(filename)) return 'audio';
+  if (isVideoFile(filename)) return 'video';
+  if (isSpreadsheetFile(filename)) return 'spreadsheet';
+  if (isDocumentFile(filename)) return 'document';
+  if (isArchiveFile(filename)) return 'archive';
+  return 'other';
+};
+
+/**
+ * Validate file before upload.
+ * Strictly blocks HTML files (.html, .htm, text/html)
+ */
+export const validateFile = (file: File): { valid: boolean; error?: string } => {
+  const ext = getFileExtension(file.name);
+  const mimeType = (file.type || '').toLowerCase();
+
+  // 1. STRICT HTML BLOCKING
+  if (
+    BLOCKED_EXTENSIONS.includes(ext) ||
+    BLOCKED_MIME_TYPES.some((blocked) => mimeType.includes(blocked)) ||
+    ext === 'html' ||
+    ext === 'htm'
+  ) {
+    return {
+      valid: false,
+      error: 'Security restriction: HTML files (.html, .htm) cannot be uploaded.',
+    };
+  }
+
+  // 2. Allowed extensions check
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    return {
+      valid: false,
+      error: `File type ".${ext}" is not supported. Please upload a standard document, media, image, or archive file.`,
+    };
+  }
+
+  // 3. Size check
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return {
+      valid: false,
+      error: `File size exceeds the 25MB limit (${formatFileSize(file.size)}).`,
+    };
+  }
+
+  return { valid: true };
 };
 
 /**

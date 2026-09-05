@@ -68,22 +68,22 @@ export const PendingTasksPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
             <Clock className="w-6 h-6 text-amber-500" />
             <span>Pending Work</span>
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             All incomplete tasks currently pending, in progress, or partially finished
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex items-center rounded-lg border border-slate-200 bg-white p-1">
+          <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1">
             <button
               onClick={() => setViewMode('card')}
-              className={`p-1.5 rounded-md ${
-                viewMode === 'card' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === 'card' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
               title="Card view"
             >
@@ -91,8 +91,8 @@ export const PendingTasksPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md ${
-                viewMode === 'table' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === 'table' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
               title="Table view"
             >

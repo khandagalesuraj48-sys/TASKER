@@ -142,10 +142,10 @@ export const DashboardPage: React.FC = () => {
       {/* Top Banner & Quick Add */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
             Dashboard
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             Real-time pending work, status tracking, and attention priorities
           </p>
         </div>
@@ -202,9 +202,9 @@ export const DashboardPage: React.FC = () => {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
           <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span>My Pending Tasks</span>
-              <span className="text-xs font-normal text-slate-500">
+              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
                 ({displayTasks.length} requiring attention)
               </span>
             </h3>
