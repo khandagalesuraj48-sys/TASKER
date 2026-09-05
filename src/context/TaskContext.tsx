@@ -12,6 +12,13 @@ interface TaskContextValue {
   createModalDefaults?: Partial<CreateTaskInput>;
   globalSearch: string;
   setGlobalSearch: (q: string) => void;
+  isUniversalSearchOpen: boolean;
+  universalSearchQuery: string;
+  openUniversalSearch: (initialQuery?: string) => void;
+  closeUniversalSearch: () => void;
+  isAIDrawerOpen: boolean;
+  openAIDrawer: () => void;
+  closeAIDrawer: () => void;
   stats: TaskStats;
   reloadStats: () => Promise<void>;
   isConfigured: boolean;
@@ -34,8 +41,28 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [createModalDefaults, setCreateModalDefaults] = useState<Partial<CreateTaskInput> | undefined>(undefined);
   const [globalSearch, setGlobalSearch] = useState<string>('');
+  const [isUniversalSearchOpen, setIsUniversalSearchOpen] = useState<boolean>(false);
+  const [universalSearchQuery, setUniversalSearchQuery] = useState<string>('');
+  const [isAIDrawerOpen, setIsAIDrawerOpen] = useState<boolean>(false);
   const [stats, setStats] = useState<TaskStats>(initialStats);
   const isConfigured = isSupabaseConfigured();
+
+  const openUniversalSearch = useCallback((initialQuery?: string) => {
+    setUniversalSearchQuery(initialQuery || '');
+    setIsUniversalSearchOpen(true);
+  }, []);
+
+  const closeUniversalSearch = useCallback(() => {
+    setIsUniversalSearchOpen(false);
+  }, []);
+
+  const openAIDrawer = useCallback(() => {
+    setIsAIDrawerOpen(true);
+  }, []);
+
+  const closeAIDrawer = useCallback(() => {
+    setIsAIDrawerOpen(false);
+  }, []);
 
   const triggerRefresh = useCallback(() => {
     setRefreshKey((prev) => prev + 1);
@@ -76,6 +103,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createModalDefaults,
         globalSearch,
         setGlobalSearch,
+        isUniversalSearchOpen,
+        universalSearchQuery,
+        openUniversalSearch,
+        closeUniversalSearch,
+        isAIDrawerOpen,
+        openAIDrawer,
+        closeAIDrawer,
         stats,
         reloadStats,
         isConfigured,

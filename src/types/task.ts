@@ -23,6 +23,7 @@ export interface Task {
   // Computed / joined fields
   attachments_count?: number;
   notes_count?: number;
+  reminder?: TaskReminder | null;
 }
 
 export interface TaskStatusHistory {
@@ -119,5 +120,65 @@ export interface BackupData {
   statusHistory: TaskStatusHistory[];
   notes: TaskNote[];
   attachments: TaskAttachment[];
+}
+
+export type ReminderRecurrence = 'once' | 'hourly' | 'every_2_hours' | 'daily' | 'custom';
+export type ReminderStatus = 'active' | 'completed' | 'dismissed' | 'snoozed' | 'stopped';
+
+export interface TaskReminder {
+  id: string;
+  task_id: string;
+  is_enabled: boolean;
+  remind_at: string;
+  recurrence_type: ReminderRecurrence;
+  custom_interval_minutes: number | null;
+  next_trigger_at: string;
+  last_triggered_at: string | null;
+  status: ReminderStatus;
+  snooze_until: string | null;
+  notification_channel: 'system' | 'browser' | 'push' | 'all';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReminderInput {
+  is_enabled: boolean;
+  remind_at: string;
+  recurrence_type: ReminderRecurrence;
+  custom_interval_minutes?: number | null;
+}
+
+export type MatchFieldCategory =
+  | 'title_exact'
+  | 'title'
+  | 'description'
+  | 'note'
+  | 'status_priority'
+  | 'person'
+  | 'status_history'
+  | 'attachment';
+
+export interface UniversalSearchResult {
+  task: Task;
+  matchedField: MatchFieldCategory;
+  snippet: string;
+  rankScore: number;
+}
+
+export interface TaskReference {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  due_date: string | null;
+}
+
+export interface AIMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  referencedTasks?: TaskReference[];
+  isSearchingDb?: boolean;
 }
 

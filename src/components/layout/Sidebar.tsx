@@ -9,6 +9,8 @@ import {
   Settings,
   X,
   PlusCircle,
+  Sparkles,
+  Search,
 } from 'lucide-react';
 import { APP_NAME } from '../../constants';
 import { useTask } from '../../context/TaskContext';
@@ -19,7 +21,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { stats, openCreateModal } = useTask();
+  const { stats, openCreateModal, openUniversalSearch, openAIDrawer } = useTask();
 
   const navItems = [
     {
@@ -100,6 +102,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <PlusCircle className="w-4 h-4" />
             <span>+ Add Task</span>
           </button>
+
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              onClick={() => {
+                openUniversalSearch();
+                onClose();
+              }}
+              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors"
+              title="Universal Search (Ctrl+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-slate-500" />
+              <span>Search</span>
+            </button>
+
+            <button
+              onClick={() => {
+                openAIDrawer();
+                onClose();
+              }}
+              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-colors border border-indigo-100"
+              title="Ask Task-Aware AI"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Ask AI</span>
+            </button>
+          </div>
         </div>
 
         {/* Navigation Links */}

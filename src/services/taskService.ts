@@ -6,12 +6,14 @@ import {
   TaskFilterOptions,
   TaskStats,
   TaskStatus,
+  UniversalSearchResult,
   UpdateTaskInput,
 } from '../types/task';
 import { isTaskOverdue } from '../lib/dateUtils';
 import { recordStatusChange } from './statusHistoryService';
 import { addNote } from './notesService';
 import { deleteAllTaskFiles } from './attachmentService';
+import { stopTaskReminder } from './reminderService';
 
 export const getTasks = async (options: TaskFilterOptions = {}): Promise<Task[]> => {
   const isDeleted = options.includeDeleted ?? false;
@@ -259,6 +261,12 @@ export const updateTaskStatus = async (
   if (newStatus === 'completed') {
     updatePayload.completed_at = nowIso;
     updatePayload.completed_by = actor;
+    // Automatically stop future reminders when task becomes completed
+    try {
+      await stopTaskReminder(id);
+    } catch {
+      // Ignore
+    }
   } else if (oldStatus === 'completed') {
     updatePayload.completed_at = null;
     updatePayload.completed_by = null;
@@ -303,6 +311,13 @@ export const softDeleteTask = async (
     console.error('Error moving task to bin:', error);
     throw new Error('Unable to move task to Bin.');
   }
+
+  // Automatically stop active reminders when task is moved to bin
+  try {
+    await stopTaskReminder(id);
+  } catch {
+    // Ignore
+  }
 };
 
 export const restoreTask = async (id: string): Promise<void> => {
@@ -332,6 +347,12 @@ export const permanentDeleteTask = async (id: string): Promise<void> => {
   if (error) {
     console.error('Error permanently deleting task from database:', error);
     throw new Error('Unable to permanently delete task.');
+  }
+
+  try {
+    await stopTaskReminder(id);
+  } catch {
+    // Ignore
   }
 
   // 2. Remove all associated files from storage
@@ -394,5 +415,220 @@ export const getTaskStats = async (): Promise<TaskStats> => {
     totalActive,
     binCount,
   };
+};
+
+export const universalSearchTasks = async (query: string): Promise<UniversalSearchResult[]> => {
+  const cleanQ = query.trim().toLowerCase();
+  if (!cleanQ) return [];
+
+  // 1. Try server RPC first if available
+  try {
+    const { data: rpcRows, error: rpcErr } = await supabase.rpc('search_tasks_universal', {
+      p_query: query.trim(),
+    });
+
+    if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0) {
+      const taskIds = rpcRows.map((r: any) => r.task_id);
+      const { data: tasksData } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          task_attachments(count),
+          task_notes(count)
+        `)
+        .in('id', taskIds)
+        .eq('is_deleted', false);
+
+      if (tasksData && tasksData.length > 0) {
+        const taskMap = new Map<string, Task>();
+        tasksData.forEach((row: any) => {
+          taskMap.set(row.id, {
+            ...row,
+            attachments_count: row.task_attachments?.[0]?.count ?? 0,
+            notes_count: row.task_notes?.[0]?.count ?? 0,
+          });
+        });
+
+        const results: UniversalSearchResult[] = [];
+        for (const r of rpcRows) {
+          const t = taskMap.get(r.task_id);
+          if (t) {
+            results.push({
+              task: t,
+              matchedField: r.matched_field,
+              snippet: r.snippet || '',
+              rankScore: r.rank_score,
+            });
+          }
+        }
+        return results;
+      }
+    }
+  } catch {
+    // RPC not present yet, use client-side search below
+  }
+
+  // 2. Comprehensive client-side multi-table search across all task fields
+  // Fetch active tasks
+  const { data: rawTasks } = await supabase
+    .from('tasks')
+    .select(`
+      *,
+      task_attachments(count),
+      task_notes(count)
+    `)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false });
+
+  if (!rawTasks || rawTasks.length === 0) return [];
+
+  const tasks: Task[] = rawTasks.map((row: any) => ({
+    ...row,
+    attachments_count: row.task_attachments?.[0]?.count ?? 0,
+    notes_count: row.task_notes?.[0]?.count ?? 0,
+  }));
+
+  const taskIds = tasks.map((t) => t.id);
+
+  // Fetch notes, attachments metadata (strictly file_name & file_type only, NEVER file contents), and history
+  const [notesRes, attachmentsRes, historyRes] = await Promise.all([
+    supabase.from('task_notes').select('task_id, note').in('task_id', taskIds),
+    supabase.from('task_attachments').select('task_id, file_name, file_type').in('task_id', taskIds),
+    supabase.from('task_status_history').select('task_id, remarks, old_status, new_status').in('task_id', taskIds),
+  ]);
+
+  const notesByTask = new Map<string, string[]>();
+  notesRes.data?.forEach((n: any) => {
+    const list = notesByTask.get(n.task_id) || [];
+    list.push(n.note);
+    notesByTask.set(n.task_id, list);
+  });
+
+  const attachmentsByTask = new Map<string, { file_name: string; file_type?: string }[]>();
+  attachmentsRes.data?.forEach((a: any) => {
+    const list = attachmentsByTask.get(a.task_id) || [];
+    list.push({ file_name: a.file_name, file_type: a.file_type });
+    attachmentsByTask.set(a.task_id, list);
+  });
+
+  const historyByTask = new Map<string, string[]>();
+  historyRes.data?.forEach((h: any) => {
+    const list = historyByTask.get(h.task_id) || [];
+    if (h.remarks) list.push(h.remarks);
+    if (h.new_status) list.push(h.new_status);
+    if (h.old_status) list.push(h.old_status);
+    historyByTask.set(h.task_id, list);
+  });
+
+  const words = cleanQ.split(/\s+/).filter(Boolean);
+  const results: UniversalSearchResult[] = [];
+
+  for (const t of tasks) {
+    const titleLower = t.title.toLowerCase();
+    const descLower = (t.description || '').toLowerCase();
+    const personLower = (t.person_name || '').toLowerCase();
+    const statusLower = t.status.toLowerCase();
+    const priorityLower = t.priority.toLowerCase();
+    const taskNotes = notesByTask.get(t.id) || [];
+    const taskAttachments = attachmentsByTask.get(t.id) || [];
+    const taskHistory = historyByTask.get(t.id) || [];
+
+    // 1. Exact task title
+    if (titleLower === cleanQ) {
+      results.push({ task: t, matchedField: 'title_exact', snippet: t.title, rankScore: 1 });
+      continue;
+    }
+
+    // 2. Partial task title (or all words match in title)
+    if (titleLower.includes(cleanQ) || (words.length > 1 && words.every((w) => titleLower.includes(w)))) {
+      results.push({ task: t, matchedField: 'title', snippet: t.title, rankScore: 2 });
+      continue;
+    }
+
+    // 3. Description match
+    if (descLower.includes(cleanQ) || (words.length > 1 && words.every((w) => descLower.includes(w)))) {
+      results.push({
+        task: t,
+        matchedField: 'description',
+        snippet: t.description?.slice(0, 120) || '',
+        rankScore: 3,
+      });
+      continue;
+    }
+
+    // 4. Notes & Remarks match
+    const matchingNote = taskNotes.find(
+      (n) => n.toLowerCase().includes(cleanQ) || (words.length > 1 && words.every((w) => n.toLowerCase().includes(w)))
+    );
+    if (matchingNote) {
+      results.push({
+        task: t,
+        matchedField: 'note',
+        snippet: matchingNote.slice(0, 120),
+        rankScore: 4,
+      });
+      continue;
+    }
+
+    // 5. Status / Priority / Person match
+    if (personLower.includes(cleanQ) || (words.length > 1 && words.every((w) => personLower.includes(w)))) {
+      results.push({
+        task: t,
+        matchedField: 'person',
+        snippet: t.person_name || '',
+        rankScore: 5,
+      });
+      continue;
+    }
+
+    if (statusLower.includes(cleanQ) || priorityLower.includes(cleanQ)) {
+      results.push({
+        task: t,
+        matchedField: 'status_priority',
+        snippet: `Status: ${t.status} | Priority: ${t.priority}`,
+        rankScore: 5,
+      });
+      continue;
+    }
+
+    // 6. History match
+    const matchingHist = taskHistory.find(
+      (h) => h.toLowerCase().includes(cleanQ) || (words.length > 1 && words.every((w) => h.toLowerCase().includes(w)))
+    );
+    if (matchingHist) {
+      results.push({
+        task: t,
+        matchedField: 'status_history',
+        snippet: matchingHist.slice(0, 120),
+        rankScore: 6,
+      });
+      continue;
+    }
+
+    // 7. Attachment filename / metadata match (STRICTLY NO PDF / FILE CONTENT SEARCH)
+    const matchingAttach = taskAttachments.find(
+      (a) =>
+        a.file_name.toLowerCase().includes(cleanQ) ||
+        (words.length > 1 && words.every((w) => a.file_name.toLowerCase().includes(w))) ||
+        (a.file_type && a.file_type.toLowerCase().includes(cleanQ))
+    );
+    if (matchingAttach) {
+      results.push({
+        task: t,
+        matchedField: 'attachment',
+        snippet: `Attachment: ${matchingAttach.file_name}`,
+        rankScore: 7,
+      });
+      continue;
+    }
+  }
+
+  // Sort by rankScore ascending, then created_at descending
+  results.sort((a, b) => {
+    if (a.rankScore !== b.rankScore) return a.rankScore - b.rankScore;
+    return new Date(b.task.created_at).getTime() - new Date(a.task.created_at).getTime();
+  });
+
+  return results;
 };
 

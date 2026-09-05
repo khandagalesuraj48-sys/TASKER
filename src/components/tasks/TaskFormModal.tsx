@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { CreateTaskInput, Task, TaskPriority, TaskStatus } from '../../types/task';
+import { CreateTaskInput, ReminderInput, Task, TaskPriority, TaskStatus } from '../../types/task';
 import { createTask, updateTask } from '../../services/taskService';
 import { uploadAttachment } from '../../services/attachmentService';
+import { getTaskReminder, saveTaskReminder } from '../../services/reminderService';
 import { formatInputDate } from '../../lib/dateUtils';
 import { useToast } from '../../context/ToastContext';
 import { useTask } from '../../context/TaskContext';
 import { DEFAULT_USER_NAME } from '../../constants';
 import { FileUploadZone } from './FileUploadZone';
+import { ReminderControls } from '../reminders/ReminderControls';
 import { Paperclip, X } from 'lucide-react';
 
 interface TaskFormModalProps {
@@ -39,6 +41,12 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const [initialNote, setInitialNote] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [reminder, setReminder] = useState<ReminderInput>({
+    is_enabled: false,
+    remind_at: '',
+    recurrence_type: 'once',
+    custom_interval_minutes: null,
+  });
 
   useEffect(() => {
     if (taskToEdit) {
@@ -50,6 +58,24 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setDueDate(formatInputDate(taskToEdit.due_date));
       setInitialNote('');
       setSelectedFiles([]);
+
+      getTaskReminder(taskToEdit.id).then((rem) => {
+        if (rem) {
+          setReminder({
+            is_enabled: rem.is_enabled && rem.status === 'active',
+            remind_at: rem.remind_at,
+            recurrence_type: rem.recurrence_type,
+            custom_interval_minutes: rem.custom_interval_minutes,
+          });
+        } else {
+          setReminder({
+            is_enabled: false,
+            remind_at: taskToEdit.due_date || '',
+            recurrence_type: 'once',
+            custom_interval_minutes: null,
+          });
+        }
+      });
     } else {
       setTitle(initialValues?.title || '');
       setDescription(initialValues?.description || '');
@@ -59,6 +85,12 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setDueDate(initialValues?.due_date ? formatInputDate(initialValues.due_date) : '');
       setInitialNote(initialValues?.initialNote || '');
       setSelectedFiles([]);
+      setReminder({
+        is_enabled: false,
+        remind_at: initialValues?.due_date ? new Date(initialValues.due_date).toISOString() : '',
+        recurrence_type: 'once',
+        custom_interval_minutes: null,
+      });
     }
   }, [taskToEdit, initialValues, isOpen]);
 
@@ -105,6 +137,15 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         } else {
           showToast(`Task "${updated.title}" updated successfully.`, 'success');
         }
+        // Save reminder if configured
+        if (reminder.is_enabled) {
+          try {
+            await saveTaskReminder(updated.id, reminder);
+          } catch (remErr) {
+            console.warn('Could not save reminder:', remErr);
+          }
+        }
+
         triggerRefresh();
         onSuccess?.(updated);
         onClose();
@@ -137,6 +178,15 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         } else {
           showToast(`Task "${created.title}" created successfully!`, 'success');
         }
+        // Save reminder if configured
+        if (reminder.is_enabled) {
+          try {
+            await saveTaskReminder(created.id, reminder);
+          } catch (remErr) {
+            console.warn('Could not save reminder:', remErr);
+          }
+        }
+
         triggerRefresh();
         onSuccess?.(created);
         onClose();
@@ -299,6 +349,15 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               ))}
             </div>
           )}
+        </div>
+
+        {/* Smart Reminder Configuration */}
+        <div className="pt-2 border-t border-slate-100">
+          <ReminderControls
+            value={reminder}
+            onChange={setReminder}
+            defaultTime={dueDate ? new Date(dueDate).toISOString() : null}
+          />
         </div>
 
         {/* Action Buttons */}

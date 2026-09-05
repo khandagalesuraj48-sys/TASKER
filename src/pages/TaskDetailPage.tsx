@@ -4,7 +4,8 @@ import { getTaskById, softDeleteTask } from '../services/taskService';
 import { getStatusHistory } from '../services/statusHistoryService';
 import { getNotes } from '../services/notesService';
 import { getAttachments } from '../services/attachmentService';
-import { Task, TaskAttachment, TaskNote, TaskStatusHistory } from '../types/task';
+import { Task, TaskAttachment, TaskNote, TaskReminder, TaskStatusHistory } from '../types/task';
+import { getTaskReminder, saveTaskReminder, stopTaskReminder, snoozeTaskReminder } from '../services/reminderService';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { Button } from '../components/common/Button';
@@ -29,6 +30,8 @@ import {
   MessageSquare,
   History,
   AlertCircle,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 
 export const TaskDetailPage: React.FC = () => {
@@ -41,6 +44,7 @@ export const TaskDetailPage: React.FC = () => {
   const [history, setHistory] = useState<TaskStatusHistory[]>([]);
   const [notes, setNotes] = useState<TaskNote[]>([]);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
+  const [reminder, setReminder] = useState<TaskReminder | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Modals state
@@ -56,15 +60,17 @@ export const TaskDetailPage: React.FC = () => {
       const taskData = await getTaskById(id);
       setTask(taskData);
 
-      const [histData, notesData, attachData] = await Promise.all([
+      const [histData, notesData, attachData, remData] = await Promise.all([
         getStatusHistory(id),
         getNotes(id),
         getAttachments(id),
+        getTaskReminder(id),
       ]);
 
       setHistory(histData);
       setNotes(notesData);
       setAttachments(attachData);
+      setReminder(remData);
     } catch (err: any) {
       showToast(err.message || 'Unable to load task details.', 'error');
     } finally {
@@ -89,6 +95,46 @@ export const TaskDetailPage: React.FC = () => {
     } finally {
       setIsDeleting(false);
       setDeleteConfirmOpen(false);
+    }
+  };
+
+  const handleStopReminder = async () => {
+    if (!task) return;
+    try {
+      await stopTaskReminder(task.id);
+      showToast('Reminder stopped.', 'info');
+      setReminder((prev) => (prev ? { ...prev, is_enabled: false, status: 'stopped' } : null));
+    } catch {
+      showToast('Could not stop reminder.', 'error');
+    }
+  };
+
+  const handleSnoozeReminder = async (mins: number = 15) => {
+    if (!task) return;
+    try {
+      await snoozeTaskReminder(task.id, mins);
+      showToast(`Reminder snoozed for ${mins} minutes.`, 'success');
+      loadTaskData();
+    } catch {
+      showToast('Could not snooze reminder.', 'error');
+    }
+  };
+
+  const handleQuickEnableReminder = async () => {
+    if (!task) return;
+    try {
+      const defaultRemindAt = task.due_date
+        ? new Date(task.due_date).toISOString()
+        : new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const updatedRem = await saveTaskReminder(task.id, {
+        is_enabled: true,
+        remind_at: defaultRemindAt,
+        recurrence_type: 'once',
+      });
+      setReminder(updatedRem);
+      showToast('Reminder enabled.', 'success');
+    } catch {
+      showToast('Could not enable reminder.', 'error');
     }
   };
 
@@ -258,6 +304,82 @@ export const TaskDetailPage: React.FC = () => {
             </span>
           </div>
         )}
+
+        {/* Smart Reminder Card */}
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            {reminder && reminder.is_enabled && reminder.status !== 'stopped' && task.status !== 'completed' ? (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                <Bell className="w-4 h-4" />
+              </span>
+            ) : (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-500">
+                <BellOff className="w-4 h-4" />
+              </span>
+            )}
+
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-800">Smart Reminder</span>
+                {reminder && reminder.is_enabled && reminder.status !== 'stopped' && task.status !== 'completed' ? (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                    Active
+                  </span>
+                ) : task.status === 'completed' ? (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    Stopped (Task Completed)
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
+                    Inactive
+                  </span>
+                )}
+              </div>
+
+              <div className="text-slate-500 mt-0.5">
+                {reminder && reminder.is_enabled && reminder.status !== 'stopped' && task.status !== 'completed' ? (
+                  <span>
+                    Next alert at <strong>{formatDateTime(reminder.next_trigger_at)}</strong> (Repeat:{' '}
+                    <span className="capitalize">{reminder.recurrence_type.replace('_', ' ')}</span>)
+                  </span>
+                ) : task.status === 'completed' ? (
+                  <span>All future reminders are automatically terminated because this task is marked completed.</span>
+                ) : (
+                  <span>No active reminder set for this task.</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          {task.status !== 'completed' && (
+            <div className="flex items-center gap-2">
+              {reminder && reminder.is_enabled && reminder.status !== 'stopped' ? (
+                <>
+                  <button
+                    onClick={() => handleSnoozeReminder(15)}
+                    className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-700 hover:bg-slate-50 font-medium"
+                  >
+                    Snooze 15m
+                  </button>
+                  <button
+                    onClick={handleStopReminder}
+                    className="px-2.5 py-1 bg-rose-50 border border-rose-200 rounded text-rose-700 hover:bg-rose-100 font-medium"
+                  >
+                    Stop Reminder
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleQuickEnableReminder}
+                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium shadow-2xs"
+                >
+                  Enable Reminder
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Two Column Layout: Left (Notes & Attachments) | Right (Status Timeline) */}
