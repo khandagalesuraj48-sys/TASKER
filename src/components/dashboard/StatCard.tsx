@@ -61,7 +61,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`rounded-2xl border p-4 sm:p-5 transition-all bg-white dark:bg-slate-900 shadow-2xs ${
+      className={`rounded-2xl border p-4 sm:p-5 transition-all bg-white dark:bg-slate-900 shadow-sm ${
         onClick ? 'cursor-pointer hover:shadow-md dark:hover:shadow-slate-950/50 active:scale-[0.98]' : ''
       } ${isActive ? style.activeBorder : style.border}`}
     >

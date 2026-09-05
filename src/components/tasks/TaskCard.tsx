@@ -104,7 +104,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     <>
       <div
         onClick={handleCardClick}
-        className={`group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 transition-all shadow-2xs hover:shadow-md dark:hover:shadow-slate-950/50 hover:border-blue-200 dark:hover:border-blue-900/50 ${
+        className={`group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 transition-all shadow-sm hover:shadow-md dark:hover:shadow-slate-950/50 hover:border-blue-200 dark:hover:border-blue-900/50 ${
           isBin ? 'opacity-90 bg-slate-50/70 dark:bg-slate-900/40' : 'cursor-pointer'
         }`}
       >

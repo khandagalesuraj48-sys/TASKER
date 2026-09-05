@@ -108,7 +108,7 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
                   className={`flex flex-col text-left p-3 rounded-xl border transition-all text-xs ${
                     isSelected
                       ? 'border-blue-500 dark:border-blue-400 bg-blue-50/60 dark:bg-blue-950/40 ring-2 ring-blue-500/20'
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-750'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   <div className="flex items-center justify-between font-semibold">

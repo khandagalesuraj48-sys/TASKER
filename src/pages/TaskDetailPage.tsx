@@ -141,11 +141,11 @@ export const TaskDetailPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto space-y-6 animate-pulse">
-        <div className="h-6 bg-slate-200 rounded w-24"></div>
-        <div className="h-10 bg-slate-200 rounded w-2/3"></div>
+        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-24"></div>
+        <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded w-2/3"></div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 h-64 bg-slate-200 rounded-xl"></div>
-          <div className="h-64 bg-slate-200 rounded-xl"></div>
+          <div className="md:col-span-2 h-64 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+          <div className="h-64 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
         </div>
       </div>
     );
@@ -153,10 +153,10 @@ export const TaskDetailPage: React.FC = () => {
 
   if (!task) {
     return (
-      <div className="max-w-md mx-auto my-12 text-center p-8 bg-white rounded-xl border border-slate-200 shadow-sm">
+      <div className="max-w-md mx-auto my-12 text-center p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
-        <h3 className="text-lg font-bold text-slate-800">Task Not Found</h3>
-        <p className="text-xs text-slate-500 mt-1">
+        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Task Not Found</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
           The task you are trying to view does not exist or has been permanently deleted.
         </p>
         <Button size="sm" className="mt-4" onClick={() => navigate('/tasks')}>
@@ -358,7 +358,7 @@ export const TaskDetailPage: React.FC = () => {
                 <>
                   <button
                     onClick={() => handleSnoozeReminder(15)}
-                    className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 font-medium"
+                    className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors"
                   >
                     Snooze 15m
                   </button>
@@ -372,7 +372,7 @@ export const TaskDetailPage: React.FC = () => {
               ) : (
                 <button
                   onClick={handleQuickEnableReminder}
-                  className="px-3 py-1 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 font-medium shadow-2xs"
+                  className="px-3 py-1 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 font-medium shadow-sm transition-colors"
                 >
                   Enable Reminder
                 </button>
@@ -387,7 +387,7 @@ export const TaskDetailPage: React.FC = () => {
         {/* Left 2 Cols: Notes and Attachments */}
         <div className="lg:col-span-2 space-y-6">
           {/* Notes Section */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs space-y-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-slate-500 dark:text-slate-400" />
@@ -403,7 +403,7 @@ export const TaskDetailPage: React.FC = () => {
           </div>
 
           {/* Attachments Section */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs space-y-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <Paperclip className="w-4 h-4 text-slate-500 dark:text-slate-400" />
@@ -421,7 +421,7 @@ export const TaskDetailPage: React.FC = () => {
 
         {/* Right 1 Col: Status History Timeline */}
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs space-y-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <History className="w-4 h-4 text-slate-500 dark:text-slate-400" />

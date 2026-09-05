@@ -42,7 +42,7 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ history }) => {
             </div>
 
             {/* Event Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-2xs">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {/* Transition badges */}
                 <div className="flex items-center gap-2 text-xs">

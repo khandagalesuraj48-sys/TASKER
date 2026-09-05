@@ -108,7 +108,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
           </div>
         ) : (
           <>
-            <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 mb-2.5 shadow-2xs">
+            <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 mb-2.5 shadow-sm">
               <UploadCloud className="w-6 h-6" />
             </div>
             <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 text-center">

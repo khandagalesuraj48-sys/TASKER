@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { Logo } from '../common/Logo';
 import {
   Lock,
   Mail,
   User,
   ArrowRight,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   Eye,
@@ -18,6 +18,7 @@ import {
 
 type AuthView =
   | 'signin'
+  | 'auth_success'
   | 'signup'
   | 'forgot_email'
   | 'forgot_success'
@@ -53,6 +54,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [infoMsg, setInfoMsg] = useState<string>('');
+  const [authenticatedName, setAuthenticatedName] = useState<string>('');
 
   // Automatically switch to password reset view if user entered via an email recovery link
   useEffect(() => {
@@ -101,7 +103,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     return err?.message || 'Authentication failed. Please check your details and try again.';
   };
 
-  // SIGN IN: Standard Email + Password
+  // SIGN IN: Standard Email + Password with ~1.2s Brand Transition
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -114,11 +116,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       await signInWithPassword(email, password);
-      showToast('Welcome back!', 'success');
-      onClose?.();
+      // Validated session exists: trigger professional 1.2s branded transition
+      const userDisplay = email.split('@')[0];
+      setAuthenticatedName(userDisplay);
+      setView('auth_success');
+      setTimeout(() => {
+        showToast('Welcome back!', 'success');
+        onClose?.();
+      }, 1200);
     } catch (err: any) {
       setErrorMsg(parseAuthError(err));
-    } finally {
       setLoading(false);
     }
   };
@@ -147,13 +154,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (result.needsEmailConfirmation) {
         setInfoMsg(`A confirmation link was sent to ${email}. Please check your inbox.`);
         showToast('Registration email sent. Please check your inbox.', 'info');
+        setLoading(false);
       } else {
-        showToast('Account created and signed in! Welcome to TASKER.', 'success');
-        onClose?.();
+        // Direct session established: trigger professional branded transition
+        setAuthenticatedName(name || email.split('@')[0]);
+        setView('auth_success');
+        setTimeout(() => {
+          showToast('Account created and signed in! Welcome to TASKER.', 'success');
+          onClose?.();
+        }, 1200);
       }
     } catch (err: any) {
       setErrorMsg(parseAuthError(err));
-    } finally {
       setLoading(false);
     }
   };
@@ -209,24 +221,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
       <div
         className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-all my-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Ribbon */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">TASKER</h2>
-              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Secure Work Management</p>
-            </div>
-          </div>
+        {/* Header Ribbon with Unified Logo */}
+        <div className="bg-slate-50 dark:bg-slate-800/70 px-6 py-4.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <Logo size="sm" variant="full" showTagline={true} />
 
-          {canDismiss && onClose && (
+          {canDismiss && onClose && view !== 'auth_success' && (
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -251,6 +255,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="mb-5 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
               <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
               <div className="flex-1 leading-relaxed">{infoMsg}</div>
+            </div>
+          )}
+
+          {/* ============================================================ */}
+          {/* VIEW: SIGN-IN BRANDED TRANSITION ANIMATION (~1.2s) */}
+          {/* ============================================================ */}
+          {view === 'auth_success' && (
+            <div className="py-8 px-4 flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="relative">
+                <div className="absolute -inset-3 rounded-2xl bg-blue-500/25 dark:bg-blue-400/25 blur-xl animate-pulse" />
+                <Logo size="xl" variant="icon" className="relative shadow-2xl rounded-2xl animate-bounce" />
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                  Welcome to TASKER
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Launching personal workspace for{' '}
+                  <strong className="text-slate-800 dark:text-slate-200">{authenticatedName}</strong>...
+                </p>
+              </div>
+
+              {/* Progress Line */}
+              <div className="w-48 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mt-2">
+                <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full animate-pulse w-full" />
+              </div>
             </div>
           )}
 
@@ -641,6 +672,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               </form>
             </div>
+          )}
+
+          {/* Developer Attribution */}
+          {view !== 'auth_success' && (
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-6 text-center tracking-tight">
+              Developed by Suraj Khandagale | One Click Solution
+            </p>
           )}
         </div>
       </div>

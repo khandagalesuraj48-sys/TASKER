@@ -132,7 +132,7 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Supabase Connection Status Card */}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1527] p-6 shadow-2xs space-y-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2.5">
             <HardDrive className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -153,11 +153,11 @@ export const SettingsPage: React.FC = () => {
 
         <div className="text-xs text-slate-600 dark:text-slate-300 space-y-3">
           <p>
-            <strong>My Work Tracker</strong> utilizes <strong>Supabase PostgreSQL</strong> for relational
+            <strong>TASKER</strong> utilizes <strong>Supabase PostgreSQL</strong> for relational
             data integrity, status history tracking, and <strong>Supabase Storage</strong> for attached documents.
           </p>
 
-          <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2 font-mono text-[11px]">
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 font-mono text-[11px]">
             <div className="flex items-center justify-between">
               <span className="text-slate-500 dark:text-slate-400">SQL Migration File:</span>
               <button
@@ -168,20 +168,19 @@ export const SettingsPage: React.FC = () => {
                 <span>Copy Path</span>
               </button>
             </div>
-            <code className="text-slate-800 dark:text-slate-200 block bg-white dark:bg-slate-950 p-2 rounded border border-slate-200 dark:border-slate-800">
+            <code className="text-slate-800 dark:text-slate-200 block bg-white dark:bg-slate-950 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
               supabase/migrations/001_initial_schema.sql
             </code>
           </div>
 
           <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-            Run this migration once in your Supabase SQL Editor to automatically create all tables,
-            triggers, indexes, and configure the <code className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-1 py-0.5 rounded">task-attachments</code> storage bucket.
+            All tables, triggers, indexes, and the <code className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-1 py-0.5 rounded">task-attachments</code> storage bucket are active with row-level security.
           </p>
         </div>
       </div>
 
       {/* Authenticated User Account Section */}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1527] p-6 shadow-2xs space-y-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -206,7 +205,7 @@ export const SettingsPage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
             <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
               Account Email
             </span>
@@ -215,7 +214,7 @@ export const SettingsPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
             <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
               Display Name
             </span>
@@ -224,7 +223,7 @@ export const SettingsPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="sm:col-span-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+          <div className="sm:col-span-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
             <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
               Security Identity (auth.uid)
             </span>
@@ -236,7 +235,7 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Backup System Section */}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1527] p-6 shadow-2xs space-y-6">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-6">
         <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <FileArchive className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -286,7 +285,7 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Restore Backup Section */}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1527] p-6 shadow-2xs space-y-6">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-6">
         <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Upload className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -397,6 +396,20 @@ export const SettingsPage: React.FC = () => {
               </p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* About TASKER & Attribution */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <div>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">TASKER Enterprise Work Management</span>
+            <span className="mx-2">•</span>
+            <span>Version 2.4.0</span>
+          </div>
+          <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+            Developed by Suraj Khandagale | One Click Solution
+          </div>
         </div>
       </div>
 

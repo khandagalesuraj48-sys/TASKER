@@ -149,16 +149,16 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
-      {/* Backdrop (Click to close) */}
-      <div className="hidden sm:block absolute inset-0" onClick={onClose} aria-hidden="true" />
+    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end animate-in fade-in duration-200">
+      {/* Backdrop (Click to close on any screen) */}
+      <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs" onClick={onClose} aria-hidden="true" />
 
       {/* Main Drawer: Fullscreen on mobile, 440px slide-over on desktop */}
       <div className="relative w-full sm:max-w-md md:max-w-lg h-full max-h-[100dvh] bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col z-10">
         {/* Top Header - ALWAYS VISIBLE CLOSE BUTTON */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/80 backdrop-blur-sm flex items-center justify-between shrink-0 pt-safe">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-md">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-md">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -172,24 +172,25 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={handleClearHistory}
               title="Clear chat history"
-              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 min-w-[38px] min-h-[38px] flex items-center justify-center"
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 min-w-[38px] min-h-[38px] flex items-center justify-center transition-colors"
               aria-label="Clear chat"
             >
               <Trash2 className="w-4 h-4" />
             </button>
 
-            {/* UNBLOCKABLE CLOSE BUTTON */}
+            {/* HIGH VISIBILITY ACCESSIBLE CLOSE BUTTON */}
             <button
               onClick={onClose}
-              className="p-2 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors shadow-2xs"
+              className="px-2.5 py-1.5 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl min-h-[38px] flex items-center gap-1.5 transition-colors shadow-xs border border-slate-200 dark:border-slate-700 font-semibold text-xs"
               aria-label="Close assistant"
               title="Close assistant (Esc)"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
+              <span>Close</span>
             </button>
           </div>
         </div>
@@ -227,7 +228,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
                     <div
                       key={refTask.id}
                       onClick={() => handleTaskClick(refTask.id)}
-                      className="p-3 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 shadow-2xs cursor-pointer transition-all flex items-center justify-between gap-2 group"
+                      className="p-3 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 shadow-sm cursor-pointer transition-all flex items-center justify-between gap-2 group"
                     >
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
@@ -256,14 +257,14 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
         </div>
 
         {/* Quick Suggestion Pills */}
-        <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-850/50 shrink-0">
+        <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             {INITIAL_SUGGESTIONS.slice(0, 4).map((s, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(s)}
                 disabled={isSearching}
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap transition-colors shrink-0 shadow-2xs"
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap transition-colors shrink-0 shadow-sm"
               >
                 {s}
               </button>

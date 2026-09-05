@@ -84,7 +84,7 @@ export const TaskNotes: React.FC<TaskNotesProps> = ({ taskId, notes, onNotesUpda
           notes.map((n) => (
             <div
               key={n.id}
-              className="group p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-2xs"
+              className="group p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-sm"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
@@ -100,7 +100,7 @@ export const TaskNotes: React.FC<TaskNotesProps> = ({ taskId, notes, onNotesUpda
                 <button
                   type="button"
                   onClick={() => handleDeleteNote(n.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-opacity"
+                  className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-opacity"
                   title="Delete note"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

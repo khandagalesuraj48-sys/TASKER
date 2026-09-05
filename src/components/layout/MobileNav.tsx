@@ -127,7 +127,7 @@ export const MobileNav: React.FC = () => {
                   <div className={`relative p-1 rounded-xl transition-all ${isActive ? 'bg-blue-50 dark:bg-blue-950/60' : ''}`}>
                     {item.icon}
                     {item.badge !== null && item.badge !== undefined && item.badge > 0 && (
-                      <span className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center shadow-2xs">
+                      <span className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center shadow-xs">
                         {item.badge > 99 ? '99+' : item.badge}
                       </span>
                     )}

@@ -26,7 +26,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     (filters.sortBy && filters.sortBy !== 'newest' ? 1 : 0);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
       {/* Toggle button row */}
       <div className="flex items-center justify-between px-4 py-2.5">
         <button

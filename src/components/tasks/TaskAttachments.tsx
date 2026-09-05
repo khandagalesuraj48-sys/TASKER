@@ -200,7 +200,7 @@ export const TaskAttachments: React.FC<TaskAttachmentsProps> = ({
             return (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-2xs"
+                className="flex items-center justify-between p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-sm"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {getFileBadge(item.file_name)}

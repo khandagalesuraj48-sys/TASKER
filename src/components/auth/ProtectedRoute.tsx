@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { AuthModal } from './AuthModal';
-import { Sparkles } from 'lucide-react';
+import { Logo } from '../common/Logo';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,10 +22,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-slate-50 dark:bg-[#090d16]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md animate-bounce">
-            <Sparkles className="w-5 h-5" />
+          <Logo size="lg" variant="full" showTagline={true} animate={true} />
+          <div className="w-24 h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mt-1">
+            <div className="h-full bg-blue-600 rounded-full animate-pulse w-full" />
           </div>
-          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Loading TASKER...</p>
         </div>
       </div>
     );
