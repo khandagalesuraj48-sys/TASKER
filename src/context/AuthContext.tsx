@@ -15,10 +15,12 @@ interface AuthContextValue {
   isPasswordRecovery: boolean;
   userEmail: string;
   displayName: string;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
+  validatePasswordAndSendOtp: (email: string, password: string) => Promise<void>;
+  verifyLoginOtp: (email: string, token: string) => Promise<void>;
+  resendLoginOtp: (email: string) => Promise<void>;
+  verifySignupOtp: (email: string, token: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name?: string) => Promise<SignUpResult>;
   resendConfirmationEmail: (email: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
   sendPasswordResetOtp: (email: string) => Promise<void>;
   verifyPasswordResetOtp: (email: string, token: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
@@ -70,16 +72,109 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [isConfigured]);
 
-  const signInWithEmail = async (email: string, password: string): Promise<void> => {
+  const validatePasswordAndSendOtp = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+      const cleanEmail = email.trim();
+
+      // Step 1: Validate credentials with Supabase Auth
+      const { error: passErr } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
         password,
       });
+      if (passErr) throw passErr;
+
+      // Step 2: Register the active session as unverified in PostgreSQL challenge table
+      try {
+        await supabase.rpc('initiate_login_challenge');
+      } catch (rpcErr) {
+        console.warn('initiate_login_challenge error (continuing with OTP):', rpcErr);
+      }
+
+      // Step 3: Trigger single-use Email OTP to the user's verified email address
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: {
+          shouldCreateUser: false,
+        },
+      });
+      if (otpErr) throw otpErr;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyLoginOtp = async (email: string, token: string): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const cleanEmail = email.trim();
+      const cleanToken = token.trim();
+
+      // Step 4: Verify single-use OTP
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: 'email',
+      });
       if (error) throw error;
-      setSession(data.session);
-      setUser(data.user);
+
+      if (data.session) {
+        // Step 5: Mark the challenge verified in PostgreSQL RLS
+        try {
+          await supabase.rpc('complete_login_challenge');
+        } catch (rpcErr) {
+          console.warn('complete_login_challenge error:', rpcErr);
+        }
+        setSession(data.session);
+        setUser(data.user);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendLoginOtp = async (email: string): Promise<void> => {
+    const cleanEmail = email.trim();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: cleanEmail,
+      options: {
+        shouldCreateUser: false,
+      },
+    });
+    if (error) throw error;
+  };
+
+  const verifySignupOtp = async (email: string, token: string): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const cleanEmail = email.trim();
+      const cleanToken = token.trim();
+
+      let verifyRes = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: 'signup',
+      });
+
+      if (verifyRes.error) {
+        verifyRes = await supabase.auth.verifyOtp({
+          email: cleanEmail,
+          token: cleanToken,
+          type: 'email',
+        });
+      }
+
+      if (verifyRes.error) throw verifyRes.error;
+
+      if (verifyRes.data.session) {
+        try {
+          await supabase.rpc('complete_login_challenge');
+        } catch (rpcErr) {
+          console.warn('complete_login_challenge on signup:', rpcErr);
+        }
+        setSession(verifyRes.data.session);
+        setUser(verifyRes.data.user);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +210,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const hasSession = Boolean(data.session);
       if (hasSession) {
+        try {
+          await supabase.rpc('complete_login_challenge');
+        } catch {
+          // ignore
+        }
         setSession(data.session);
         setUser(data.user);
       }
@@ -143,20 +243,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
-  const signInWithGoogle = async (): Promise<void> => {
-    const redirectUrl = window.location.origin.includes('localhost')
-      ? window.location.origin
-      : 'https://mytasker-dun.vercel.app';
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl,
-      },
-    });
-    if (error) throw error;
-  };
-
   const sendPasswordResetOtp = async (email: string): Promise<void> => {
     const redirectUrl = window.location.origin.includes('localhost')
       ? window.location.origin
@@ -176,6 +262,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     if (error) throw error;
     if (data.session) {
+      try {
+        await supabase.rpc('complete_login_challenge');
+      } catch {
+        // ignore
+      }
       setSession(data.session);
       setUser(data.user);
     }
@@ -196,6 +287,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async (): Promise<void> => {
     setIsLoading(true);
     try {
+      try {
+        await supabase.rpc('revoke_login_challenge');
+      } catch {
+        // ignore
+      }
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);
@@ -233,10 +329,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isPasswordRecovery,
         userEmail,
         displayName,
-        signInWithEmail,
+        validatePasswordAndSendOtp,
+        verifyLoginOtp,
+        resendLoginOtp,
+        verifySignupOtp,
         signUpWithEmail,
         resendConfirmationEmail,
-        signInWithGoogle,
         sendPasswordResetOtp,
         verifyPasswordResetOtp,
         updatePassword,

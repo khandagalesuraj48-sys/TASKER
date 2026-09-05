@@ -31,3 +31,4 @@ dist-ssr
 # Vite / Build cache
 .eslintcache
 tsconfig.tsbuildinfo
+supabase/.temp/

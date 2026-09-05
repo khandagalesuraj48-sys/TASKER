@@ -1,113 +1,93 @@
-# TASKER: Production Authentication & Supabase Setup Guide
+# TASKER: Production Authentication & Security Setup Guide
 
-This guide details the exact setup steps in the **Supabase Dashboard** and **Google Cloud Console** required for TASKER multi-user production authentication.
-
----
-
-## 1. Google OAuth Configuration
-
-The TASKER application code uses the official Supabase OAuth implementation:
-```typescript
-await supabase.auth.signInWithOAuth({
-  provider: 'google',
-  options: {
-    redirectTo: 'https://mytasker-dun.vercel.app'
-  }
-});
-```
-
-When Google Sign-In returns `Unsupported provider: provider is not enabled`, it means the Google provider has not yet been enabled in the Supabase Dashboard. Follow these steps to activate it:
-
-### Step 1: Create Google OAuth 2.0 Credentials in Google Cloud Console
-1. Open the [Google Cloud Console Credentials Page](https://console.cloud.google.com/apis/credentials).
-2. Select your Google Cloud Project (or create a new one named `TASKER`).
-3. If not already done, configure the **OAuth consent screen**:
-   - User Type: **External**
-   - App Name: `TASKER`
-   - User support email: Select your email
-   - Developer contact email: Enter your email
-   - Click **Save and Continue** through the scopes and test users.
-4. Go to **Credentials** -> Click **+ CREATE CREDENTIALS** -> Select **OAuth client ID**.
-5. Set Application Type: **Web application**.
-6. Name: `TASKER Web & Android Client`.
-7. Under **Authorized JavaScript origins**, add:
-   - `https://mytasker-dun.vercel.app`
-   - `https://xargfforwknnicudigxs.supabase.co`
-   - `http://localhost:5173` (for local development)
-8. Under **Authorized redirect URIs**, add the exact Supabase OAuth callback URL:
-   - `https://xargfforwknnicudigxs.supabase.co/auth/v1/callback`
-9. Click **Create**.
-10. Copy your **Client ID** (e.g. `123456789-...apps.googleusercontent.com`) and **Client Secret**.
-
-### Step 2: Enable Google in Supabase Dashboard
-1. Open your [Supabase Project Auth Providers](https://supabase.com/dashboard/project/xargfforwknnicudigxs/auth/providers).
-2. Find and click **Google** to expand its settings.
-3. Toggle **Enable Google provider** to **ON**.
-4. Paste the **Client ID** and **Client Secret** copied from Step 1.
-5. Click **Save**.
-
-### Step 3: Configure URL Configuration in Supabase
-1. In the Supabase Dashboard, go to **Authentication** -> **URL Configuration**:
-   `https://supabase.com/dashboard/project/xargfforwknnicudigxs/auth/url-configuration`
-2. Set **Site URL** to:
-   `https://mytasker-dun.vercel.app`
-3. Under **Redirect URLs**, ensure the following patterns are listed:
-   - `https://mytasker-dun.vercel.app/**`
-   - `http://localhost:5173/**`
-4. Click **Save**.
+This document specifies the authentication architecture and setup instructions for TASKER multi-user production deployment.
 
 ---
 
-## 2. Email Confirmation Setting (Instant Login vs Email Verification)
+## 1. Authentication Architecture
 
-In Supabase Auth, you have two modes for Email/Password registration:
+TASKER enforces a strict **Two-Step Authentication** model on every login session:
 
-### Option A: Instant Registration & Sign-In (Recommended for fast onboarding)
-If you want users to immediately sign in upon account creation without waiting for or clicking a confirmation email:
+1. **Step 1: Credential Verification (Email + Password)**
+   - The user enters their registered email and password.
+   - Credentials are electronically validated against Supabase Auth.
+   - If invalid, the request is rejected immediately with an error and **no OTP is generated or sent**.
+   - If valid, a session challenge is initiated in the database with status `is_verified = FALSE`.
+
+2. **Step 2: Fresh Single-Use Email OTP Challenge**
+   - A single-use 6-digit verification code is securely dispatched to the user's verified email address.
+   - The user inputs the 6-digit code.
+   - Once validated, the session is marked verified (`is_verified = TRUE`), and the authenticated TASKER dashboard loads.
+   - There is no "remember this device" bypass. Every new sign-in session must satisfy both steps.
+
+3. **Database RLS Boundary Enforcement (Migration 005)**
+   - Even if an attacker obtains a user's password, calling `signInWithPassword` directly without the UI will yield a session where `public.is_session_otp_verified()` is `FALSE`.
+   - Under PostgreSQL Row Level Security (RLS), all queries to `tasks`, `task_status_history`, `task_notes`, `task_attachments`, and `task_reminders` return **0 rows** until the OTP challenge is completed.
+   - Google Sign-In has been **completely excised** from both UI and authentication logic.
+
+---
+
+## 2. Applying Database Migration 005
+
+To activate database-level OTP session enforcement in Supabase:
+
+1. Open the [Supabase SQL Editor](https://supabase.com/dashboard/project/xargfforwknnicudigxs/sql/new).
+2. Open the file `supabase/migrations/005_mandatory_email_otp_rls.sql` from this repository.
+3. Paste its contents into the SQL Editor and click **Run**.
+
+### What Migration 005 Implements:
+- Creates `public.user_otp_sessions` mapping user sessions to verification status.
+- Implements `public.is_session_otp_verified()` (`STABLE SECURITY DEFINER`).
+- Implements `public.initiate_login_challenge()`, `public.complete_login_challenge()`, and `public.revoke_login_challenge()`.
+- Updates Row Level Security policies across all tables:
+  ```sql
+  (user_id = auth.uid() AND public.is_session_otp_verified())
+  ```
+- Updates `search_tasks_universal` and storage object security for `task-attachments`.
+
+---
+
+## 3. Email Provider & Confirmation Settings
+
+In Supabase Auth, verify your Email provider settings:
+
 1. Go to [Supabase Auth Providers -> Email](https://supabase.com/dashboard/project/xargfforwknnicudigxs/auth/providers).
-2. Find the **Confirm email** toggle.
-3. Toggle **Confirm email** to **OFF** (Disabled).
-4. Click **Save**.
-
-*Benefit*: Eliminates the Supabase free-tier SMTP rate limit (3-4 emails/hour), and users start using TASKER immediately after signup.
-
-### Option B: Require Email Confirmation
-If you want users to verify their email address before accessing the app:
-1. Ensure **Confirm email** is toggled to **ON** in [Supabase Auth Providers -> Email](https://supabase.com/dashboard/project/xargfforwknnicudigxs/auth/providers).
-2. TASKER displays a dedicated **Activation Screen** after signup with the user's email, instructions to check their spam folder, and a "Resend Verification Email" button.
-3. If testing frequently, note that Supabase's built-in mailer has a limit of ~3-4 emails per hour. For production with high volume, configure a custom SMTP provider (Resend, SendGrid, Amazon SES, or Brevo) under **Project Settings** -> **Auth** -> **SMTP Settings**.
+2. Ensure **Email** provider is toggled to **ON**.
+3. Under **Confirm email**:
+   - If toggled **ON**: New users will be directed to the activation screen to enter the 6-digit signup OTP sent to their inbox before their first login.
+   - If toggled **OFF**: New accounts are activated immediately upon signup.
+4. For high-volume production, configure custom SMTP (Resend, SendGrid, Amazon SES, or Brevo) under **Project Settings** -> **Auth** -> **SMTP Settings** to avoid default rate limits.
 
 ---
 
-## 3. Forgot Password Flow
+## 4. Forgot Password Flow
 
-TASKER supports both methods of password recovery:
-1. **6-Digit Verification Code (OTP)**:
-   - The user requests a reset code.
-   - Supabase sends an email containing the 6-digit recovery code.
+TASKER supports both recovery paths:
+1. **6-Digit Recovery OTP**:
+   - The user enters their email on the "Forgot Password" screen.
+   - Supabase sends a 6-digit recovery code.
    - The user enters the code and their new password in TASKER.
-   - `verifyOtp({ email, token, type: 'recovery' })` validates the token and updates the password.
-2. **Email Recovery Link Callback**:
-   - If the user clicks the password reset link inside the email, Supabase redirects them back to `https://mytasker-dun.vercel.app/#access_token=...&type=recovery`.
-   - TASKER detects the `PASSWORD_RECOVERY` event and automatically presents the **Set New Password** screen.
+   - `verifyOtp({ email, token, type: 'recovery' })` validates the token and updates the password immediately.
+2. **Password Reset Email Link**:
+   - Clicking the password reset link inside the email brings the user to the reset screen automatically via the `PASSWORD_RECOVERY` auth event.
 
 ---
 
-## 4. Legacy Data Assignment to Owner Account
+## 5. Legacy Data Assignment to Owner Account
 
 All legacy data in production (4 tasks, 12 status histories, 1 note, 2 attachments) is safely preserved with `user_id IS NULL`. Under PostgreSQL RLS, **new users see 0 tasks**.
 
-Once the owner account has been registered (via Email or Google), link the legacy data to your account by running this single query in the [Supabase SQL Editor](https://supabase.com/dashboard/project/xargfforwknnicudigxs/sql/new):
+Once the owner account has been registered, assign the legacy data to your account by running this query in the [Supabase SQL Editor](https://supabase.com/dashboard/project/xargfforwknnicudigxs/sql/new):
 
 ```sql
 SELECT public.assign_legacy_data_to_owner('your_registered_email@example.com');
 ```
 
-*This securely assigns all 4 tasks and their related records to your user UUID without exposing any secrets in frontend code.*
+*This securely assigns all 4 legacy tasks and their related records to your user UUID without exposing any secrets in frontend code.*
 
 ---
 
-## 5. Multi-User & Realtime Verification Summary
+## 6. Multi-User & Realtime Verification Summary
 
 - **User Isolation**: PostgreSQL RLS policies enforce `user_id = auth.uid()` on all tables and storage objects.
 - **Realtime Sync**: When a task or status is updated on Android or another browser tab, Supabase Realtime emits `postgres_changes` over WebSocket to the channel `tasker-realtime-${userId}`, immediately refreshing the web client.

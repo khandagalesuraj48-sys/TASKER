@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -14,14 +14,16 @@ import {
   EyeOff,
   Clock,
   X,
-  Send,
+  ShieldCheck,
+  RefreshCw,
   HelpCircle,
 } from 'lucide-react';
 
 type AuthView =
   | 'signin'
+  | 'verify_login_otp'
   | 'signup'
-  | 'signup_confirmation'
+  | 'verify_signup_otp'
   | 'forgot_email'
   | 'forgot_code'
   | 'forgot_success'
@@ -39,10 +41,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   canDismiss = false,
 }) => {
   const {
-    signInWithEmail,
+    validatePasswordAndSendOtp,
+    verifyLoginOtp,
+    resendLoginOtp,
+    verifySignupOtp,
     signUpWithEmail,
     resendConfirmationEmail,
-    signInWithGoogle,
     sendPasswordResetOtp,
     verifyPasswordResetOtp,
     updatePassword,
@@ -61,21 +65,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [infoMsg, setInfoMsg] = useState<string>('');
-  const [isEmailUnconfirmed, setIsEmailUnconfirmed] = useState<boolean>(false);
   const [resendingEmail, setResendingEmail] = useState<boolean>(false);
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
 
-  React.useEffect(() => {
+  // Automatically switch to password reset view if user entered via an email recovery link
+  useEffect(() => {
     if (isPasswordRecovery) {
       setView('reset_new_password');
     }
   }, [isPasswordRecovery]);
+
+  // Resend cooldown countdown ticker
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   if (!isOpen) return null;
 
   const resetForm = () => {
     setErrorMsg('');
     setInfoMsg('');
-    setIsEmailUnconfirmed(false);
     setPassword('');
     setConfirmPassword('');
     setOtpCode('');
@@ -86,30 +98,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const code = err?.code || '';
 
     if (rawMsg.includes('email not confirmed') || code === 'email_not_confirmed') {
-      setIsEmailUnconfirmed(true);
-      return 'Your email address is not verified yet. Please click the confirmation link sent to your inbox, or click "Resend Confirmation Email" below.';
+      return 'Your email address is not verified yet. Please check your inbox for the activation code.';
     }
 
     if (rawMsg.includes('invalid login credentials') || code === 'invalid_credentials') {
       return 'Incorrect email or password. Please verify your credentials and try again.';
     }
 
-    if (rawMsg.includes('over_email_send_rate_limit') || rawMsg.includes('rate limit') || rawMsg.includes('rate_limit')) {
-      return 'Supabase email rate limit reached (3-4 emails/hour on default mailer). Please wait a few minutes, or in your Supabase Dashboard toggle "Confirm email" OFF (Auth -> Providers -> Email) for instant signups.';
+    if (
+      rawMsg.includes('over_email_send_rate_limit') ||
+      rawMsg.includes('rate limit') ||
+      rawMsg.includes('rate_limit')
+    ) {
+      return 'Email rate limit reached. Please wait a minute before requesting another code.';
     }
 
-    if (rawMsg.includes('provider is not enabled') || rawMsg.includes('unsupported provider')) {
-      return 'Google Sign-In is not enabled yet in the Supabase Dashboard. Go to Authentication -> Providers -> Google to provide your OAuth Client ID and Secret.';
-    }
-
-    if (rawMsg.includes('already registered') || rawMsg.includes('user already exists') || rawMsg.includes('already exists')) {
+    if (
+      rawMsg.includes('already registered') ||
+      rawMsg.includes('user already exists') ||
+      rawMsg.includes('already exists')
+    ) {
       return 'An account with this email address already exists. Please switch to Sign In.';
+    }
+
+    if (
+      rawMsg.includes('token has expired') ||
+      rawMsg.includes('invalid') ||
+      code === 'otp_expired'
+    ) {
+      return 'The verification code is invalid or has expired. Please check the code or request a new one.';
     }
 
     return err?.message || 'Authentication failed. Please check your details and try again.';
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  // STEP 1 OF LOGIN: Validate Password & Request Email OTP
+  const handlePasswordSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       setErrorMsg('Please enter both email and password.');
@@ -117,11 +141,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
     setErrorMsg('');
     setInfoMsg('');
-    setIsEmailUnconfirmed(false);
     setLoading(true);
 
     try {
-      await signInWithEmail(email, password);
+      await validatePasswordAndSendOtp(email, password);
+      setOtpCode('');
+      setResendCooldown(60);
+      setView('verify_login_otp');
+      showToast('Password verified! A 6-digit security code was sent to your email.', 'info');
+    } catch (err: any) {
+      setErrorMsg(parseAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // STEP 2 OF LOGIN: Verify Email OTP & Establish Authenticated Session
+  const handleVerifyLoginOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length < 6) {
+      setErrorMsg('Please enter the 6-digit verification code.');
+      return;
+    }
+    setErrorMsg('');
+    setInfoMsg('');
+    setLoading(true);
+
+    try {
+      await verifyLoginOtp(email, otpCode.trim());
       showToast('Signed in successfully!', 'success');
       onClose?.();
     } catch (err: any) {
@@ -131,6 +178,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  // Resend Login OTP
+  const handleResendLoginOtp = async () => {
+    if (!email || resendCooldown > 0) return;
+    setResendingEmail(true);
+    setErrorMsg('');
+    try {
+      await resendLoginOtp(email);
+      setResendCooldown(60);
+      showToast('New verification code sent to your email!', 'info');
+    } catch (err: any) {
+      setErrorMsg(parseAuthError(err));
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
+  // STEP 1 OF SIGNUP: Create Account & Send Activation OTP
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -143,14 +207,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
     setErrorMsg('');
     setInfoMsg('');
-    setIsEmailUnconfirmed(false);
     setLoading(true);
 
     try {
       const result = await signUpWithEmail(email, password, name);
       if (result.needsEmailConfirmation) {
-        setIsEmailUnconfirmed(true);
-        setView('signup_confirmation');
+        setOtpCode('');
+        setResendCooldown(60);
+        setView('verify_signup_otp');
+        showToast('Account created! Please enter the 6-digit verification code.', 'info');
       } else {
         showToast('Account created and signed in!', 'success');
         onClose?.();
@@ -162,6 +227,101 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  // STEP 2 OF SIGNUP: Verify Activation Code & Activate Account
+  const handleVerifySignupOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length < 6) {
+      setErrorMsg('Please enter the 6-digit verification code.');
+      return;
+    }
+    setErrorMsg('');
+    setInfoMsg('');
+    setLoading(true);
+
+    try {
+      await verifySignupOtp(email, otpCode.trim());
+      showToast('Account activated! Welcome to TASKER.', 'success');
+      onClose?.();
+    } catch (err: any) {
+      setErrorMsg(parseAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend Signup Activation Code
+  const handleResendSignupCode = async () => {
+    if (!email || resendCooldown > 0) return;
+    setResendingEmail(true);
+    setErrorMsg('');
+    try {
+      await resendConfirmationEmail(email);
+      setResendCooldown(60);
+      showToast('New activation code sent to your email!', 'info');
+    } catch (err: any) {
+      setErrorMsg(parseAuthError(err));
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
+  // FORGOT PASSWORD: Step 1 Request Code
+  const handleRequestResetOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setErrorMsg('Please enter your registered email address.');
+      return;
+    }
+    setErrorMsg('');
+    setInfoMsg('');
+    setLoading(true);
+
+    try {
+      await sendPasswordResetOtp(email);
+      setOtpCode('');
+      setResendCooldown(60);
+      showToast('Password reset code sent to your email! Valid for 10 minutes.', 'info');
+      setView('forgot_code');
+    } catch (err: any) {
+      setErrorMsg(parseAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // FORGOT PASSWORD: Step 2 Verify Code & Set Password
+  const handleVerifyAndResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length < 6) {
+      setErrorMsg('Please enter the 6-digit verification code sent to your email.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setErrorMsg('New password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match.');
+      return;
+    }
+
+    setErrorMsg('');
+    setInfoMsg('');
+    setLoading(true);
+
+    try {
+      await verifyPasswordResetOtp(email, otpCode.trim());
+      await updatePassword(password);
+      showToast('Password reset successfully! You are now authenticated.', 'success');
+      setView('forgot_success');
+    } catch (err: any) {
+      setErrorMsg(parseAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // FORGOT PASSWORD: Link Callback Set New Password
   const handleResetPasswordDirect = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password || password.length < 6) {
@@ -184,91 +344,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setView('forgot_success');
     } catch (err: any) {
       setErrorMsg(parseAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendConfirmation = async () => {
-    if (!email) return;
-    setResendingEmail(true);
-    setErrorMsg('');
-    try {
-      await resendConfirmationEmail(email);
-      showToast('Confirmation email resent! Please check your inbox.', 'info');
-      setInfoMsg(`A new confirmation email has been sent to ${email}.`);
-    } catch (err: any) {
-      setErrorMsg(parseAuthError(err));
-    } finally {
-      setResendingEmail(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setErrorMsg('');
-    setInfoMsg('');
-    setLoading(true);
-    try {
-      await signInWithGoogle();
-    } catch (err: any) {
-      setErrorMsg(parseAuthError(err));
-      setLoading(false);
-    }
-  };
-
-  const handleRequestResetOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) {
-      setErrorMsg('Please enter your registered email address.');
-      return;
-    }
-    setErrorMsg('');
-    setInfoMsg('');
-    setLoading(true);
-
-    try {
-      await sendPasswordResetOtp(email);
-      showToast('Verification code sent to your email! Valid for 10 minutes.', 'info');
-      setView('forgot_code');
-    } catch (err: any) {
-      setErrorMsg(parseAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyAndResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otpCode || otpCode.trim().length < 6) {
-      setErrorMsg('Please enter the 6-digit verification code sent to your email.');
-      return;
-    }
-    if (!password || password.length < 6) {
-      setErrorMsg('New password must be at least 6 characters.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMsg('Passwords do not match.');
-      return;
-    }
-
-    setErrorMsg('');
-    setInfoMsg('');
-    setLoading(true);
-
-    try {
-      // 1. Verify OTP with Supabase Auth recovery type
-      await verifyPasswordResetOtp(email, otpCode.trim());
-      // 2. Update user with new password
-      await updatePassword(password);
-      showToast('Password reset successfully! You are now authenticated.', 'success');
-      setView('forgot_success');
-    } catch (err: any) {
-      setErrorMsg(
-        err.message?.toLowerCase().includes('expired')
-          ? 'Verification code has expired (valid for 10 minutes). Please request a new code.'
-          : parseAuthError(err)
-      );
     } finally {
       setLoading(false);
     }
@@ -298,7 +373,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Form Body */}
         <div className="p-6">
-          {/* Info Banner (e.g. email confirmation notice) */}
+          {/* Info Banner */}
           {infoMsg && (
             <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-start gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
@@ -314,79 +389,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <span>{errorMsg}</span>
-                {isEmailUnconfirmed && (
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      onClick={handleResendConfirmation}
-                      disabled={resendingEmail}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 font-semibold rounded text-[11px] transition-colors"
-                    >
-                      <Send className="w-3 h-3" />
-                      <span>{resendingEmail ? 'Sending...' : 'Resend Confirmation Email'}</span>
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           )}
 
-          {/* SIGN IN VIEW */}
+          {/* ============================================================ */}
+          {/* VIEW 1: SIGN IN (EMAIL + PASSWORD) */}
+          {/* ============================================================ */}
           {view === 'signin' && (
             <div>
               {/* Tab Selector */}
               <div className="flex border-b border-slate-200 mb-5">
                 <button
                   type="button"
-                  onClick={() => { setView('signin'); resetForm(); }}
+                  onClick={() => {
+                    setView('signin');
+                    resetForm();
+                  }}
                   className="flex-1 pb-2.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors"
                 >
                   Sign In
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setView('signup'); resetForm(); }}
+                  onClick={() => {
+                    setView('signup');
+                    resetForm();
+                  }}
                   className="flex-1 pb-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
                 >
                   Create Account
                 </button>
               </div>
 
-              {/* Google OAuth Button */}
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-2xs mb-4"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                Continue with Google
-              </button>
-
-              <div className="flex items-center my-4">
-                <div className="flex-1 border-t border-slate-200" />
-                <span className="px-3 text-xs text-slate-400 uppercase font-medium">Or with email</span>
-                <div className="flex-1 border-t border-slate-200" />
-              </div>
-
-              <form onSubmit={handleSignIn} className="space-y-4">
+              <form onSubmit={handlePasswordSignIn} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
                   <div className="relative">
@@ -407,7 +443,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <label className="block text-xs font-semibold text-slate-700">Password</label>
                     <button
                       type="button"
-                      onClick={() => { setView('forgot_email'); resetForm(); }}
+                      onClick={() => {
+                        setView('forgot_email');
+                        resetForm();
+                      }}
                       className="text-xs text-blue-600 hover:text-blue-700 font-medium"
                     >
                       Forgot password?
@@ -438,33 +477,116 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   disabled={loading}
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-50"
                 >
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? 'Verifying Credentials...' : 'Continue to Verification'}
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
 
-              {/* Helpful Hint on Email Confirmation */}
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-400">
-                <HelpCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>If email verification is enabled, confirm your address before sign in.</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>Two-step security: A one-time verification code is required on every login.</span>
               </div>
             </div>
           )}
 
-          {/* SIGN UP VIEW */}
+          {/* ============================================================ */}
+          {/* VIEW 2: VERIFY LOGIN EMAIL OTP */}
+          {/* ============================================================ */}
+          {view === 'verify_login_otp' && (
+            <div className="animate-in fade-in zoom-in-95 duration-200">
+              <div className="text-center mb-4">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 text-blue-600 mb-2">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">Two-Step Verification</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  We sent a single-use 6-digit code to:
+                </p>
+                <div className="inline-block mt-1.5 px-3 py-1 bg-slate-100 rounded-lg text-xs font-mono font-bold text-slate-800 border border-slate-200 break-all">
+                  {email}
+                </div>
+              </div>
+
+              <form onSubmit={handleVerifyLoginOtp} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 text-center">
+                    Enter 6-Digit Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    autoFocus
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    required
+                    className="w-full px-3 py-2.5 text-center tracking-[0.35em] text-lg font-mono font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otpCode.length < 6}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Validating Security Code...' : 'Verify & Enter TASKER'}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={handleResendLoginOtp}
+                    disabled={resendingEmail || resendCooldown > 0}
+                    className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${resendingEmail ? 'animate-spin' : ''}`} />
+                    <span>
+                      {resendCooldown > 0
+                        ? `Resend code in ${resendCooldown}s`
+                        : resendingEmail
+                        ? 'Sending...'
+                        : 'Resend Code'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView('signin');
+                      resetForm();
+                    }}
+                    className="text-xs text-slate-500 hover:text-slate-800"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* ============================================================ */}
+          {/* VIEW 3: CREATE ACCOUNT (NAME + EMAIL + PASSWORD) */}
+          {/* ============================================================ */}
           {view === 'signup' && (
             <div>
               <div className="flex border-b border-slate-200 mb-5">
                 <button
                   type="button"
-                  onClick={() => { setView('signin'); resetForm(); }}
+                  onClick={() => {
+                    setView('signin');
+                    resetForm();
+                  }}
                   className="flex-1 pb-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
                 >
                   Sign In
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setView('signup'); resetForm(); }}
+                  onClick={() => {
+                    setView('signup');
+                    resetForm();
+                  }}
                   className="flex-1 pb-2.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors"
                 >
                   Create Account
@@ -502,7 +624,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Password (min 6 characters)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Password (min 6 characters)
+                  </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     <input
@@ -528,78 +652,97 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   disabled={loading}
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 disabled:opacity-50"
                 >
-                  {loading ? 'Creating Account...' : 'Sign Up'}
+                  {loading ? 'Creating Account...' : 'Continue to Activation'}
                   <ArrowRight className="w-4 h-4" />
                 </button>
+              </form>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-400">
+                <HelpCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>An activation code will be sent to your email to verify account ownership.</span>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================ */}
+          {/* VIEW 4: VERIFY SIGNUP ACTIVATION OTP */}
+          {/* ============================================================ */}
+          {view === 'verify_signup_otp' && (
+            <div className="animate-in fade-in zoom-in-95 duration-200">
+              <div className="text-center mb-4">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 mb-2">
+                  <Mail className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">Activate Your Account</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  We sent a 6-digit activation code to:
+                </p>
+                <div className="inline-block mt-1.5 px-3 py-1 bg-slate-100 rounded-lg text-xs font-mono font-bold text-slate-800 border border-slate-200 break-all">
+                  {email}
+                </div>
+              </div>
+
+              <form onSubmit={handleVerifySignupOtp} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 text-center">
+                    Enter Activation Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    autoFocus
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    required
+                    className="w-full px-3 py-2.5 text-center tracking-[0.35em] text-lg font-mono font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otpCode.length < 6}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Activating Account...' : 'Activate & Enter TASKER'}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={handleResendSignupCode}
+                    disabled={resendingEmail || resendCooldown > 0}
+                    className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${resendingEmail ? 'animate-spin' : ''}`} />
+                    <span>
+                      {resendCooldown > 0
+                        ? `Resend in ${resendCooldown}s`
+                        : resendingEmail
+                        ? 'Sending...'
+                        : 'Resend Code'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView('signup');
+                      resetForm();
+                    }}
+                    className="text-xs text-slate-500 hover:text-slate-800"
+                  >
+                    Back to Sign Up
+                  </button>
+                </div>
               </form>
             </div>
           )}
 
-          {/* SIGN UP CONFIRMATION VIEW */}
-          {view === 'signup_confirmation' && (
-            <div className="text-center py-2 animate-in fade-in zoom-in-95 duration-200">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 mb-4 ring-8 ring-blue-50/50">
-                <Mail className="w-7 h-7" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-1.5">Check Your Email</h3>
-              <p className="text-xs text-slate-500 mb-3 max-w-xs mx-auto leading-relaxed">
-                We've sent an activation link to verify your email address:
-              </p>
-              <div className="inline-block px-3.5 py-1.5 bg-slate-100 rounded-lg text-xs font-mono font-bold text-slate-800 mb-5 border border-slate-200 break-all">
-                {email}
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-left mb-5 space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-semibold text-amber-800">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Activation Required Before Login</span>
-                </div>
-                <p className="text-[11px] text-amber-700 leading-relaxed pl-6">
-                  Please open the confirmation email and click the verification link. If you don't see it within 2 minutes, be sure to check your <strong>Spam / Junk</strong> folder.
-                </p>
-              </div>
-
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setView('signin');
-                    resetForm();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
-                >
-                  <span>I've Verified — Proceed to Sign In</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleResendConfirmation}
-                  disabled={resendingEmail}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>{resendingEmail ? 'Sending new link...' : 'Resend Verification Email'}</span>
-                </button>
-              </div>
-
-              <div className="mt-5 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
-                <span>Want to use a different email? </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setView('signup');
-                    resetForm();
-                  }}
-                  className="text-blue-600 hover:underline font-semibold"
-                >
-                  Back to Sign Up
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* FORGOT PASSWORD: STEP 1 - ENTER EMAIL */}
+          {/* ============================================================ */}
+          {/* VIEW 5: FORGOT PASSWORD - STEP 1 (ENTER EMAIL) */}
+          {/* ============================================================ */}
           {view === 'forgot_email' && (
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -607,12 +750,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <h3 className="text-base font-bold text-slate-900">Reset Password</h3>
               </div>
               <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-                Enter your registered email address. We will send you a 6-digit verification code valid for <strong>10 minutes</strong>.
+                Enter your registered email address. We will send you a 6-digit recovery code valid for{' '}
+                <strong>10 minutes</strong>.
               </p>
 
               <form onSubmit={handleRequestResetOtp} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Registered Email</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Registered Email
+                  </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     <input
@@ -631,12 +777,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   disabled={loading}
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors disabled:opacity-50"
                 >
-                  {loading ? 'Sending Code...' : 'Send Verification Code'}
+                  {loading ? 'Sending Code...' : 'Send Recovery Code'}
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => { setView('signin'); resetForm(); }}
+                  onClick={() => {
+                    setView('signin');
+                    resetForm();
+                  }}
                   className="w-full text-center text-xs text-slate-500 hover:text-slate-800 pt-2"
                 >
                   Back to Sign In
@@ -645,25 +794,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          {/* FORGOT PASSWORD: STEP 2 - ENTER CODE & NEW PASSWORD */}
+          {/* ============================================================ */}
+          {/* VIEW 6: FORGOT PASSWORD - STEP 2 (ENTER CODE & NEW PASSWORD) */}
+          {/* ============================================================ */}
           {view === 'forgot_code' && (
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Clock className="w-5 h-5 text-amber-600" />
-                <h3 className="text-base font-bold text-slate-900">Enter Verification Code</h3>
+                <h3 className="text-base font-bold text-slate-900">Enter Recovery Code</h3>
               </div>
               <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-                Enter the 6-digit code sent to <strong>{email}</strong> (valid for 10 minutes) and set your new password.
+                Enter the 6-digit code sent to <strong>{email}</strong> and set your new password.
               </p>
 
               <form onSubmit={handleVerifyAndResetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">6-Digit Code</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    6-Digit Recovery Code
+                  </label>
                   <input
                     type="text"
-                    maxLength={10}
+                    maxLength={6}
                     value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                     placeholder="123456"
                     required
                     className="w-full px-3 py-2 text-base text-center tracking-widest font-mono font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -671,7 +824,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">New Password</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    New Password
+                  </label>
                   <input
                     type="password"
                     value={password}
@@ -683,7 +838,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm New Password</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Confirm New Password
+                  </label>
                   <input
                     type="password"
                     value={confirmPassword}
@@ -706,14 +863,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <button
                     type="button"
                     onClick={handleRequestResetOtp}
-                    disabled={loading}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    disabled={loading || resendCooldown > 0}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50"
                   >
-                    Resend Code
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setView('signin'); resetForm(); }}
+                    onClick={() => {
+                      setView('signin');
+                      resetForm();
+                    }}
                     className="text-xs text-slate-500 hover:text-slate-800"
                   >
                     Cancel
@@ -723,7 +883,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          {/* RESET NEW PASSWORD VIEW (FOR EMAIL LINK CALLBACK / RECOVERY) */}
+          {/* ============================================================ */}
+          {/* VIEW 7: RESET NEW PASSWORD (DIRECT EMAIL LINK RECOVERY) */}
+          {/* ============================================================ */}
           {view === 'reset_new_password' && (
             <div className="animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-center gap-2 mb-2">
@@ -784,7 +946,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          {/* FORGOT PASSWORD: STEP 3 - SUCCESS */}
+          {/* ============================================================ */}
+          {/* VIEW 8: FORGOT PASSWORD - SUCCESS */}
+          {/* ============================================================ */}
           {view === 'forgot_success' && (
             <div className="text-center py-4">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mb-3">
@@ -796,7 +960,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </p>
               <button
                 type="button"
-                onClick={() => { onClose?.(); setView('signin'); resetForm(); }}
+                onClick={() => {
+                  onClose?.();
+                  setView('signin');
+                  resetForm();
+                }}
                 className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
               >
                 Go to TASKER
