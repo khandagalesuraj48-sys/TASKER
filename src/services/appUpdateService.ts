@@ -66,14 +66,14 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
   if (Capacitor.isNativePlatform()) {
     try {
       const info = await App.getInfo();
-      const versionName = info.version || '1.0.2';
-      const versionCode = Number((info as any).build) || 3;
+      const versionName = info.version || '1.0.3';
+      const versionCode = Number((info as any).build) || 4;
       return { versionName, versionCode };
     } catch (e) {
       console.warn('App.getInfo failed, using fallback version:', e);
     }
   }
-  return { versionName: '1.0.2', versionCode: 3 };
+  return { versionName: '1.0.3', versionCode: 4 };
 }
 
 /**

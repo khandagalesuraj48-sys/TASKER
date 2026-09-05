@@ -1,5 +1,9 @@
 package com.oneclicksolution.tasker;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Build;
@@ -45,7 +49,9 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(SystemBarsPlugin.class);
         registerPlugin(UpdatePlugin.class);
+        registerPlugin(NotificationHelperPlugin.class);
         super.onCreate(savedInstanceState);
+        createNotificationChannels();
 
         Window window = getWindow();
         if (window != null) {
@@ -69,6 +75,39 @@ public class MainActivity extends BridgeActivity {
             if (controller != null) {
                 controller.setAppearanceLightStatusBars(!isDark);
                 controller.setAppearanceLightNavigationBars(!isDark);
+            }
+        }
+    }
+
+    private void createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                // 1. Task Reminders Channel (High Importance with Sound & Vibration)
+                NotificationChannel reminderChannel = new NotificationChannel(
+                    "tasker_reminders",
+                    "Task Reminders",
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                reminderChannel.setDescription("Scheduled task reminders and due date alerts");
+                reminderChannel.enableVibration(true);
+                reminderChannel.enableLights(true);
+                AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .build();
+                reminderChannel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), audioAttributes);
+                manager.createNotificationChannel(reminderChannel);
+
+                // 2. Pending Tasks Summary Channel (Default Importance)
+                NotificationChannel pendingChannel = new NotificationChannel(
+                    "tasker_pending",
+                    "Pending Tasks",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                );
+                pendingChannel.setDescription("Periodic reminders and summaries of pending tasks");
+                pendingChannel.enableVibration(true);
+                manager.createNotificationChannel(pendingChannel);
             }
         }
     }

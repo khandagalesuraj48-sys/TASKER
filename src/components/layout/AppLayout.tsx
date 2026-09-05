@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
@@ -12,8 +12,12 @@ import { AlertTriangle, Database, Sparkles } from 'lucide-react';
 import { useAndroidBackHandler } from '../../hooks/useAndroidBackHandler';
 import { useBackButton } from '../../hooks/useBackButton';
 import { AppUpdateCard } from '../AppUpdateCard';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { schedulePendingTasksNotification } from '../../services/notificationService';
 
 export const AppLayout: React.FC = () => {
+  const navigate = useNavigate();
+
   // Initialize native Android hardware back button handler
   useAndroidBackHandler();
 
@@ -33,7 +37,40 @@ export const AppLayout: React.FC = () => {
     isAIDrawerOpen,
     openAIDrawer,
     closeAIDrawer,
+    stats,
   } = useTask();
+
+  // Listen for local notification taps and deep link to task or pending page
+  useEffect(() => {
+    let listenerHandle: any = null;
+    LocalNotifications.addListener('localNotificationActionPerformed', (notificationAction) => {
+      const extra = notificationAction.notification.extra;
+      if (extra?.taskId) {
+        navigate(`/tasks/${extra.taskId}`);
+      } else if (extra?.path) {
+        navigate(extra.path);
+      } else if (extra?.type === 'pending_tasks') {
+        navigate('/pending');
+      }
+    }).then((handle) => {
+      listenerHandle = handle;
+    }).catch((e) => {
+      console.warn('Could not register notification action listener:', e);
+    });
+
+    return () => {
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
+    };
+  }, [navigate]);
+
+  // Keep pending tasks notification schedule updated based on current pending count
+  useEffect(() => {
+    schedulePendingTasksNotification(stats.pending).catch((e) => {
+      console.warn('Error updating pending notification schedule:', e);
+    });
+  }, [stats.pending]);
 
   return (
     <div className="flex h-screen min-h-[100dvh] bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors">

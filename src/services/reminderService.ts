@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { ReminderInput, ReminderRecurrence, Task, TaskReminder } from '../types/task';
+import { scheduleNativeTaskReminder, cancelNativeTaskReminder } from './notificationService';
 
 const LOCAL_STORAGE_KEY = 'tasker_reminders_store';
 
@@ -101,6 +102,22 @@ export const getTaskReminder = async (taskId: string): Promise<TaskReminder | nu
   }
 };
 
+// Helper to sync local/native notification schedule
+const syncNativeReminder = async (taskId: string, reminder: TaskReminder | null): Promise<void> => {
+  try {
+    if (!reminder || !reminder.is_enabled || reminder.status === 'stopped') {
+      await cancelNativeTaskReminder(taskId);
+      return;
+    }
+    const { data: taskData } = await supabase.from('tasks').select('*').eq('id', taskId).maybeSingle();
+    if (taskData) {
+      await scheduleNativeTaskReminder(taskData as Task, reminder);
+    }
+  } catch (e) {
+    console.warn('Sync native reminder error:', e);
+  }
+};
+
 // 2. Save or update reminder
 export const saveTaskReminder = async (
   taskId: string,
@@ -123,6 +140,8 @@ export const saveTaskReminder = async (
     updated_at: new Date().toISOString(),
   };
 
+  let savedRecord: TaskReminder;
+
   try {
     // Check if exists
     const existing = await getTaskReminder(taskId);
@@ -136,8 +155,7 @@ export const saveTaskReminder = async (
         .single();
 
       if (error) throw error;
-      setLocalReminder(data as TaskReminder);
-      return data as TaskReminder;
+      savedRecord = data as TaskReminder;
     } else {
       const { data, error } = await supabase
         .from('task_reminders')
@@ -149,12 +167,12 @@ export const saveTaskReminder = async (
         .single();
 
       if (error) throw error;
-      setLocalReminder(data as TaskReminder);
-      return data as TaskReminder;
+      savedRecord = data as TaskReminder;
     }
+    setLocalReminder(savedRecord);
   } catch (err: any) {
     // If Supabase table is not yet migrated, save gracefully in local fallback
-    const fallbackRecord: TaskReminder = {
+    savedRecord = {
       id: 'local_' + Date.now(),
       task_id: taskId,
       is_enabled: input.is_enabled,
@@ -169,13 +187,23 @@ export const saveTaskReminder = async (
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    setLocalReminder(fallbackRecord);
-    return fallbackRecord;
+    setLocalReminder(savedRecord);
   }
+
+  // Synchronize native Android notification
+  await syncNativeReminder(taskId, savedRecord);
+  return savedRecord;
 };
 
 // 3. Stop reminder on completion or manual request
 export const stopTaskReminder = async (taskId: string): Promise<void> => {
+  // Cancel native notification first
+  try {
+    await cancelNativeTaskReminder(taskId);
+  } catch {
+    // Ignore
+  }
+
   try {
     await supabase
       .from('task_reminders')
@@ -216,12 +244,21 @@ export const snoozeTaskReminder = async (taskId: string, minutes: number = 15): 
   }
 
   const all = getLocalReminders();
+  let updatedRecord: TaskReminder | null = null;
   if (all[taskId]) {
     all[taskId].status = 'snoozed';
     all[taskId].snooze_until = snoozeUntil;
     all[taskId].next_trigger_at = snoozeUntil;
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(all));
+    updatedRecord = all[taskId];
   }
+
+  await syncNativeReminder(taskId, updatedRecord || ({
+    task_id: taskId,
+    is_enabled: true,
+    status: 'snoozed',
+    next_trigger_at: snoozeUntil,
+  } as TaskReminder));
 };
 
 // 5. Dismiss reminder for current cycle and advance to next recurrence
@@ -260,6 +297,13 @@ export const dismissTaskReminder = async (reminder: TaskReminder): Promise<void>
     all[reminder.task_id].next_trigger_at = nextTrigger;
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(all));
   }
+
+  await syncNativeReminder(reminder.task_id, {
+    ...reminder,
+    status: 'active',
+    snooze_until: null,
+    next_trigger_at: nextTrigger,
+  });
 };
 
 // 6. Get currently due reminders (for in-app banner/alerts)
