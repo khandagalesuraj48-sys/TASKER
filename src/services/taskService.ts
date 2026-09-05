@@ -139,7 +139,9 @@ export const getTaskById = async (id: string): Promise<Task> => {
 
 export const createTask = async (input: CreateTaskInput): Promise<Task> => {
   const initialStatus = input.status || 'pending';
-  const creator = input.created_by || DEFAULT_USER_NAME;
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUserId = authData?.user?.id || input.user_id || null;
+  const creator = authData?.user?.email || input.created_by || DEFAULT_USER_NAME;
   const nowIso = new Date().toISOString();
 
   const insertPayload = {
@@ -150,6 +152,7 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
     status: initialStatus,
     due_date: input.due_date || null,
     created_by: creator,
+    user_id: currentUserId,
     created_at: nowIso,
     updated_at: nowIso,
     pending_since: nowIso,

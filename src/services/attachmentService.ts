@@ -21,13 +21,17 @@ export const getAttachments = async (taskId: string): Promise<TaskAttachment[]> 
 export const uploadAttachment = async (
   taskId: string,
   file: File,
-  uploader: string = DEFAULT_USER_NAME
+  uploader?: string
 ): Promise<TaskAttachment> => {
   // Validate file client-side
   const validation = validateFile(file);
   if (!validation.valid) {
     throw new Error(validation.error || 'Invalid file');
   }
+
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUserId = authData?.user?.id || null;
+  const fileUploader = uploader || authData?.user?.email || DEFAULT_USER_NAME;
 
   const safeName = sanitizeFileName(file.name);
   const storagePath = `tasks/${taskId}/${Date.now()}_${safeName}`;
@@ -52,7 +56,8 @@ export const uploadAttachment = async (
     storage_path: storagePath,
     file_type: file.type || 'application/octet-stream',
     file_size: file.size,
-    uploaded_by: uploader,
+    uploaded_by: fileUploader,
+    user_id: currentUserId,
     uploaded_at: new Date().toISOString(),
   };
 

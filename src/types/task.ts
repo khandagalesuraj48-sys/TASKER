@@ -20,6 +20,7 @@ export interface Task {
   is_deleted: boolean;
   deleted_at: string | null;
   deleted_by: string | null;
+  user_id?: string | null;
   // Computed / joined fields
   attachments_count?: number;
   notes_count?: number;
@@ -34,6 +35,7 @@ export interface TaskStatusHistory {
   changed_by: string;
   changed_at: string;
   remarks: string | null;
+  user_id?: string | null;
 }
 
 export interface TaskNote {
@@ -42,6 +44,7 @@ export interface TaskNote {
   note: string;
   created_by: string;
   created_at: string;
+  user_id?: string | null;
 }
 
 export interface TaskAttachment {
@@ -53,6 +56,7 @@ export interface TaskAttachment {
   file_size: number | null;
   uploaded_by: string;
   uploaded_at: string;
+  user_id?: string | null;
 }
 
 export type SortField = 'newest' | 'oldest' | 'due_date' | 'priority' | 'recently_updated' | 'pending_duration';
@@ -90,6 +94,7 @@ export interface CreateTaskInput {
   status?: TaskStatus;
   due_date?: string | null;
   created_by?: string;
+  user_id?: string | null;
   initialNote?: string;
 }
 
@@ -137,6 +142,7 @@ export interface TaskReminder {
   status: ReminderStatus;
   snooze_until: string | null;
   notification_channel: 'system' | 'browser' | 'push' | 'all';
+  user_id?: string | null;
   created_at: string;
   updated_at: string;
 }

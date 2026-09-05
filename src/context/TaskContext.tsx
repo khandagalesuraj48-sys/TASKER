@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { CreateTaskInput, TaskStats } from '../types/task';
 import { getTaskStats } from '../services/taskService';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
 interface TaskContextValue {
   refreshKey: number;
@@ -22,6 +23,7 @@ interface TaskContextValue {
   stats: TaskStats;
   reloadStats: () => Promise<void>;
   isConfigured: boolean;
+  isRealtimeConnected: boolean;
 }
 
 const initialStats: TaskStats = {
@@ -37,6 +39,7 @@ const initialStats: TaskStats = {
 const TaskContext = createContext<TaskContextValue | undefined>(undefined);
 
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [createModalDefaults, setCreateModalDefaults] = useState<Partial<CreateTaskInput> | undefined>(undefined);
@@ -45,7 +48,20 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [universalSearchQuery, setUniversalSearchQuery] = useState<string>('');
   const [isAIDrawerOpen, setIsAIDrawerOpen] = useState<boolean>(false);
   const [stats, setStats] = useState<TaskStats>(initialStats);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState<boolean>(false);
+
   const isConfigured = isSupabaseConfigured();
+  const refreshDebounceRef = useRef<number | null>(null);
+
+  const triggerRefresh = useCallback(() => {
+    // Debounce rapid realtime triggers within 100ms to avoid unnecessary re-renders
+    if (refreshDebounceRef.current) {
+      clearTimeout(refreshDebounceRef.current);
+    }
+    refreshDebounceRef.current = window.setTimeout(() => {
+      setRefreshKey((prev) => prev + 1);
+    }, 100);
+  }, []);
 
   const openUniversalSearch = useCallback((initialQuery?: string) => {
     setUniversalSearchQuery(initialQuery || '');
@@ -64,10 +80,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAIDrawerOpen(false);
   }, []);
 
-  const triggerRefresh = useCallback(() => {
-    setRefreshKey((prev) => prev + 1);
-  }, []);
-
   const openCreateModal = useCallback((defaults?: Partial<CreateTaskInput>) => {
     setCreateModalDefaults(defaults);
     setIsCreateModalOpen(true);
@@ -79,18 +91,88 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const reloadStats = useCallback(async () => {
-    if (!isConfigured) return;
+    if (!isConfigured || !isAuthenticated) {
+      setStats(initialStats);
+      return;
+    }
     try {
       const data = await getTaskStats();
       setStats(data);
     } catch (err) {
       console.warn('Could not reload stats:', err);
     }
-  }, [isConfigured]);
+  }, [isConfigured, isAuthenticated]);
 
+  // Reload stats whenever refreshKey changes
   useEffect(() => {
     reloadStats();
   }, [refreshKey, reloadStats]);
+
+  // Reset state when user logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setStats(initialStats);
+      setGlobalSearch('');
+      setIsUniversalSearchOpen(false);
+      setIsAIDrawerOpen(false);
+      setIsCreateModalOpen(false);
+    }
+  }, [isAuthenticated]);
+
+  // Supabase Realtime Subscription: Instant synchronization across devices without page reload
+  useEffect(() => {
+    if (!isConfigured || !isAuthenticated || !user) {
+      setIsRealtimeConnected(false);
+      return;
+    }
+
+    const channelName = `tasker-realtime-${user.id}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => {
+          triggerRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_notes' },
+        () => {
+          triggerRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_status_history' },
+        () => {
+          triggerRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_reminders' },
+        () => {
+          triggerRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_attachments' },
+        () => {
+          triggerRefresh();
+        }
+      )
+      .subscribe((status) => {
+        setIsRealtimeConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      setIsRealtimeConnected(false);
+    };
+  }, [isConfigured, isAuthenticated, user, triggerRefresh]);
 
   return (
     <TaskContext.Provider
@@ -113,6 +195,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         stats,
         reloadStats,
         isConfigured,
+        isRealtimeConnected,
       }}
     >
       {children}
@@ -127,4 +210,3 @@ export const useTask = (): TaskContextValue => {
   }
   return context;
 };
-

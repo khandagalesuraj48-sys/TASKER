@@ -20,12 +20,17 @@ export const getNotes = async (taskId: string): Promise<TaskNote[]> => {
 export const addNote = async (
   taskId: string,
   note: string,
-  author: string = DEFAULT_USER_NAME
+  author?: string
 ): Promise<TaskNote> => {
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUserId = authData?.user?.id || null;
+  const noteAuthor = author || authData?.user?.email || DEFAULT_USER_NAME;
+
   const payload = {
     task_id: taskId,
     note: note.trim(),
-    created_by: author,
+    created_by: noteAuthor,
+    user_id: currentUserId,
     created_at: new Date().toISOString(),
   };
 

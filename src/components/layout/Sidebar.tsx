@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { APP_NAME } from '../../constants';
 import { useTask } from '../../context/TaskContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { stats, openCreateModal, openUniversalSearch, openAIDrawer } = useTask();
+  const { userEmail } = useAuth();
 
   const navItems = [
     {
@@ -164,10 +166,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Footer Info */}
       <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-        <div className="flex items-center justify-between text-xs text-slate-500">
-          <span>Active Tasks: <strong>{stats.totalActive}</strong></span>
+        <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+          <span>Active: <strong>{stats.totalActive}</strong></span>
           <span>Pending: <strong>{stats.pending + stats.inProgress + stats.partial}</strong></span>
         </div>
+        {userEmail && (
+          <div className="text-[11px] text-slate-400 truncate flex items-center gap-1.5 pt-1 border-t border-slate-100">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+            <span className="truncate">{userEmail}</span>
+          </div>
+        )}
       </div>
     </div>
   );

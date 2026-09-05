@@ -1,4 +1,4 @@
-﻿import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { ReminderInput, ReminderRecurrence, Task, TaskReminder } from '../types/task';
 
 const LOCAL_STORAGE_KEY = 'tasker_reminders_store';
@@ -107,7 +107,10 @@ export const saveTaskReminder = async (
   input: ReminderInput
 ): Promise<TaskReminder> => {
   const nextTrigger = computeNextTrigger(input.remind_at, input.recurrence_type, input.custom_interval_minutes);
-  const payload = {
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUserId = authData?.user?.id || null;
+
+  const payload: any = {
     task_id: taskId,
     is_enabled: input.is_enabled,
     remind_at: new Date(input.remind_at).toISOString(),
@@ -116,6 +119,7 @@ export const saveTaskReminder = async (
     next_trigger_at: nextTrigger,
     status: input.is_enabled ? 'active' : 'stopped',
     notification_channel: 'system',
+    user_id: currentUserId,
     updated_at: new Date().toISOString(),
   };
 
