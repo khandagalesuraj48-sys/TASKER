@@ -9,9 +9,19 @@ import { UniversalSearchModal } from '../search/UniversalSearchModal';
 import { AIAssistantDrawer } from '../ai/AIAssistantDrawer';
 import { ReminderBanner } from '../reminders/ReminderBanner';
 import { AlertTriangle, Database, Sparkles } from 'lucide-react';
+import { useAndroidBackHandler } from '../../hooks/useAndroidBackHandler';
+import { useBackButton } from '../../hooks/useBackButton';
+import { AppUpdateCard } from '../AppUpdateCard';
 
 export const AppLayout: React.FC = () => {
+  // Initialize native Android hardware back button handler
+  useAndroidBackHandler();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
+  // Register with Android hardware back button handler (Priority 30: Menus & Popups)
+  useBackButton(mobileMenuOpen, () => setMobileMenuOpen(false), 30);
+
   const {
     isCreateModalOpen,
     closeCreateModal,
@@ -60,6 +70,8 @@ export const AppLayout: React.FC = () => {
 
         {/* Main View Router Outlet */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-12">
+          {/* App Update Banner */}
+          <AppUpdateCard />
           <Outlet />
         </main>
       </div>

@@ -14,6 +14,7 @@ import { MatchFieldCategory, UniversalSearchResult } from '../../types/task';
 import { StatusBadge } from '../common/StatusBadge';
 import { PriorityBadge } from '../common/PriorityBadge';
 import { formatDateTime } from '../../lib/dateUtils';
+import { useBackButton } from '../../hooks/useBackButton';
 
 interface UniversalSearchModalProps {
   isOpen: boolean;
@@ -51,10 +52,27 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Register with Android hardware back button handler (Priority 40: Command Palettes)
+  useBackButton(isOpen, onClose, 40);
+
   const [query, setQuery] = useState<string>(initialQuery);
   const [results, setResults] = useState<UniversalSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+
+  // Close on Escape key from anywhere
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -118,7 +136,7 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20 px-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs transition-opacity animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20 px-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs transition-opacity animate-in fade-in pt-safe pb-safe"
       onClick={onClose}
     >
       <div

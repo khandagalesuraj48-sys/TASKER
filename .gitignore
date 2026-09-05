@@ -32,3 +32,14 @@ dist-ssr
 .eslintcache
 tsconfig.tsbuildinfo
 supabase/.temp/
+
+# Android build outputs & Signing Keystores
+android/app/build/
+android/.gradle/
+android/local.properties
+release/
+*.apk
+*.aab
+*.keystore
+*.jks
+

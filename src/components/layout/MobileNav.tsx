@@ -12,10 +12,14 @@ import {
   X,
 } from 'lucide-react';
 import { useTask } from '../../context/TaskContext';
+import { useBackButton } from '../../hooks/useBackButton';
 
 export const MobileNav: React.FC = () => {
   const { stats } = useTask();
   const [moreMenuOpen, setMoreMenuOpen] = useState<boolean>(false);
+
+  // Register with Android hardware back button handler (Priority 30: Menus & Popups)
+  useBackButton(moreMenuOpen, () => setMoreMenuOpen(false), 30);
 
   const mainItems = [
     {
@@ -55,7 +59,7 @@ export const MobileNav: React.FC = () => {
           onClick={() => setMoreMenuOpen(false)}
         >
           <div
-            className="w-full bg-white dark:bg-slate-900 rounded-t-3xl border-t border-slate-200 dark:border-slate-800 p-5 pb-8 shadow-2xl space-y-4"
+            className="w-full bg-white dark:bg-slate-900 rounded-t-3xl border-t border-slate-200 dark:border-slate-800 p-5 pb-8 pb-safe shadow-2xl space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">

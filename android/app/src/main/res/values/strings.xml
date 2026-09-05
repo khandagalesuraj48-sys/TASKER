@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TASKER</string>
+    <string name="title_activity_main">TASKER</string>
+    <string name="package_name">com.oneclicksolution.tasker</string>
+    <string name="custom_url_scheme">com.oneclicksolution.tasker</string>
+</resources>

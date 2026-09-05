@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TaskFilterOptions, TaskPriority, TaskStatus, SortField } from '../../types/task';
 import { Filter, RotateCcw, Paperclip } from 'lucide-react';
 import { Button } from '../common/Button';
+import { useBackButton } from '../../hooks/useBackButton';
 
 interface FilterPanelProps {
   filters: TaskFilterOptions;
@@ -17,6 +18,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   hideStatusFilter = false,
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  // Register with Android hardware back button handler (Priority 20: Collapsible Panels)
+  useBackButton(isOpen, () => setIsOpen(false), 20);
 
   const activeFiltersCount =
     (filters.status && filters.status !== 'all' ? 1 : 0) +

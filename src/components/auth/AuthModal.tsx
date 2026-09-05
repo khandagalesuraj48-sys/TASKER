@@ -15,6 +15,7 @@ import {
   RefreshCw,
   ArrowLeft,
 } from 'lucide-react';
+import { useBackButton } from '../../hooks/useBackButton';
 
 type AuthView =
   | 'signin'
@@ -63,14 +64,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   }, [isPasswordRecovery]);
 
-  if (!isOpen) return null;
-
   const resetForm = () => {
     setErrorMsg('');
     setInfoMsg('');
     setPassword('');
     setConfirmPassword('');
   };
+
+  // If dismissible, back button closes AuthModal
+  useBackButton(isOpen && Boolean(canDismiss && onClose), onClose || (() => {}), 50);
+
+  // If inside subviews (signup, forgot_email, etc.), back button returns to 'signin'
+  useBackButton(
+    isOpen && view !== 'signin' && view !== 'auth_success',
+    () => {
+      resetForm();
+      setView('signin');
+    },
+    45
+  );
+
+  if (!isOpen) return null;
 
   const parseAuthError = (err: any): string => {
     const rawMsg = (err?.message || '').toLowerCase();
@@ -221,7 +235,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 pt-safe pb-safe">
       <div
         className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-all my-auto"
         onClick={(e) => e.stopPropagation()}

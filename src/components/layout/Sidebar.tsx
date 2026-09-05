@@ -18,6 +18,7 @@ import { useTask } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Logo } from '../common/Logo';
+import { useBackButton } from '../../hooks/useBackButton';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -25,6 +26,9 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  // Register with Android hardware back button handler (Priority 30: Menus & Popups)
+  useBackButton(isOpen, onClose, 30);
+
   const { stats, openCreateModal } = useTask();
   const { userEmail, displayName, signOut } = useAuth();
   const { effectiveTheme, toggleTheme } = useTheme();
@@ -81,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   ];
 
   const sidebarContent = (
-    <div className="flex h-full flex-col justify-between bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-colors">
+    <div className="flex h-full flex-col justify-between bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-colors pt-safe pb-safe">
       <div className="p-5 flex-1 overflow-y-auto">
         {/* Brand Header */}
         <div className="flex items-center justify-between mb-6">

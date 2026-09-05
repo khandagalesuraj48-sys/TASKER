@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { askTaskerAI } from '../../services/aiService';
 import { AIMessage } from '../../types/task';
+import { useBackButton } from '../../hooks/useBackButton';
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -31,6 +32,9 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Register with Android hardware back button handler (Priority 40: Drawers)
+  useBackButton(isOpen, onClose, 40);
 
   const [inputQuery, setInputQuery] = useState<string>('');
   const [messages, setMessages] = useState<AIMessage[]>([
@@ -55,23 +59,6 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
-  // Android back button handling: close AI drawer first before navigating away
-  useEffect(() => {
-    if (!isOpen) return;
-
-    window.history.pushState({ taskerAiModal: true }, '');
-
-    const handlePopState = () => {
-      onClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
   }, [isOpen, onClose]);
 
   useEffect(() => {

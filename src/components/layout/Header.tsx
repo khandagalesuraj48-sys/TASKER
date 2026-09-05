@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { DEFAULT_USER_NAME } from '../../constants';
 import { Logo } from '../common/Logo';
+import { useBackButton } from '../../hooks/useBackButton';
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
@@ -32,6 +33,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const { effectiveTheme, toggleTheme } = useTheme();
   const [profileOpen, setProfileOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Register with Android hardware back button handler (Priority 30: Menus & Popups)
+  useBackButton(profileOpen, () => setProfileOpen(false), 30);
 
   // Keyboard shortcut: Ctrl+K or / to open Universal Search
   useEffect(() => {

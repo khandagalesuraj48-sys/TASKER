@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { setNativeSystemBarsStyle } from '../services/systemBarsService';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type EffectiveTheme = 'light' | 'dark';
@@ -51,6 +52,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         root.classList.add('dark');
       } else {
         root.classList.remove('dark');
+      }
+
+      // Sync Android status bar & navigation bar icons with effective theme
+      setNativeSystemBarsStyle(active);
+
+      // Dynamically sync theme-color meta tag
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', active === 'dark' ? '#090d16' : '#ffffff');
       }
     };
 
