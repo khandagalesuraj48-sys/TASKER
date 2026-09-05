@@ -4,6 +4,40 @@ This guide defines the end-to-end architecture, release lifecycle, versioning st
 
 ---
 
+## 0. One-Command Automated Release Pipeline (`npm run release`)
+
+TASKER provides a fully automated, end-to-end release pipeline via:
+```powershell
+npm.cmd run release
+```
+
+### What `npm run release` executes automatically in a single command:
+1. **Validates Environment**: Checks `.env`, Git status, GitHub credentials, and Supabase service role access.
+2. **Computes Next Version**: Automatically calculates monotonically increasing `versionCode` (+1) and increments patch version (`1.0.2` -> `1.0.3`).
+3. **Conflict Detection**: Verifies that neither the version name nor versionCode already exists in Supabase `app_releases` or GitHub Releases.
+4. **Synchronizes Version Metadata**: Updates `package.json`, `android/app/build.gradle`, and in-app service fallbacks.
+5. **Compiles Web Bundle**: Runs `npm.cmd run build` (`tsc -b && vite build`).
+6. **Synchronizes Capacitor**: Runs `npx.cmd cap sync android`.
+7. **Compiles Signed Android APK**: Executes Gradle `.\gradlew.bat assembleRelease -x lint` using the existing key.
+8. **Generates Named Artifacts**: Produces `release/TASKER-vX.Y.Z.apk` and `TASKER-vX.Y.Z.apk`.
+9. **Uploads to Supabase Storage**: Automatically uploads the APK to the public bucket `app-releases` as `TASKER-vX.Y.Z.apk` and updates `app-release.apk`.
+10. **Registers in Supabase Database**: Automatically upserts the release record in `public.app_releases` with public download URL.
+11. **Publishes GitHub Release**: Creates tag `vX.Y.Z` and uploads `TASKER-vX.Y.Z.apk` asset.
+12. **Pushes to Git**: Safely stages version files, commits, and pushes to `origin/main` (never staging secrets, `.env`, or APK binaries).
+
+### Optional Command-Line Flags:
+```powershell
+npm.cmd run release                      # Standard patch bump (e.g. 1.0.2 -> 1.0.3)
+npm.cmd run release -- --type minor      # Minor release (e.g. 1.1.0)
+npm.cmd run release -- --type major      # Major release (e.g. 2.0.0)
+npm.cmd run release -- --version 1.0.5   # Explicit version override
+npm.cmd run release -- --notes "..."     # Custom release notes
+npm.cmd run release -- --mandatory       # Mark release as mandatory
+npm.cmd run release -- --dry-run         # Test preflight checks and validations without modifying files
+```
+
+---
+
 ## 1. Versioning Strategy & Increment Procedure
 
 TASKER adheres strictly to Semantic Versioning (`MAJOR.MINOR.PATCH`) for public version names and a monotonically increasing integer for Android `versionCode`.
