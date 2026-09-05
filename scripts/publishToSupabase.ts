@@ -30,8 +30,15 @@ async function main() {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || envMap['VITE_SUPABASE_URL'] || 'https://xargfforwknnicudigxs.supabase.co';
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || envMap['SUPABASE_SERVICE_ROLE_KEY'] || null;
 
-  const version = '1.0.3';
-  const versionCode = 4;
+  const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
+  const version = pkg.version || '1.0.4';
+  let versionCode = 5;
+  const gradlePath = path.join(rootDir, 'android', 'app', 'build.gradle');
+  if (fs.existsSync(gradlePath)) {
+    const gradleContent = fs.readFileSync(gradlePath, 'utf8');
+    const match = gradleContent.match(/versionCode\s+(\d+)/);
+    if (match) versionCode = parseInt(match[1], 10);
+  }
   const apkName = `TASKER-v${version}.apk`;
   const apkPath = path.join(rootDir, apkName);
 
@@ -39,13 +46,14 @@ async function main() {
     throw new Error(`APK file not found: ${apkPath}`);
   }
 
-  const releaseNotes = `TASKER v1.0.3 Native Android Task Reminders & Notifications:
-- Exact native alarms trigger when TASKER is backgrounded, closed, or screen locked
-- Android 13+ POST_NOTIFICATIONS permission support and settings shortcut
-- Fast 1-minute minimum interval and preset chips (1m, 5m, 15m, 30m, 1h, 2h)
+  const releaseNotes = `TASKER v${version} Production Release:
+- High-precision 1-minute reminders and quick schedule presets
+- Localized and timezone-accurate datetime formatting
+- Streamlined App Updates & Version settings center
+- Rock-solid background alarm scheduling and pending task synchronization
 - Configurable periodic pending tasks reminder (1h, 2h, 4h, 8h, daily) with auto-suppress at 0 tasks
 - Notification tap deep-linking to task detail and pending tasks list
-- Clean Notifications & Reminders section in Settings alongside App Updates`;
+- Clean in-app App Updates & Version management`;
 
   const githubReleaseUrl = `https://github.com/khandagalesuraj48-sys/TASKER/releases/tag/v${version}`;
 
