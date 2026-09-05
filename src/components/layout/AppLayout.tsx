@@ -12,8 +12,13 @@ import { AlertTriangle, Database, Sparkles } from 'lucide-react';
 import { useAndroidBackHandler } from '../../hooks/useAndroidBackHandler';
 import { useBackButton } from '../../hooks/useBackButton';
 import { AppUpdateCard } from '../AppUpdateCard';
+import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { schedulePendingTasksNotification } from '../../services/notificationService';
+import {
+  schedulePendingTasksNotification,
+  checkNotificationPermissions,
+  requestNotificationPermissions,
+} from '../../services/notificationService';
 
 export const AppLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -39,6 +44,17 @@ export const AppLayout: React.FC = () => {
     closeAIDrawer,
     stats,
   } = useTask();
+
+  // Silently check/request notification permission on native launch
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      checkNotificationPermissions().then((status) => {
+        if (status.displayState === 'prompt') {
+          requestNotificationPermissions().catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  }, []);
 
   // Listen for local notification taps and deep link to task or pending page
   useEffect(() => {

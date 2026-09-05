@@ -13,6 +13,11 @@ export const computeNextTrigger = (
   const d = new Date(baseTime);
   const now = new Date();
 
+  // Guard against invalid date
+  if (isNaN(d.getTime())) {
+    return new Date(now.getTime() + 60 * 1000).toISOString();
+  }
+
   // If initial time is already in future, return it
   if (d.getTime() > now.getTime()) {
     return d.toISOString();
@@ -44,7 +49,7 @@ export const computeNextTrigger = (
     }
     case 'once':
     default:
-      return new Date(baseTime).toISOString();
+      return d.toISOString();
   }
 };
 

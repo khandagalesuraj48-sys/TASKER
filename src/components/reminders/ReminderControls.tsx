@@ -1,7 +1,8 @@
 import React from 'react';
-import { Bell, BellOff, Clock } from 'lucide-react';
+import { Bell, BellOff, Clock, Sparkles } from 'lucide-react';
 import { ReminderInput, ReminderRecurrence } from '../../types/task';
-import { formatInputDate } from '../../lib/dateUtils';
+import { formatInputDateTime } from '../../lib/dateUtils';
+import { requestNotificationPermissions } from '../../services/notificationService';
 
 interface ReminderControlsProps {
   value: ReminderInput;
@@ -15,10 +16,22 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
   defaultTime,
 }) => {
   const handleToggle = (enabled: boolean) => {
+    if (enabled) {
+      requestNotificationPermissions().catch(() => {});
+    }
+
+    const now = Date.now();
+    let targetTime = value.remind_at;
+    if (!targetTime || new Date(targetTime).getTime() <= now) {
+      targetTime = defaultTime && new Date(defaultTime).getTime() > now
+        ? defaultTime
+        : new Date(now + 15 * 60 * 1000).toISOString();
+    }
+
     onChange({
       ...value,
       is_enabled: enabled,
-      remind_at: value.remind_at || defaultTime || new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      remind_at: targetTime,
     });
   };
 
@@ -30,6 +43,17 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
     });
   };
 
+  const handleQuickPreset = (mins: number) => {
+    requestNotificationPermissions().catch(() => {});
+    const triggerDate = new Date(Date.now() + mins * 60 * 1000);
+    onChange({
+      ...value,
+      is_enabled: true,
+      remind_at: triggerDate.toISOString(),
+      recurrence_type: 'once',
+    });
+  };
+
   const handleRecurrenceChange = (recurrence: ReminderRecurrence) => {
     onChange({
       ...value,
@@ -38,9 +62,17 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
   };
 
   const handleCustomIntervalChange = (mins: number) => {
+    const validMins = mins > 0 ? mins : 60;
+    const now = Date.now();
+    // If remind_at is in past or empty, advance from now
+    const targetRemindAt = (!value.remind_at || new Date(value.remind_at).getTime() <= now)
+      ? new Date(now + validMins * 60 * 1000).toISOString()
+      : value.remind_at;
+
     onChange({
       ...value,
-      custom_interval_minutes: mins > 0 ? mins : 60,
+      custom_interval_minutes: validMins,
+      remind_at: targetRemindAt,
     });
   };
 
@@ -69,17 +101,46 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
       </div>
 
       {value.is_enabled && (
-        <div className="space-y-3 pt-2 border-t border-slate-200/60 dark:border-slate-800/80 animate-in fade-in">
+        <div className="space-y-3.5 pt-2 border-t border-slate-200/60 dark:border-slate-800/80 animate-in fade-in">
+          {/* Quick Schedule Presets */}
+          <div>
+            <div className="flex items-center gap-1 mb-1.5">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                Quick Schedule (from now)
+              </label>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-xs">
+              {[
+                { label: 'In 1 min', mins: 1 },
+                { label: 'In 5 mins', mins: 5 },
+                { label: 'In 15 mins', mins: 15 },
+                { label: 'In 30 mins', mins: 30 },
+                { label: 'In 1 hr', mins: 60 },
+                { label: 'In 2 hrs', mins: 120 },
+              ].map((preset) => (
+                <button
+                  key={preset.mins}
+                  type="button"
+                  onClick={() => handleQuickPreset(preset.mins)}
+                  className="py-1 px-1.5 rounded-md border text-center font-medium bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-700 transition-colors shadow-xs"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Reminder Trigger Time */}
           <div>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-              Reminder Date & Time
+              Exact Reminder Date & Time
             </label>
             <div className="relative">
               <Clock className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-2.5 pointer-events-none" />
               <input
                 type="datetime-local"
-                value={value.remind_at ? formatInputDate(value.remind_at) : ''}
+                value={value.remind_at ? formatInputDateTime(value.remind_at) : ''}
                 onChange={handleDateChange}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none"
               />
@@ -133,7 +194,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                 <span className="text-xs text-slate-500 dark:text-slate-400">minutes</span>
               </div>
 
-              {/* Quick Preset Chips */}
+              {/* Quick Preset Chips for Custom Interval */}
               <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                 {[
                   { label: '1 min', val: 1 },

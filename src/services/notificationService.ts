@@ -24,7 +24,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: TaskerNotificationSettings = {
   masterEnabled: true,
   taskRemindersEnabled: true,
   pendingRemindersEnabled: true,
-  pendingReminderIntervalHours: 4,
+  pendingReminderIntervalHours: 2,
 };
 
 export const getNotificationSettings = (): TaskerNotificationSettings => {
@@ -190,15 +190,19 @@ export const scheduleNativeTaskReminder = async (
   const triggerIso = reminder.next_trigger_at || reminder.remind_at;
   if (!triggerIso) return;
 
-  const triggerDate = new Date(triggerIso);
+  let triggerDate = new Date(triggerIso);
   const now = new Date();
 
   // If time is in past
   if (triggerDate.getTime() <= now.getTime()) {
-    // If it's a one-time reminder in the past, cancel
+    // If it's a one-time reminder in the past (> 10s past), cancel
     if (reminder.recurrence_type === 'once') {
-      await cancelNativeTaskReminder(task.id);
-      return;
+      if (triggerDate.getTime() <= now.getTime() - 10000) {
+        await cancelNativeTaskReminder(task.id);
+        return;
+      }
+      // If within 10s or just about to fire, set to 2s from now so it triggers reliably
+      triggerDate = new Date(Date.now() + 2000);
     }
   }
 
@@ -267,7 +271,7 @@ export const schedulePendingTasksNotification = async (
   customIntervalHours?: number
 ): Promise<void> => {
   const settings = getNotificationSettings();
-  const intervalHours = customIntervalHours || settings.pendingReminderIntervalHours || 4;
+  const intervalHours = customIntervalHours || settings.pendingReminderIntervalHours || 2;
 
   if (!Capacitor.isNativePlatform()) return;
 

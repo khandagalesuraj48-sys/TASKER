@@ -123,9 +123,10 @@ export const TaskDetailPage: React.FC = () => {
   const handleQuickEnableReminder = async () => {
     if (!task) return;
     try {
-      const defaultRemindAt = task.due_date
-        ? new Date(task.due_date).toISOString()
-        : new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const isPast = task.due_date && new Date(task.due_date).getTime() <= Date.now();
+      const defaultRemindAt = (!task.due_date || isPast)
+        ? new Date(Date.now() + 15 * 60 * 1000).toISOString()
+        : new Date(task.due_date).toISOString();
       const updatedRem = await saveTaskReminder(task.id, {
         is_enabled: true,
         remind_at: defaultRemindAt,
