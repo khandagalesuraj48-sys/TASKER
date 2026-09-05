@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { AuthModal } from './AuthModal';
 import { Sparkles } from 'lucide-react';
@@ -9,8 +9,16 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const [hasInitialized, setHasInitialized] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading) {
+      setHasInitialized(true);
+    }
+  }, [isLoading]);
+
+  // Only display full-screen cold start loader before the initial session resolution
+  if (!hasInitialized && isLoading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-slate-50 dark:bg-[#090d16]">
         <div className="flex flex-col items-center gap-3">

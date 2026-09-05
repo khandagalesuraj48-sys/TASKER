@@ -19,30 +19,30 @@ export const App: React.FC = () => {
     <ThemeProvider>
       <ToastProvider>
         <AuthProvider>
-          <TaskProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <TaskProvider>
                       <AppLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<DashboardPage />} />
-                  <Route path="pending" element={<PendingTasksPage />} />
-                  <Route path="tasks" element={<AllTasksPage />} />
-                  <Route path="completed" element={<CompletedTasksPage />} />
-                  <Route path="reminders" element={<AllTasksPage />} />
-                  <Route path="bin" element={<BinPage />} />
-                  <Route path="tasks/:id" element={<TaskDetailPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Route>
-              </Routes>
-            </BrowserRouter>
-          </TaskProvider>
+                    </TaskProvider>
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<DashboardPage />} />
+                <Route path="pending" element={<PendingTasksPage />} />
+                <Route path="tasks" element={<AllTasksPage />} />
+                <Route path="completed" element={<CompletedTasksPage />} />
+                <Route path="reminders" element={<AllTasksPage />} />
+                <Route path="bin" element={<BinPage />} />
+                <Route path="tasks/:id" element={<TaskDetailPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
         </AuthProvider>
       </ToastProvider>
     </ThemeProvider>

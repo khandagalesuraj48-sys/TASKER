@@ -13,17 +13,11 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   isPasswordRecovery: boolean;
-  isOtpVerified: boolean;
   userEmail: string;
   displayName: string;
-  validatePasswordAndSendOtp: (email: string, password: string) => Promise<void>;
-  verifyLoginOtp: (email: string, token: string) => Promise<void>;
-  resendLoginOtp: (email: string) => Promise<void>;
-  verifySignupOtp: (email: string, token: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name?: string) => Promise<SignUpResult>;
-  resendConfirmationEmail: (email: string) => Promise<void>;
-  sendPasswordResetOtp: (email: string) => Promise<void>;
-  verifyPasswordResetOtp: (email: string, token: string) => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
   resetPasswordRecoveryState: () => void;
   signOut: () => Promise<void>;
@@ -36,13 +30,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState<boolean>(false);
-  const [isOtpVerified, setIsOtpVerified] = useState<boolean>(() => {
-    try {
-      return sessionStorage.getItem('tasker_otp_verified') === 'true';
-    } catch {
-      return false;
-    }
-  });
 
   const isConfigured = isSupabaseConfigured();
 
@@ -57,37 +44,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!error && currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        // Only mark verified if sessionStorage explicitly contains the verification token
-        try {
-          const verifiedInSession = sessionStorage.getItem('tasker_otp_verified') === 'true';
-          setIsOtpVerified(verifiedInSession);
-        } catch {
-          setIsOtpVerified(false);
-        }
       } else {
-        setIsOtpVerified(false);
+        setSession(null);
+        setUser(null);
       }
       setIsLoading(false);
     }).catch(() => {
-      setIsOtpVerified(false);
+      setSession(null);
+      setUser(null);
       setIsLoading(false);
     });
 
     // 2. Listen to Auth State Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
+          setIsLoading(false);
+          return;
+        }
+
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
         setSession(newSession);
         setUser(newSession?.user ?? null);
         setIsLoading(false);
-        if (event === 'PASSWORD_RECOVERY') {
-          setIsPasswordRecovery(true);
-        }
-        if (event === 'SIGNED_OUT') {
-          setIsOtpVerified(false);
-          try {
-            sessionStorage.removeItem('tasker_otp_verified');
-          } catch {}
-        }
       }
     );
 
@@ -96,127 +84,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [isConfigured]);
 
-  const validatePasswordAndSendOtp = async (email: string, password: string): Promise<void> => {
-    setIsLoading(true);
-    try {
-      const cleanEmail = email.trim();
-
-      // Ensure session is marked unverified before initiating OTP
-      setIsOtpVerified(false);
-      try {
-        sessionStorage.removeItem('tasker_otp_verified');
-      } catch {}
-
-      // Step 1: Validate credentials with Supabase Auth
-      const { error: passErr } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
-      });
-      if (passErr) throw passErr;
-
-      // Step 2: Register the active session as unverified in PostgreSQL challenge table
-      try {
-        await supabase.rpc('initiate_login_challenge');
-      } catch (rpcErr) {
-        console.warn('initiate_login_challenge error (continuing with OTP):', rpcErr);
-      }
-
-      // Step 3: Trigger single-use Email OTP to the user's verified email address
-      const { error: otpErr } = await supabase.auth.signInWithOtp({
-        email: cleanEmail,
-        options: {
-          shouldCreateUser: false,
-        },
-      });
-      if (otpErr) throw otpErr;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const verifyLoginOtp = async (email: string, token: string): Promise<void> => {
-    setIsLoading(true);
-    try {
-      const cleanEmail = email.trim();
-      const cleanToken = token.trim();
-
-      // Step 4: Verify single-use OTP
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: cleanEmail,
-        token: cleanToken,
-        type: 'email',
-      });
-      if (error) throw error;
-
-      if (data.session) {
-        // Step 5: Mark the challenge verified in PostgreSQL RLS
-        try {
-          await supabase.rpc('complete_login_challenge');
-        } catch (rpcErr) {
-          console.warn('complete_login_challenge error:', rpcErr);
-        }
-
-        // HARD AUTHENTICATION GATE: Now and only now mark session verified
-        try {
-          sessionStorage.setItem('tasker_otp_verified', 'true');
-        } catch {}
-        setIsOtpVerified(true);
-        setSession(data.session);
-        setUser(data.user);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resendLoginOtp = async (email: string): Promise<void> => {
+  const signInWithPassword = async (email: string, password: string): Promise<void> => {
     const cleanEmail = email.trim();
-    const { error } = await supabase.auth.signInWithOtp({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
-      options: {
-        shouldCreateUser: false,
-      },
+      password,
     });
     if (error) throw error;
-  };
-
-  const verifySignupOtp = async (email: string, token: string): Promise<void> => {
-    setIsLoading(true);
-    try {
-      const cleanEmail = email.trim();
-      const cleanToken = token.trim();
-
-      let verifyRes = await supabase.auth.verifyOtp({
-        email: cleanEmail,
-        token: cleanToken,
-        type: 'signup',
-      });
-
-      if (verifyRes.error) {
-        verifyRes = await supabase.auth.verifyOtp({
-          email: cleanEmail,
-          token: cleanToken,
-          type: 'email',
-        });
-      }
-
-      if (verifyRes.error) throw verifyRes.error;
-
-      if (verifyRes.data.session) {
-        try {
-          await supabase.rpc('complete_login_challenge');
-        } catch (rpcErr) {
-          console.warn('complete_login_challenge on signup:', rpcErr);
-        }
-        try {
-          sessionStorage.setItem('tasker_otp_verified', 'true');
-        } catch {}
-        setIsOtpVerified(true);
-        setSession(verifyRes.data.session);
-        setUser(verifyRes.data.user);
-      }
-    } finally {
-      setIsLoading(false);
+    if (data.session) {
+      setSession(data.session);
+      setUser(data.user);
     }
   };
 
@@ -225,65 +102,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     password: string,
     name?: string
   ): Promise<SignUpResult> => {
-    setIsLoading(true);
-    try {
-      const redirectUrl = window.location.origin.includes('localhost')
-        ? window.location.origin
-        : 'https://mytasker-dun.vercel.app';
-
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            display_name: name?.trim() || email.split('@')[0],
-          },
-        },
-      });
-      if (error) throw error;
-
-      // When email confirmation is active in Supabase, an existing user returns identities: [] without an error
-      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-        throw new Error('An account with this email address already exists. Please switch to Sign In.');
-      }
-
-      const hasSession = Boolean(data.session);
-      if (hasSession) {
-        try {
-          await supabase.rpc('complete_login_challenge');
-        } catch {
-          // ignore
-        }
-        setSession(data.session);
-        setUser(data.user);
-      }
-
-      return {
-        needsEmailConfirmation: !hasSession,
-        user: data.user,
-      };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resendConfirmationEmail = async (email: string): Promise<void> => {
+    const cleanEmail = email.trim();
+    const displayName = name?.trim() || cleanEmail.split('@')[0];
     const redirectUrl = window.location.origin.includes('localhost')
       ? window.location.origin
       : 'https://mytasker-dun.vercel.app';
 
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email.trim(),
+    const { data, error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
       options: {
         emailRedirectTo: redirectUrl,
+        data: {
+          display_name: displayName,
+          name: displayName,
+        },
       },
     });
     if (error) throw error;
+
+    // When email confirmation is active in Supabase, an existing user returns identities: [] without an error
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      throw new Error('An account with this email address already exists. Please switch to Sign In.');
+    }
+
+    if (data.session) {
+      setSession(data.session);
+      setUser(data.user);
+    }
+
+    return {
+      needsEmailConfirmation: !Boolean(data.session),
+      user: data.user,
+    };
   };
 
-  const sendPasswordResetOtp = async (email: string): Promise<void> => {
+  const sendPasswordResetEmail = async (email: string): Promise<void> => {
     const redirectUrl = window.location.origin.includes('localhost')
       ? window.location.origin
       : 'https://mytasker-dun.vercel.app';
@@ -292,24 +146,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       redirectTo: redirectUrl,
     });
     if (error) throw error;
-  };
-
-  const verifyPasswordResetOtp = async (email: string, token: string): Promise<void> => {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: token.trim(),
-      type: 'recovery',
-    });
-    if (error) throw error;
-    if (data.session) {
-      try {
-        await supabase.rpc('complete_login_challenge');
-      } catch {
-        // ignore
-      }
-      setSession(data.session);
-      setUser(data.user);
-    }
   };
 
   const updatePassword = async (newPassword: string): Promise<void> => {
@@ -327,20 +163,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async (): Promise<void> => {
     setIsLoading(true);
     try {
-      try {
-        await supabase.rpc('revoke_login_challenge');
-      } catch {
-        // ignore
-      }
-      try {
-        sessionStorage.removeItem('tasker_otp_verified');
-      } catch {}
-      setIsOtpVerified(false);
       await supabase.auth.signOut();
+    } catch {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {}
+    } finally {
       setSession(null);
       setUser(null);
       setIsPasswordRecovery(false);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -360,8 +191,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   const isAuthenticated = useMemo(() => {
-    return Boolean(user && session && isOtpVerified);
-  }, [user, session, isOtpVerified]);
+    return Boolean(user && session);
+  }, [user, session]);
 
   return (
     <AuthContext.Provider
@@ -371,17 +202,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isAuthenticated,
         isPasswordRecovery,
-        isOtpVerified,
         userEmail,
         displayName,
-        validatePasswordAndSendOtp,
-        verifyLoginOtp,
-        resendLoginOtp,
-        verifySignupOtp,
+        signInWithPassword,
         signUpWithEmail,
-        resendConfirmationEmail,
-        sendPasswordResetOtp,
-        verifyPasswordResetOtp,
+        sendPasswordResetEmail,
         updatePassword,
         resetPasswordRecoveryState,
         signOut,

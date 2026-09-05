@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -12,19 +12,14 @@ import {
   Eye,
   EyeOff,
   X,
-  ShieldCheck,
   RefreshCw,
   ArrowLeft,
-  ShieldAlert,
 } from 'lucide-react';
 
 type AuthView =
   | 'signin'
-  | 'verify_login_otp'
   | 'signup'
-  | 'verify_signup_otp'
   | 'forgot_email'
-  | 'forgot_code'
   | 'forgot_success'
   | 'reset_new_password';
 
@@ -40,14 +35,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   canDismiss = false,
 }) => {
   const {
-    validatePasswordAndSendOtp,
-    verifyLoginOtp,
-    resendLoginOtp,
-    verifySignupOtp,
+    signInWithPassword,
     signUpWithEmail,
-    resendConfirmationEmail,
-    sendPasswordResetOtp,
-    verifyPasswordResetOtp,
+    sendPasswordResetEmail,
     updatePassword,
     resetPasswordRecoveryState,
     isPasswordRecovery,
@@ -63,16 +53,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [infoMsg, setInfoMsg] = useState<string>('');
-  const [resendingEmail, setResendingEmail] = useState<boolean>(false);
-  const [resendCooldown, setResendCooldown] = useState<number>(0);
-
-  // 4-Digit Segmented OTP State
-  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '']);
-  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
-
-  // 5-Attempt Security Tracking & 60s Lockout
-  const [attemptsLeft, setAttemptsLeft] = useState<number>(5);
-  const [lockoutSeconds, setLockoutSeconds] = useState<number>(0);
 
   // Automatically switch to password reset view if user entered via an email recovery link
   useEffect(() => {
@@ -81,26 +61,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   }, [isPasswordRecovery]);
 
-  // Resend cooldown countdown ticker
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
-
-  // Lockout countdown ticker
-  useEffect(() => {
-    if (lockoutSeconds > 0) {
-      const timer = setTimeout(() => setLockoutSeconds((prev) => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (lockoutSeconds === 0 && attemptsLeft === 0) {
-      setAttemptsLeft(5);
-      setErrorMsg('');
-      setInfoMsg('Lockout expired. You may now request a fresh verification code.');
-    }
-  }, [lockoutSeconds, attemptsLeft]);
-
   if (!isOpen) return null;
 
   const resetForm = () => {
@@ -108,45 +68,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setInfoMsg('');
     setPassword('');
     setConfirmPassword('');
-    setOtpDigits(['', '', '', '']);
-    setAttemptsLeft(5);
-    setLockoutSeconds(0);
-  };
-
-  const getFullOtpString = (): string => {
-    return otpDigits.join('').trim();
-  };
-
-  const handleOtpDigitChange = (index: number, val: string) => {
-    if (lockoutSeconds > 0) return;
-    const clean = val.replace(/\D/g, '');
-
-    // Handle Paste of multi-digit code (e.g. 4 or 6 digits)
-    if (clean.length > 1) {
-      const newDigits = ['', '', '', ''];
-      for (let i = 0; i < 4; i++) {
-        newDigits[i] = clean[i] || '';
-      }
-      setOtpDigits(newDigits);
-      const nextFocus = Math.min(clean.length, 3);
-      otpInputsRef.current[nextFocus]?.focus();
-      return;
-    }
-
-    const updated = [...otpDigits];
-    updated[index] = clean.slice(-1);
-    setOtpDigits(updated);
-
-    // Auto advance focus to next input
-    if (clean && index < 3) {
-      otpInputsRef.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      otpInputsRef.current[index - 1]?.focus();
-    }
   };
 
   const parseAuthError = (err: any): string => {
@@ -154,11 +75,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const code = err?.code || '';
 
     if (rawMsg.includes('email not confirmed') || code === 'email_not_confirmed') {
-      return 'Your email address is not verified yet. Please check your inbox for the activation code.';
+      return 'Your email address is not verified yet. Please check your inbox.';
     }
 
     if (rawMsg.includes('invalid login credentials') || code === 'invalid_credentials') {
-      return 'Incorrect email or password. Please verify your credentials and try again.';
+      return 'Incorrect email or password.';
     }
 
     if (
@@ -166,7 +87,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       rawMsg.includes('rate limit') ||
       rawMsg.includes('rate_limit')
     ) {
-      return 'Email rate limit reached. Please wait a minute before requesting another code.';
+      return 'Email rate limit reached. Please wait a minute before requesting another reset email.';
     }
 
     if (
@@ -177,19 +98,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return 'An account with this email address already exists. Please switch to Sign In.';
     }
 
-    if (
-      rawMsg.includes('token has expired') ||
-      rawMsg.includes('invalid') ||
-      code === 'otp_expired'
-    ) {
-      return 'The verification code is invalid or has expired.';
-    }
-
     return err?.message || 'Authentication failed. Please check your details and try again.';
   };
 
-  // STEP 1 OF LOGIN: Validate Password & Request 4-digit Email OTP
-  const handlePasswordSignIn = async (e: React.FormEvent) => {
+  // SIGN IN: Standard Email + Password
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       setErrorMsg('Please enter both email and password.');
@@ -200,74 +113,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
 
     try {
-      await validatePasswordAndSendOtp(email, password);
-      setOtpDigits(['', '', '', '']);
-      setAttemptsLeft(5);
-      setLockoutSeconds(0);
-      setResendCooldown(60);
-      setView('verify_login_otp');
-      showToast('Credentials confirmed! A 4-digit security code was dispatched to your email.', 'info');
-    } catch (err: any) {
-      setErrorMsg(parseAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // STEP 2 OF LOGIN: Verify Email OTP & Establish Authenticated Session
-  const handleVerifyLoginOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (lockoutSeconds > 0) return;
-
-    const code = getFullOtpString();
-    if (code.length < 4) {
-      setErrorMsg('Please enter the complete 4-digit verification code.');
-      return;
-    }
-
-    setErrorMsg('');
-    setInfoMsg('');
-    setLoading(true);
-
-    try {
-      await verifyLoginOtp(email, code);
-      showToast('Verification successful! Welcome to TASKER.', 'success');
+      await signInWithPassword(email, password);
+      showToast('Welcome back!', 'success');
       onClose?.();
     } catch (err: any) {
-      const nextAttempts = attemptsLeft - 1;
-      setAttemptsLeft(nextAttempts);
-
-      if (nextAttempts <= 0) {
-        setLockoutSeconds(60);
-        setErrorMsg('Maximum attempts reached. Current OTP invalidated. Please wait 60s.');
-        setOtpDigits(['', '', '', '']);
-      } else {
-        setErrorMsg(`Invalid OTP. ${nextAttempts} attempt${nextAttempts === 1 ? '' : 's'} available.`);
-      }
+      setErrorMsg(parseAuthError(err));
     } finally {
       setLoading(false);
     }
   };
 
-  // Resend Login OTP
-  const handleResendLoginOtp = async () => {
-    if (!email || resendCooldown > 0 || lockoutSeconds > 0) return;
-    setResendingEmail(true);
-    setErrorMsg('');
-    try {
-      await resendLoginOtp(email);
-      setResendCooldown(60);
-      setAttemptsLeft(5);
-      setOtpDigits(['', '', '', '']);
-      showToast('Fresh verification code sent to your email!', 'info');
-    } catch (err: any) {
-      setErrorMsg(parseAuthError(err));
-    } finally {
-      setResendingEmail(false);
-    }
-  };
-
-  // STEP 1 OF SIGNUP: Create Account & Send Activation OTP
+  // SIGN UP: Standard Name + Email + Password
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -289,12 +145,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       const result = await signUpWithEmail(email, password, name);
       if (result.needsEmailConfirmation) {
-        setOtpDigits(['', '', '', '']);
-        setResendCooldown(60);
-        setView('verify_signup_otp');
-        showToast('Account registered! Enter the activation code sent to your email.', 'info');
+        setInfoMsg(`A confirmation link was sent to ${email}. Please check your inbox.`);
+        showToast('Registration email sent. Please check your inbox.', 'info');
       } else {
-        showToast('Account created and signed in!', 'success');
+        showToast('Account created and signed in! Welcome to TASKER.', 'success');
         onClose?.();
       }
     } catch (err: any) {
@@ -304,30 +158,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  // STEP 2 OF SIGNUP: Verify Activation Code
-  const handleVerifySignupOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = getFullOtpString();
-    if (code.length < 4) {
-      setErrorMsg('Please enter the complete 4-digit activation code.');
-      return;
-    }
-    setErrorMsg('');
-    setInfoMsg('');
-    setLoading(true);
-
-    try {
-      await verifySignupOtp(email, code);
-      showToast('Account activated! Welcome to TASKER.', 'success');
-      onClose?.();
-    } catch (err: any) {
-      setErrorMsg(parseAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // FORGOT PASSWORD: Step 1 (Request Reset Code)
+  // FORGOT PASSWORD: Request Reset Email
   const handleRequestPasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
@@ -339,43 +170,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
 
     try {
-      await sendPasswordResetOtp(email);
-      setOtpDigits(['', '', '', '']);
-      setView('forgot_code');
-      showToast('Password recovery code sent to your email.', 'info');
-    } catch (err: any) {
-      setErrorMsg(parseAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // FORGOT PASSWORD: Step 2 (Verify Recovery Code & Set New Password)
-  const handleVerifyAndResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = getFullOtpString();
-    if (code.length < 4) {
-      setErrorMsg('Please enter the complete recovery code.');
-      return;
-    }
-    if (!password || password.length < 6) {
-      setErrorMsg('New password must be at least 6 characters.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMsg('Passwords do not match.');
-      return;
-    }
-
-    setErrorMsg('');
-    setInfoMsg('');
-    setLoading(true);
-
-    try {
-      await verifyPasswordResetOtp(email, code);
-      await updatePassword(password);
+      await sendPasswordResetEmail(email);
       setView('forgot_success');
-      showToast('Password updated successfully! You may now sign in.', 'success');
+      showToast('Password reset email sent. Please check your inbox.', 'info');
     } catch (err: any) {
       setErrorMsg(parseAuthError(err));
     } finally {
@@ -452,13 +249,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {infoMsg && (
             <div className="mb-5 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
-              <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
               <div className="flex-1 leading-relaxed">{infoMsg}</div>
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* VIEW 1: SIGN IN (STEP 1 - EMAIL + PASSWORD) */}
+          {/* VIEW 1: SIGN IN (EMAIL + PASSWORD) */}
           {/* ============================================================ */}
           {view === 'signin' && (
             <div className="space-y-4">
@@ -469,7 +266,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </p>
               </div>
 
-              <form onSubmit={handlePasswordSignIn} className="space-y-3.5">
+              <form onSubmit={handleSignIn} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Email Address
@@ -535,7 +332,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      <span>Continue to Verification</span>
+                      <span>Sign In</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -561,100 +358,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {/* ============================================================ */}
-          {/* VIEW 2: VERIFY LOGIN OTP (STEP 2 - HARD GATE) */}
-          {/* ============================================================ */}
-          {view === 'verify_login_otp' && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-3 shadow-xs">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Two-Step Verification</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
-                  Enter the 4-digit security code dispatched to <strong className="text-slate-700 dark:text-slate-200">{email}</strong>
-                </p>
-              </div>
-
-              {/* Segmented 4-Digit Input */}
-              <form onSubmit={handleVerifyLoginOtp} className="space-y-4">
-                <div className="flex justify-center gap-3 my-2">
-                  {[0, 1, 2, 3].map((idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => {
-                        otpInputsRef.current[idx] = el;
-                      }}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={idx === 0 ? 4 : 1}
-                      disabled={loading || lockoutSeconds > 0}
-                      value={otpDigits[idx]}
-                      onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      className="w-13 h-14 text-center text-xl font-bold font-mono bg-slate-50 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-40"
-                    />
-                  ))}
-                </div>
-
-                {/* Lockout Banner or Attempts Counter */}
-                {lockoutSeconds > 0 ? (
-                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs text-center font-medium flex items-center justify-center gap-2">
-                    <ShieldAlert className="w-4 h-4 text-rose-500 animate-pulse" />
-                    <span>Locked out: wait <strong>{lockoutSeconds}s</strong> before requesting code.</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1">
-                    <span>Attempts remaining: <strong className="text-slate-700 dark:text-slate-200">{attemptsLeft}/5</strong></span>
-                    {resendCooldown > 0 ? (
-                      <span className="text-slate-400">Resend in {resendCooldown}s</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleResendLoginOtp}
-                        disabled={resendingEmail || lockoutSeconds > 0}
-                        className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-                      >
-                        Resend Code
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading || lockoutSeconds > 0 || getFullOtpString().length < 4}
-                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Verify & Enter TASKER</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setView('signin');
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Back to Credentials</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* ============================================================ */}
-          {/* VIEW 3: SIGN UP */}
+          {/* VIEW 2: SIGN UP */}
           {/* ============================================================ */}
           {view === 'signup' && (
             <div className="space-y-4">
@@ -753,7 +457,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      <span>Create Account & Send Code</span>
+                      <span>Create Account</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -779,105 +483,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {/* ============================================================ */}
-          {/* VIEW 4: VERIFY SIGNUP OTP */}
-          {/* ============================================================ */}
-          {view === 'verify_signup_otp' && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3 shadow-xs">
-                  <Mail className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Activate Your Account</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
-                  Enter the 4-digit code dispatched to <strong className="text-slate-700 dark:text-slate-200">{email}</strong>
-                </p>
-              </div>
-
-              <form onSubmit={handleVerifySignupOtp} className="space-y-4">
-                <div className="flex justify-center gap-3 my-2">
-                  {[0, 1, 2, 3].map((idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => {
-                        otpInputsRef.current[idx] = el;
-                      }}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={idx === 0 ? 4 : 1}
-                      disabled={loading}
-                      value={otpDigits[idx]}
-                      onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      className="w-13 h-14 text-center text-xl font-bold font-mono bg-slate-50 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:border-emerald-500 dark:focus:border-emerald-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                    />
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1">
-                  <span>Activation code sent</span>
-                  {resendCooldown > 0 ? (
-                    <span className="text-slate-400">Resend in {resendCooldown}s</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await resendConfirmationEmail(email);
-                          setResendCooldown(60);
-                          showToast('New activation code sent!', 'info');
-                        } catch (err: any) {
-                          setErrorMsg(parseAuthError(err));
-                        }
-                      }}
-                      className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
-                    >
-                      Resend Code
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading || getFullOtpString().length < 4}
-                  className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:opacity-50"
-                >
-                  {loading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Activate Account</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setView('signin');
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Back to Sign In</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* ============================================================ */}
-          {/* VIEW 5: FORGOT PASSWORD - REQUEST EMAIL */}
+          {/* VIEW 3: FORGOT PASSWORD - REQUEST EMAIL */}
           {/* ============================================================ */}
           {view === 'forgot_email' && (
             <div className="space-y-4">
               <div className="mb-2">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Reset Password</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Enter your email address to receive a recovery code.
+                  Enter your email address to receive a password reset link.
                 </p>
               </div>
 
@@ -909,7 +522,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      <span>Send Recovery Code</span>
+                      <span>Send Reset Link</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -933,112 +546,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {/* ============================================================ */}
-          {/* VIEW 6: FORGOT PASSWORD - CODE & NEW PASSWORD */}
-          {/* ============================================================ */}
-          {view === 'forgot_code' && (
-            <div className="space-y-4">
-              <div className="mb-2">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Set New Password</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Enter the recovery code sent to <strong className="text-slate-700 dark:text-slate-200">{email}</strong>
-                </p>
-              </div>
-
-              <form onSubmit={handleVerifyAndResetPassword} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Recovery Code
-                  </label>
-                  <div className="flex justify-center gap-3 my-2">
-                    {[0, 1, 2, 3].map((idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => {
-                          otpInputsRef.current[idx] = el;
-                        }}
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={idx === 0 ? 6 : 1}
-                        value={otpDigits[idx]}
-                        onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        className="w-13 h-14 text-center text-xl font-bold font-mono bg-slate-50 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    New Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Confirm New Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading || getFullOtpString().length < 4}
-                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-60"
-                >
-                  {loading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Reset Password</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* ============================================================ */}
-          {/* VIEW 7: FORGOT PASSWORD - SUCCESS */}
+          {/* VIEW 4: FORGOT PASSWORD - SUCCESS NOTIFICATION */}
           {/* ============================================================ */}
           {view === 'forgot_success' && (
             <div className="text-center py-4 space-y-3">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-600 dark:text-emerald-400 mb-2">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Password Reset Complete</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Check Your Email</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-                Your password has been successfully updated. You can now sign in using your new credentials.
+                If an account exists for <strong className="text-slate-700 dark:text-slate-200">{email}</strong>, a password reset link has been sent. Follow the instructions in the email to reset your password.
               </p>
               <button
                 type="button"
@@ -1048,13 +565,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 }}
                 className="w-full mt-4 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md transition-colors"
               >
-                Go to Sign In
+                Back to Sign In
               </button>
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* VIEW 8: RESET NEW PASSWORD (FROM DIRECT EMAIL LINK) */}
+          {/* VIEW 5: RESET NEW PASSWORD (FROM RECOVERY LINK) */}
           {/* ============================================================ */}
           {view === 'reset_new_password' && (
             <div className="space-y-4">
@@ -1084,6 +601,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+                      aria-label="Toggle password visibility"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
