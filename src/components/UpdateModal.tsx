@@ -52,11 +52,11 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     const cleanup = backHandlerService.register(
       'update-modal',
       () => {
-        if (!isMandatory && !isDownloading) {
+        if ((!isMandatory || Boolean(error)) && !isDownloading) {
           onClose();
           return true;
         }
-        // Consumed back press to prevent backing out of mandatory update
+        // Consumed back press to prevent backing out of mandatory update when actively updating
         return true;
       },
       60
@@ -124,7 +124,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
               </div>
             </div>
 
-            {!isMandatory && !isDownloading && (
+            {(!isMandatory || Boolean(error)) && !isDownloading && (
               <button
                 onClick={onClose}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -197,9 +197,21 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
           {error && (
             <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
               <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
+              <div className="flex-1 space-y-1.5">
                 <p className="font-semibold">Update Notice</p>
-                <p className="text-[11px] mt-0.5">{error}</p>
+                <p className="text-[11px] leading-relaxed">{error}</p>
+                {release.apk_url && (
+                  <div className="pt-1">
+                    <a
+                      href={release.apk_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-semibold underline hover:text-blue-700"
+                    >
+                      Download APK directly via browser
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -232,9 +244,9 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
 
         {/* Footer Actions */}
         <div className="p-4 bg-slate-50/80 dark:bg-slate-900/80 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
-          {!isMandatory && !isDownloading && (
+          {(!isMandatory || Boolean(error)) && !isDownloading && (
             <Button variant="secondary" size="md" onClick={onClose}>
-              Later
+              {error ? 'Close' : 'Later'}
             </Button>
           )}
 
@@ -245,7 +257,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             isLoading={isDownloading}
             leftIcon={!isDownloading ? <Download className="w-4 h-4" /> : undefined}
           >
-            {isDownloading ? `Downloading (${downloadProgress}%)` : 'Install Update'}
+            {isDownloading ? `Downloading (${downloadProgress}%)` : error ? 'Try Again' : 'Install Update'}
           </Button>
         </div>
       </div>

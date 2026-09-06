@@ -25,9 +25,37 @@ export interface UpdateInfo {
   isMandatory: boolean;
 }
 
+export interface InstallApkResult {
+  success: boolean;
+  installerLaunched?: boolean;
+  needsPermission?: boolean;
+  error?: string;
+  targetVersionCode?: number;
+  targetVersionName?: string;
+}
+
 export interface UpdatePluginInterface {
-  downloadApk(options: { url: string }): Promise<{ uri: string; filePath?: string; fileSize?: number }>;
-  installApk(options: { uri?: string }): Promise<{ success: boolean; error?: string }>;
+  downloadApk(options: { url: string }): Promise<{
+    uri: string;
+    filePath?: string;
+    fileSize?: number;
+    packageName?: string;
+    versionName?: string;
+    versionCode?: number;
+  }>;
+  validateApk(): Promise<{
+    valid: boolean;
+    packageName?: string;
+    versionName?: string;
+    versionCode?: number;
+    error?: string;
+  }>;
+  getInstalledVersion(): Promise<{
+    versionName: string;
+    versionCode: number;
+    packageName: string;
+  }>;
+  installApk(options?: { uri?: string }): Promise<InstallApkResult>;
   canRequestPackageInstalls(): Promise<{ canInstall: boolean }>;
   openInstallPermissionSettings(): Promise<{ success: boolean }>;
   addListener(
@@ -69,6 +97,17 @@ export function isValidApkUrl(url: string): boolean {
  */
 export async function getInstalledVersion(): Promise<{ versionName: string; versionCode: number }> {
   if (Capacitor.isNativePlatform()) {
+    // 1. Query live Android PackageManager directly via UpdatePlugin
+    try {
+      const liveInfo = await UpdatePlugin.getInstalledVersion();
+      if (liveInfo && liveInfo.versionName && typeof liveInfo.versionCode === 'number') {
+        return { versionName: liveInfo.versionName, versionCode: liveInfo.versionCode };
+      }
+    } catch (e) {
+      console.warn('UpdatePlugin.getInstalledVersion failed, falling back to App.getInfo:', e);
+    }
+
+    // 2. Fallback to Capacitor App.getInfo()
     try {
       const info = await App.getInfo();
       const versionName = info.version || '1.0.5';
@@ -205,18 +244,29 @@ export async function downloadApk(
 /**
  * Triggers Android package installer for the downloaded APK.
  * The system shows the confirmation prompt: "Do you want to install an update to this application?"
- * The user manually taps Install or Cancel.
+ * Returns detailed installation status (installerLaunched, needsPermission, targetVersionCode, error).
  */
-export async function installApk(uri: string): Promise<boolean> {
+export async function installApk(uri?: string): Promise<InstallApkResult> {
   if (!Capacitor.isNativePlatform()) {
-    return false;
+    return { success: false, error: 'In-app update installation is only supported on Android devices.' };
   }
 
   try {
-    const result = await UpdatePlugin.installApk({ uri });
-    return result?.success ?? false;
+    const result = await UpdatePlugin.installApk(uri ? { uri } : {});
+    return {
+      success: Boolean(result?.success),
+      installerLaunched: Boolean(result?.installerLaunched),
+      needsPermission: Boolean(result?.needsPermission),
+      error: result?.error,
+      targetVersionCode: result?.targetVersionCode,
+      targetVersionName: result?.targetVersionName,
+    };
   } catch (e: any) {
     console.error('Error launching installer:', e);
-    return false;
+    return {
+      success: false,
+      installerLaunched: false,
+      error: e?.message || 'Failed to start Android package installer',
+    };
   }
 }
