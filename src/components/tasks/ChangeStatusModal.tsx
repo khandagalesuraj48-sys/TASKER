@@ -134,15 +134,28 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
         <div>
           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
             <MessageSquare className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-            <span>Remark / Notes (Recorded in History)</span>
+            <span>
+              {selectedStatus === 'completed' || selectedStatus === 'partial'
+                ? 'Work Done / Submission Remarks (केलेल्या कामाचा तपशील / शेरा)'
+                : 'Progress Note / Reason (शेरा / टिप्पणी)'}
+            </span>
           </label>
           <textarea
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
-            placeholder="e.g. Waiting on vendor callback, or completed milestone 1..."
+            placeholder={
+              selectedStatus === 'completed'
+                ? 'उदा. काम यशस्वीरीत्या पूर्ण झाले, रिपोर्ट तयार आहे...'
+                : selectedStatus === 'partial'
+                ? 'उदा. ५ पैकी ३ कामे पूर्ण झाली, उर्वरित २ कामे प्रलंबित आहेत...'
+                : 'उदा. काम सुरू केले आहे, पुढील माहितीची प्रतीक्षा आहे...'
+            }
             rows={2}
             className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
+          <p className="text-[11px] text-slate-400 mt-1">
+            💡 हा शेरा टाइमलाइनमध्ये सेव्ह होईल आणि पुढील हँडओव्हरसाठी सर्वांना स्पष्ट दिसेल.
+          </p>
         </div>
 
         {/* Changed By Field */}

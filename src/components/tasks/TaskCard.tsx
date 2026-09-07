@@ -194,11 +194,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             {task.title}
           </h3>
-          {task.description && (
+          {task.reassigned_by ? (
+            <div className="mt-1 text-[11px] text-blue-700 dark:text-blue-300 bg-blue-50/70 dark:bg-blue-950/40 px-2 py-1 rounded-lg border border-blue-100 dark:border-blue-900/40 line-clamp-2">
+              🎯 <strong>Next:</strong> {task.reassigned_by}
+            </div>
+          ) : task.description ? (
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
               {task.description}
             </p>
-          )}
+          ) : null}
         </div>
 
         {/* Person / Pending With */}

@@ -37,7 +37,9 @@ export interface Task {
   entity_id?: string | null;
   // Enterprise collaboration fields
   scope?: TaskScope;
-  org_id?: string | null;
+  org_id?: string | null; // organization id for workplace tasks
+  reassigned_by?: string | null; // who reassigned
+  reassigned_at?: string | null; // when reassigned
   site_id?: string | null;
   department_id?: string | null;
   assigned_to?: string | null;
@@ -182,6 +184,8 @@ export interface UpdateTaskInput {
   entity_type?: string | null;
   entity_id?: string | null;
   scope?: TaskScope;
+  reassigned_by?: string | null; // who reassigned
+  reassigned_at?: string | null; // when reassigned
   org_id?: string | null;
   site_id?: string | null;
   department_id?: string | null;

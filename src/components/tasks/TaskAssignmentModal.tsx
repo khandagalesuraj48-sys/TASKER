@@ -255,18 +255,46 @@ export const TaskAssignmentModal: React.FC<TaskAssignmentModalProps> = ({
               </div>
             </div>
 
-            {/* Assignment Remark */}
+            {/* Current Assignee Context Banner */}
+            {task.person_name && (
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 text-xs">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Current:</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">{task.person_name}</span>
+                {selectedEmployeeId && (
+                  <>
+                    <span className="text-slate-400">➔</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-500">Handing Over To:</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400">
+                      {employees.find((e) => e.id === selectedEmployeeId)?.first_name}{' '}
+                      {employees.find((e) => e.id === selectedEmployeeId)?.last_name || ''}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Assignment Remark / New Action Instructions */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                Handover Remark / Instruction (Optional)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                  🎯 Clear Instructions / Next Step for Assignee
+                </label>
+                <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">Shown prominently to assignee</span>
+              </div>
               <textarea
-                rows={2}
+                rows={3}
                 value={remark}
                 onChange={(e) => setRemark(e.target.value)}
-                placeholder="e.g. Please verify invoice and follow up with client by tomorrow..."
-                className="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+                placeholder={
+                  task.person_name
+                    ? `उदा. ${task.person_name} कडून हे काम झाले आहे. आता पुढील व्यक्तीने काय करायचे आहे ते येथे स्पष्ट लिहा...`
+                    : 'उदा. क्लायंटकडून कागदपत्रे गोळा करा आणि संध्याकाळी ५ वाजेपर्यंत रिपोर्ट सादर करा...'
+                }
+                className="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                💡 ही सूचना नवीन व्यक्तीला टास्क उघडल्यावर सर्वात वर ठळकपणे दिसेल, ज्यामुळे त्याचा गोंधळ होणार नाही.
+              </p>
             </div>
 
             {/* Actions */}

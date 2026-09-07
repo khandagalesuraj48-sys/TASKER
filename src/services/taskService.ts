@@ -798,13 +798,61 @@ export const assignTask = async (
     remark?: string;
   }
 ): Promise<void> => {
+  // Update assignment and audit fields
   await updateTask(taskId, {
     scope: 'workplace',
     org_id: params.orgId,
     assigned_to: params.assignedTo || null,
     assigned_employee_id: params.assignedEmployeeId || null,
     person_name: params.assignedToName || undefined,
+    // Audit columns for reassignment
+    reassigned_by: params.remark ? params.remark : undefined,
+    reassigned_at: new Date().toISOString(),
   });
+
+  // Record into task_assignments table for explicit history trail
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+    if (currentUserId) {
+      await supabase.from('task_assignments').insert({
+        task_id: taskId,
+        org_id: params.orgId,
+        assigned_by: currentUserId,
+        assigned_to: params.assignedTo || null,
+        assigned_employee_id: params.assignedEmployeeId || null,
+        assigned_to_name: params.assignedToName || null,
+        remark: params.remark || null,
+        status: 'assigned',
+      });
+    }
+  } catch (asgnErr) {
+    console.warn('Direct task_assignments insert fallback:', asgnErr);
+  }
+
+  // If remark provided, also save as note for full transparency
+  if (params.remark && params.remark.trim()) {
+    try {
+      const { addNote } = await import('./notesService');
+      const author = params.assignedToName ? `Handover to ${params.assignedToName}` : 'Task Assignment';
+      await addNote(taskId, `📌 [Action Required] ${params.remark.trim()}`, author);
+    } catch {
+      // non-blocking
+    }
+  }
+
+  // Send notification to new assignee
+  try {
+    const task = await getTaskById(taskId);
+    if (task && task.assigned_to) {
+      const assignedTarget = task.assigned_to;
+      await import('./notificationService').then(async (mod) => {
+        await mod.notifyTaskReassigned(task, assignedTarget);
+      });
+    }
+  } catch (e) {
+    console.warn('Notification after reassignment failed:', e);
+  }
 };
 
 export const getOrgEmployees = async (orgId: string): Promise<ErpEmployee[]> => {

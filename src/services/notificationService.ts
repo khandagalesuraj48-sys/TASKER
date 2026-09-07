@@ -319,3 +319,29 @@ export const schedulePendingTasksNotification = async (
   }
 };
 
+
+export const notifyTaskReassigned = async (task: Task, _assigneeId: string): Promise<void> => {
+  // Immediate native notification for task reassignment
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    const title = `Task Reassigned: ${task.title}`;
+    const body = `${task.title} has been reassigned to you.`;
+    const notifId = taskIdToNotificationId(task.id);
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: notifId,
+          title,
+          body,
+          schedule: { at: new Date(Date.now() + 1000) }, // fire shortly
+          channelId: 'tasker_reassign',
+          autoCancel: true,
+          extra: { taskId: task.id, type: 'task_reassigned' },
+        },
+      ],
+    });
+  } catch (err) {
+    console.warn('Failed to send reassignment notification:', err);
+  }
+};
+
