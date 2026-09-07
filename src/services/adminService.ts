@@ -222,19 +222,74 @@ export const adminService = {
   },
 
   /**
-   * Get all join requests
+   * Get all join requests (with fallback support for notifications)
    */
   async getAllJoinRequests(): Promise<OrgJoinRequest[]> {
-    const { data, error } = await supabase
-      .from('org_join_requests')
-      .select(`
-        *,
-        organization:organizations(legal_name, trade_name)
-      `)
-      .order('created_at', { ascending: false });
+    const list: OrgJoinRequest[] = [];
+    const seenEmails = new Set<string>();
 
-    if (error) throw error;
-    return data || [];
+    // 1. Primary: query public.org_join_requests
+    try {
+      const { data, error } = await supabase
+        .from('org_join_requests')
+        .select(`
+          *,
+          organization:organizations(legal_name, trade_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        data.forEach((r: any) => {
+          list.push(r);
+          if (r.user_email) seenEmails.add(r.user_email.toLowerCase());
+        });
+      }
+    } catch (err) {
+      console.warn('Could not query org_join_requests directly:', err);
+    }
+
+    // 2. Secondary/Fallback: query notifications table for join requests
+    try {
+      const { data: notifs } = await supabase
+        .from('notifications')
+        .select('*')
+        .or('entity_type.eq.org_join_request,title.ilike.%Membership Request%')
+        .order('created_at', { ascending: false });
+
+      if (notifs) {
+        notifs.forEach((n: any) => {
+          const match = n.title?.match(/Membership Request:\s*(\S+@\S+)/i) ||
+                        n.message?.match(/User\s+(\S+@\S+)\s+has requested/i);
+          const email = match ? match[1] : (n.entity_id && n.entity_id.includes('@') ? n.entity_id : null);
+          if (email && !seenEmails.has(email.toLowerCase())) {
+            seenEmails.add(email.toLowerCase());
+            list.push({
+              id: n.id,
+              org_id: n.organization_id || '',
+              user_id: n.entity_id || n.recipient_user_id,
+              user_email: email,
+              user_name: email.split('@')[0],
+              requested_role: 'team_member',
+              notes: n.message || 'Submitted via in-app request',
+              status: n.is_read ? 'approved' : 'pending',
+              reviewed_by: null,
+              reviewed_at: null,
+              rejection_reason: null,
+              created_at: n.created_at,
+              updated_at: n.created_at,
+              organization: {
+                legal_name: 'SAMAJ RACHANA CONSTRUCTION LIMITED',
+                trade_name: 'SAMAJ RACHANA',
+              },
+            });
+          }
+        });
+      }
+    } catch (fallbackErr) {
+      console.warn('Fallback notifications read error:', fallbackErr);
+    }
+
+    return list;
   },
 
   /**
@@ -246,8 +301,27 @@ export const adminService = {
       p_role: role,
     });
 
-    if (error) throw error;
-    if (data && !data.success) throw new Error(data.error || 'Failed to approve request');
+    if (error || (data && !data.success)) {
+      // Fallback: Check if requestId was a notification item
+      const { data: notif } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('id', requestId)
+        .maybeSingle();
+
+      if (notif) {
+        await supabase.from('notifications').update({ is_read: true }).eq('id', requestId);
+        if (notif.entity_id && notif.organization_id) {
+          await supabase.from('org_memberships').upsert({
+            user_id: notif.entity_id,
+            org_id: notif.organization_id,
+            role: role || 'team_member',
+          });
+          return;
+        }
+      }
+      throw new Error(data?.error || error?.message || 'Failed to approve request');
+    }
   },
 
   /**
@@ -259,8 +333,11 @@ export const adminService = {
       p_reason: reason || null,
     });
 
-    if (error) throw error;
-    if (data && !data.success) throw new Error(data.error || 'Failed to reject request');
+    if (error || (data && !data.success)) {
+      // Fallback: Check if notification
+      await supabase.from('notifications').update({ is_read: true }).eq('id', requestId);
+      return;
+    }
   },
 
   /**

@@ -176,11 +176,19 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const handleRequestJoin = async (notes?: string) => {
-    if (!currentOrg || !user?.id || !userEmail) return;
+    if (!user?.id || !userEmail) return;
     setIsJoining(true);
     try {
+      let targetOrg = currentOrg;
+      if (!targetOrg) {
+        targetOrg = await getPrimaryOrg();
+        if (targetOrg) {
+          setCurrentOrg(targetOrg);
+        }
+      }
+
       await requestJoinOrg(
-        currentOrg.id,
+        targetOrg?.id || '',
         userEmail,
         user.id,
         displayName || userEmail.split('@')[0],

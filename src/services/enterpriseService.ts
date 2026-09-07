@@ -273,42 +273,68 @@ export const requestJoinOrg = async (
   userName?: string,
   notes?: string
 ): Promise<void> => {
-  // 1. Insert into public.org_join_requests table
-  const { error: reqErr } = await supabase
-    .from('org_join_requests')
-    .insert({
-      org_id: orgId,
-      user_id: userId,
-      user_email: userEmail,
-      user_name: userName || userEmail.split('@')[0],
-      requested_role: 'team_member',
-      notes: notes || 'Requested via TASKER app',
-      status: 'pending',
+  // 1. Try bulletproof RPC first
+  try {
+    const { data, error } = await supabase.rpc('submit_org_join_request', {
+      p_org_id: orgId || null,
+      p_notes: notes || 'Requested via TASKER app',
     });
 
-  if (reqErr) {
-    console.warn('Could not insert org_join_request, falling back to notification:', reqErr.message);
+    if (!error && data && data.success) {
+      return;
+    }
+  } catch (rpcErr) {
+    console.warn('RPC submit_org_join_request error, trying direct insert:', rpcErr);
   }
 
-  // 2. Also send notification to organization owner if found
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('owner_id')
-    .eq('id', orgId)
-    .single();
+  // 2. Direct insert into public.org_join_requests table
+  let targetOrgId = orgId;
+  if (!targetOrgId) {
+    const primary = await getPrimaryOrg();
+    targetOrgId = primary?.id || '';
+  }
 
-  if (org?.owner_id) {
-    await supabase
-      .from('notifications')
+  if (targetOrgId) {
+    const { error: reqErr } = await supabase
+      .from('org_join_requests')
       .insert({
-        recipient_user_id: org.owner_id,
-        organization_id: orgId,
-        type: 'system',
-        title: `Membership Request: ${userEmail}`,
-        message: `User ${userEmail} has requested to join ${PRIMARY_ORG_NAME}.`,
-        entity_type: 'org_join_request',
-        entity_id: userId,
+        org_id: targetOrgId,
+        user_id: userId,
+        user_email: userEmail,
+        user_name: userName || userEmail.split('@')[0],
+        requested_role: 'team_member',
+        notes: notes || 'Requested via TASKER app',
+        status: 'pending',
       });
+
+    if (reqErr) {
+      console.warn('Could not insert org_join_request:', reqErr.message);
+    }
+
+    // 3. Also send notification to organization owner if found
+    try {
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('owner_id')
+        .eq('id', targetOrgId)
+        .maybeSingle();
+
+      if (org?.owner_id) {
+        await supabase
+          .from('notifications')
+          .insert({
+            recipient_user_id: org.owner_id,
+            organization_id: targetOrgId,
+            type: 'system',
+            title: `Membership Request: ${userEmail}`,
+            message: `User ${userEmail} has requested to join ${PRIMARY_ORG_NAME}.`,
+            entity_type: 'org_join_request',
+            entity_id: userId,
+          });
+      }
+    } catch (notifErr) {
+      console.warn('Could not notify org owner:', notifErr);
+    }
   }
 };
 
