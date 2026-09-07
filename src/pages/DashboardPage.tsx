@@ -31,7 +31,7 @@ export const DashboardPage: React.FC = () => {
   const loadDashboardTasks = async () => {
     setIsLoading(true);
     try {
-      const data = await getTasks({ includeDeleted: false });
+      const data = await getTasks({ includeDeleted: false, scope: 'personal' });
       setTasks(data);
     } catch (err) {
       console.error('Failed to load dashboard tasks:', err);

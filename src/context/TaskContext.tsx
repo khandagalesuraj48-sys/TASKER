@@ -96,7 +96,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     try {
-      const data = await getTaskStats();
+      const data = await getTaskStats('personal');
       setStats(data);
     } catch (err) {
       console.warn('Could not reload stats:', err);

@@ -33,6 +33,7 @@ export const PendingTasksPage: React.FC = () => {
       const data = await getTasks({
         ...filters,
         includeDeleted: false,
+        scope: 'personal',
         search: globalSearch,
       });
 

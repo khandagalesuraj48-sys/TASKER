@@ -3,26 +3,18 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Clock,
-  CheckSquare2,
   CheckCircle2,
   Bell,
   MoreHorizontal,
   Trash2,
   Settings,
   X,
-  IndianRupee,
-  Car,
-  FileBadge,
-  Users,
-  Briefcase,
-  Sparkles,
-  BarChart3,
   Building2,
-  Package,
-  Receipt,
-  FileCheck2,
   UserCheck,
-  FolderGit2,
+  Send,
+  Users,
+  History,
+  ShieldAlert,
 } from 'lucide-react';
 import { useTask } from '../../context/TaskContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
@@ -30,43 +22,21 @@ import { useBackButton } from '../../hooks/useBackButton';
 
 export const MobileNav: React.FC = () => {
   const { stats } = useTask();
-  const { isEnterpriseMode, setEnterpriseMode } = useEnterprise();
+  const { isEnterpriseMode, setEnterpriseMode, isAdmin } = useEnterprise();
   const [moreMenuOpen, setMoreMenuOpen] = useState<boolean>(false);
 
   useBackButton(moreMenuOpen, () => setMoreMenuOpen(false), 30);
 
   const mainItems = [
-    { to: '/', label: 'Home', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { to: '/', label: 'My Tasks', icon: <LayoutDashboard className="w-5 h-5" /> },
     {
       to: '/pending',
       label: 'Pending',
       icon: <Clock className="w-5 h-5" />,
       badge: stats.pending + stats.inProgress + stats.partial > 0 ? stats.pending + stats.inProgress + stats.partial : null,
     },
-    { to: '/tasks', label: 'Tasks', icon: <CheckSquare2 className="w-5 h-5" /> },
-    { to: '/completed', label: 'Done', icon: <CheckCircle2 className="w-5 h-5" /> },
+    { to: '/org/tasks', label: 'Workplace', icon: <Building2 className="w-5 h-5 text-indigo-500" /> },
     { to: '/reminders', label: 'Remind', icon: <Bell className="w-5 h-5" /> },
-  ];
-
-  const personalItems = [
-    { to: '/finance', label: 'Finance & Bills', icon: <IndianRupee className="w-4 h-4 text-emerald-500" /> },
-    { to: '/vehicles', label: 'Vehicles & PUC', icon: <Car className="w-4 h-4 text-blue-500" /> },
-    { to: '/documents', label: 'Documents & Vault', icon: <FileBadge className="w-4 h-4 text-indigo-500" /> },
-    { to: '/family', label: 'Family & Chores', icon: <Users className="w-4 h-4 text-teal-500" /> },
-    { to: '/business', label: 'Business & Khata', icon: <Briefcase className="w-4 h-4 text-purple-500" /> },
-    { to: '/templates', label: 'Checklists', icon: <Sparkles className="w-4 h-4 text-amber-500" /> },
-    { to: '/reports', label: 'Reports & DPDP', icon: <BarChart3 className="w-4 h-4 text-rose-500" /> },
-  ];
-
-  const erpItems = [
-    { to: '/erp', label: 'Executive ERP', icon: <Building2 className="w-4 h-4 text-blue-600" /> },
-    { to: '/erp/inventory', label: 'Site Inventory', icon: <Package className="w-4 h-4 text-indigo-600" /> },
-    { to: '/erp/accounting', label: 'Invoices & Ledger', icon: <Receipt className="w-4 h-4 text-emerald-600" /> },
-    { to: '/erp/crm', label: 'CRM & Parties', icon: <Users className="w-4 h-4 text-blue-500" /> },
-    { to: '/erp/hr', label: 'HR & Workforce', icon: <UserCheck className="w-4 h-4 text-indigo-500" /> },
-    { to: '/erp/approvals', label: 'Approvals Queue', icon: <FileCheck2 className="w-4 h-4 text-amber-500" /> },
-    { to: '/erp/documents', label: 'Drawings & Files', icon: <FolderGit2 className="w-4 h-4 text-purple-500" /> },
-    { to: '/erp/reports', label: 'Financial Reports', icon: <BarChart3 className="w-4 h-4 text-rose-500" /> },
   ];
 
   return (
@@ -81,7 +51,7 @@ export const MobileNav: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">TASKER Mode & Modules</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">TASKER Spaces & Navigation</h3>
               <button
                 onClick={() => setMoreMenuOpen(false)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
@@ -90,117 +60,183 @@ export const MobileNav: React.FC = () => {
               </button>
             </div>
 
-            {/* Mode Toggle */}
+            {/* Space Toggle */}
             <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
               <button
                 type="button"
                 onClick={() => setEnterpriseMode(false)}
-                className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                   !isEnterpriseMode
                     ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
-                    : 'text-slate-500'
+                    : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                👤 Personal Mode
+                <span>👤</span>
+                <span>Personal</span>
               </button>
               <button
                 type="button"
                 onClick={() => setEnterpriseMode(true)}
-                className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                   isEnterpriseMode
                     ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                    : 'text-slate-500'
+                    : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                🏢 Enterprise ERP
+                <span>🏢</span>
+                <span>Workplace</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
-              {(isEnterpriseMode ? erpItems : personalItems).map((m) => (
+            {/* Navigation Section */}
+            <div className="space-y-1">
+              {isEnterpriseMode ? (
+                <>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-2">
+                    Workplace Collaboration
+                  </p>
+                  <NavLink
+                    to="/org/tasks"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <Building2 className="w-4 h-4 text-indigo-500" />
+                    <span>Organization Tasks</span>
+                  </NavLink>
+                  <NavLink
+                    to="/org/assigned-to-me"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <UserCheck className="w-4 h-4 text-blue-500" />
+                    <span>My Assigned Tasks</span>
+                  </NavLink>
+                  <NavLink
+                    to="/org/created-by-me"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <Send className="w-4 h-4 text-emerald-500" />
+                    <span>Tasks Created by Me</span>
+                  </NavLink>
+                  <NavLink
+                    to="/org/employees"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <Users className="w-4 h-4 text-purple-500" />
+                    <span>Employee Directory</span>
+                  </NavLink>
+                  <NavLink
+                    to="/org/history"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <History className="w-4 h-4 text-amber-500" />
+                    <span>Assignment History</span>
+                  </NavLink>
+                  <NavLink
+                    to="/org/notifications"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <Bell className="w-4 h-4 text-rose-500" />
+                    <span>Notifications</span>
+                  </NavLink>
+
+                  {isAdmin && (
+                    <NavLink
+                      to="/org/manage"
+                      onClick={() => setMoreMenuOpen(false)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold text-amber-600 dark:text-amber-400"
+                    >
+                      <ShieldAlert className="w-4 h-4" />
+                      <span>Organization Management (Admin)</span>
+                    </NavLink>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                    Personal Space
+                  </p>
+                  <NavLink
+                    to="/"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-blue-500" />
+                    <span>My Tasks</span>
+                  </NavLink>
+                  <NavLink
+                    to="/completed"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span>Completed Tasks</span>
+                  </NavLink>
+                  <NavLink
+                    to="/bin"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-500" />
+                    <span>Bin</span>
+                  </NavLink>
+                </>
+              )}
+
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                 <NavLink
-                  key={m.to}
-                  to={m.to}
+                  to="/settings"
                   onClick={() => setMoreMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2.5 p-3 rounded-xl border text-xs font-semibold transition-all ${
-                      isActive
-                        ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400'
-                        : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 text-slate-700 dark:text-slate-300'
-                    }`
-                  }
+                  className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
                 >
-                  {m.icon}
-                  <span className="truncate">{m.label}</span>
+                  <Settings className="w-4 h-4 text-slate-500" />
+                  <span>Settings</span>
                 </NavLink>
-              ))}
-
-              <NavLink
-                to="/bin"
-                onClick={() => setMoreMenuOpen(false)}
-                className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold text-slate-700 dark:text-slate-300"
-              >
-                <Trash2 className="w-4 h-4 text-slate-400" />
-                <span>Bin ({stats.binCount})</span>
-              </NavLink>
-
-              <NavLink
-                to="/settings"
-                onClick={() => setMoreMenuOpen(false)}
-                className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold text-slate-700 dark:text-slate-300"
-              >
-                <Settings className="w-4 h-4 text-slate-400" />
-                <span>Settings</span>
-              </NavLink>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      <nav
-        aria-label="Mobile Navigation"
-        className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 lg:hidden pb-safe shadow-lg"
-      >
-        <div className="flex items-center justify-around px-2 py-1.5 max-w-lg mx-auto">
+      {/* Bottom Floating Navigation Bar */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 pb-safe">
+        <div className="flex items-center justify-around h-14 px-2">
           {mainItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `relative flex flex-col items-center justify-center min-w-[52px] min-h-[46px] rounded-xl px-1.5 py-1 text-[10px] font-semibold transition-all ${
+                `relative flex flex-col items-center justify-center w-14 h-full text-[10px] font-semibold transition-colors ${
                   isActive
                     ? 'text-blue-600 dark:text-blue-400 font-bold'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`
               }
             >
-              {({ isActive }) => (
-                <>
-                  <div className={`relative p-1 rounded-xl transition-all ${isActive ? 'bg-blue-50 dark:bg-blue-950/60' : ''}`}>
-                    {item.icon}
-                    {item.badge !== null && item.badge !== undefined && item.badge > 0 && (
-                      <span className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center shadow-xs">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
-                  </div>
-                  <span className="mt-0.5 tracking-tight truncate">{item.label}</span>
-                </>
-              )}
+              <div className="relative">
+                {item.icon}
+                {item.badge !== null && item.badge !== undefined && (
+                  <span className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+              <span className="mt-0.5">{item.label}</span>
             </NavLink>
           ))}
 
           <button
             type="button"
             onClick={() => setMoreMenuOpen(true)}
-            className="flex flex-col items-center justify-center min-w-[52px] min-h-[46px] rounded-xl px-1.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all"
-            aria-label="More navigation options"
+            className="flex flex-col items-center justify-center w-14 h-full text-[10px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
           >
-            <div className="p-1 rounded-xl">
-              <MoreHorizontal className="w-5 h-5" />
-            </div>
-            <span className="mt-0.5 tracking-tight">More</span>
+            <MoreHorizontal className="w-5 h-5" />
+            <span className="mt-0.5">More</span>
           </button>
         </div>
       </nav>

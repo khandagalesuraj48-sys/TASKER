@@ -1,133 +1,85 @@
+import { supabase } from '../lib/supabase';
 import {
   Organization,
-  OrgProject,
-  OrgSite,
+  OrgRole,
+  OrgMembership,
+  ErpEmployee,
   OrgDepartment,
 } from '../types/enterprise';
-import { OfflineSyncService } from './offlineSyncService';
+import { TaskAssignment } from '../types/task';
+
+export const PRIMARY_ORG_NAME = 'SAMAJ RACHANA CONSTRUCTION LIMITED';
+export const OWNER_EMAIL = 'khandagalesuraj48@gmail.com';
 
 const ACTIVE_ORG_KEY = 'tasker_active_org_id';
-const ACTIVE_PROJECT_KEY = 'tasker_active_project_id';
-const ACTIVE_SITE_KEY = 'tasker_active_site_id';
-const ACTIVE_DEPT_KEY = 'tasker_active_dept_id';
 
-const DEFAULT_ORG: Organization = {
-  id: 'org_enterprise_default',
-  legal_name: 'One Click Solutions Enterprise',
-  trade_name: 'One Click Infra & Tech',
-  gstin: '27AABCO1234F1Z5',
-  pan: 'AABCO1234F',
-  currency: 'INR',
-  fiscal_year_start_month: 4,
-  owner_id: 'default-user',
-  is_active: true,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
+export interface OrgMemberWithDetails {
+  id: string;
+  user_id: string;
+  org_id: string;
+  role: OrgRole;
+  created_at: string;
+  email?: string;
+  employee?: ErpEmployee | null;
+}
+
+export interface OrgJoinRequestItem {
+  id: string;
+  user_id: string;
+  user_email: string;
+  org_id: string;
+  created_at: string;
+  is_read: boolean;
+}
+
+/**
+ * Fetch all organizations accessible to current user
+ */
+export const getOrganizations = async (): Promise<Organization[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.warn('Could not fetch organizations from Supabase:', error);
+      return [];
+    }
+
+    return (data as Organization[]) || [];
+  } catch (err) {
+    console.error('Error fetching organizations:', err);
+    return [];
+  }
 };
 
-const DEFAULT_PROJECTS: OrgProject[] = [
-  {
-    id: 'prj_mumbai_metro',
-    org_id: 'org_enterprise_default',
-    name: 'Mumbai Metro Phase 2',
-    code: 'PRJ-MUM-02',
-    description: 'Underground station excavation & civil construction',
-    status: 'active',
-    budget: 45000000,
-    start_date: '2026-01-01',
-    target_date: '2027-12-31',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'prj_pune_techpark',
-    org_id: 'org_enterprise_default',
-    name: 'Pune Commercial Tech Park',
-    code: 'PRJ-PUN-01',
-    description: '14-floor commercial IT park development',
-    status: 'active',
-    budget: 28000000,
-    start_date: '2026-02-15',
-    target_date: '2027-06-30',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
+/**
+ * Fetch primary organization: SAMAJ RACHANA CONSTRUCTION LIMITED
+ */
+export const getPrimaryOrg = async (): Promise<Organization | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('*')
+      .ilike('legal_name', `%${PRIMARY_ORG_NAME}%`)
+      .maybeSingle();
 
-const DEFAULT_SITES: OrgSite[] = [
-  {
-    id: 'site_worli',
-    org_id: 'org_enterprise_default',
-    project_id: 'prj_mumbai_metro',
-    name: 'Worli Underground Station',
-    code: 'SITE-WORLI-01',
-    address: 'Worli Naka, Mumbai, Maharashtra',
-    is_warehouse: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'site_bandra',
-    org_id: 'org_enterprise_default',
-    project_id: 'prj_mumbai_metro',
-    name: 'Bandra Reclamation Yard',
-    code: 'SITE-BND-02',
-    address: 'Bandra Reclamation, Mumbai, Maharashtra',
-    is_warehouse: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'site_baner',
-    org_id: 'org_enterprise_default',
-    project_id: 'prj_pune_techpark',
-    name: 'Baner Tower A & B',
-    code: 'SITE-BANER-01',
-    address: 'Baner High Street, Pune, Maharashtra',
-    is_warehouse: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
+    if (!error && data) {
+      return data as Organization;
+    }
 
-const DEFAULT_DEPTS: OrgDepartment[] = [
-  {
-    id: 'dept_civil',
-    org_id: 'org_enterprise_default',
-    name: 'Civil & Structural Execution',
-    code: 'DEPT-CIVIL',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'dept_stores',
-    org_id: 'org_enterprise_default',
-    name: 'Stores & Inventory',
-    code: 'DEPT-STORES',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'dept_accounts',
-    org_id: 'org_enterprise_default',
-    name: 'Accounts & Finance',
-    code: 'DEPT-ACCTS',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-export const getOrganizations = async (): Promise<Organization[]> => {
-  const list = await OfflineSyncService.getItems<Organization>('organizations');
-  if (list.length === 0) {
-    await OfflineSyncService.saveItem('organizations', DEFAULT_ORG);
-    return [DEFAULT_ORG];
+    // Fallback to first active organization
+    const orgs = await getOrganizations();
+    return orgs[0] || null;
+  } catch (err) {
+    console.error('Error getting primary org:', err);
+    return null;
   }
-  return list;
 };
 
 export const getActiveOrgId = (): string => {
-  return localStorage.getItem(ACTIVE_ORG_KEY) || 'org_enterprise_default';
+  return localStorage.getItem(ACTIVE_ORG_KEY) || '';
 };
 
 export const setActiveOrgId = (id: string): void => {
@@ -135,88 +87,337 @@ export const setActiveOrgId = (id: string): void => {
   window.dispatchEvent(new CustomEvent('enterprise-context-changed'));
 };
 
-export const getActiveProjectId = (): string | null => {
-  return localStorage.getItem(ACTIVE_PROJECT_KEY) || null;
-};
+/**
+ * Check a user's membership and role in an organization
+ */
+export const getUserMembership = async (
+  userId: string,
+  orgId: string
+): Promise<OrgMembership | null> => {
+  if (!userId || !orgId) return null;
+  try {
+    const { data, error } = await supabase
+      .from('org_memberships')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('org_id', orgId)
+      .maybeSingle();
 
-export const setActiveProjectId = (id: string | null): void => {
-  if (id) localStorage.setItem(ACTIVE_PROJECT_KEY, id);
-  else localStorage.removeItem(ACTIVE_PROJECT_KEY);
-  window.dispatchEvent(new CustomEvent('enterprise-context-changed'));
-};
-
-export const getActiveSiteId = (): string | null => {
-  return localStorage.getItem(ACTIVE_SITE_KEY) || null;
-};
-
-export const setActiveSiteId = (id: string | null): void => {
-  if (id) localStorage.setItem(ACTIVE_SITE_KEY, id);
-  else localStorage.removeItem(ACTIVE_SITE_KEY);
-  window.dispatchEvent(new CustomEvent('enterprise-context-changed'));
-};
-
-export const getActiveDeptId = (): string | null => {
-  return localStorage.getItem(ACTIVE_DEPT_KEY) || null;
-};
-
-export const setActiveDeptId = (id: string | null): void => {
-  if (id) localStorage.setItem(ACTIVE_DEPT_KEY, id);
-  else localStorage.removeItem(ACTIVE_DEPT_KEY);
-  window.dispatchEvent(new CustomEvent('enterprise-context-changed'));
-};
-
-export const getOrgProjects = async (orgId: string): Promise<OrgProject[]> => {
-  const projects = await OfflineSyncService.getItems<OrgProject>('org_projects', (p) => p.org_id === orgId);
-  if (projects.length === 0 && orgId === 'org_enterprise_default') {
-    for (const p of DEFAULT_PROJECTS) {
-      await OfflineSyncService.saveItem('org_projects', p);
-    }
-    return DEFAULT_PROJECTS;
+    if (error || !data) return null;
+    return data as OrgMembership;
+  } catch {
+    return null;
   }
-  return projects;
 };
 
-export const createOrgProject = async (input: Omit<OrgProject, 'id' | 'created_at' | 'updated_at'>): Promise<OrgProject> => {
-  const newProject: OrgProject = {
-    ...input,
-    id: 'prj_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  return await OfflineSyncService.saveItem('org_projects', newProject);
-};
+/**
+ * Fetch all approved members for an organization
+ */
+export const getOrgMembers = async (orgId: string): Promise<OrgMemberWithDetails[]> => {
+  if (!orgId) return [];
+  try {
+    const { data: memberships, error } = await supabase
+      .from('org_memberships')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: true });
 
-export const getOrgSites = async (projectId?: string | null, orgId: string = getActiveOrgId()): Promise<OrgSite[]> => {
-  const sites = await OfflineSyncService.getItems<OrgSite>(
-    'org_sites',
-    (s) => s.org_id === orgId && (!projectId || s.project_id === projectId)
-  );
-  if (sites.length === 0 && orgId === 'org_enterprise_default') {
-    for (const s of DEFAULT_SITES) {
-      await OfflineSyncService.saveItem('org_sites', s);
+    if (error || !memberships) {
+      console.warn('Could not fetch org members:', error);
+      return [];
     }
-    return projectId ? DEFAULT_SITES.filter((s) => s.project_id === projectId) : DEFAULT_SITES;
+
+    // Fetch employee records for linking
+    const { data: employees } = await supabase
+      .from('erp_employees')
+      .select('*')
+      .eq('org_id', orgId);
+
+    const empMap = new Map<string, ErpEmployee>();
+    employees?.forEach((e: any) => {
+      if (e.user_id) empMap.set(e.user_id, e);
+    });
+
+    return memberships.map((m: any) => ({
+      id: m.id,
+      user_id: m.user_id,
+      org_id: m.org_id,
+      role: m.role,
+      created_at: m.created_at,
+      employee: empMap.get(m.user_id) || null,
+    }));
+  } catch (err) {
+    console.error('Error fetching org members:', err);
+    return [];
   }
-  return sites;
 };
 
-export const createOrgSite = async (input: Omit<OrgSite, 'id' | 'created_at' | 'updated_at'>): Promise<OrgSite> => {
-  const newSite: OrgSite = {
-    ...input,
-    id: 'site_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  return await OfflineSyncService.saveItem('org_sites', newSite);
+/**
+ * Owner/Admin approves a user and adds them to org_memberships
+ */
+export const addOrgMember = async (
+  orgId: string,
+  userId: string,
+  role: OrgRole = 'team_member',
+  employeeId?: string
+): Promise<OrgMembership> => {
+  const { data, error } = await supabase
+    .from('org_memberships')
+    .upsert(
+      {
+        org_id: orgId,
+        user_id: userId,
+        role: role,
+      },
+      { onConflict: 'user_id,org_id' }
+    )
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || 'Failed to add organization member');
+  }
+
+  // If an employee directory record was selected, link user_id
+  if (employeeId) {
+    await supabase
+      .from('erp_employees')
+      .update({ user_id: userId })
+      .eq('id', employeeId);
+  }
+
+  return data as OrgMembership;
 };
 
-export const getOrgDepartments = async (orgId: string = getActiveOrgId()): Promise<OrgDepartment[]> => {
-  const depts = await OfflineSyncService.getItems<OrgDepartment>('org_departments', (d) => d.org_id === orgId);
-  if (depts.length === 0 && orgId === 'org_enterprise_default') {
-    for (const d of DEFAULT_DEPTS) {
-      await OfflineSyncService.saveItem('org_departments', d);
+/**
+ * Owner/Admin removes a user from org_memberships
+ */
+export const removeOrgMember = async (membershipId: string, userId?: string): Promise<void> => {
+  const { error } = await supabase
+    .from('org_memberships')
+    .delete()
+    .eq('id', membershipId);
+
+  if (error) {
+    throw new Error(error.message || 'Failed to remove organization member');
+  }
+
+  // Unlink employee if user provided
+  if (userId) {
+    await supabase
+      .from('erp_employees')
+      .update({ user_id: null })
+      .eq('user_id', userId);
+  }
+};
+
+/**
+ * Non-member user submits a request to join the organization
+ */
+export const requestJoinOrg = async (
+  orgId: string,
+  userEmail: string,
+  userId: string
+): Promise<void> => {
+  // Find organization owner
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('owner_id')
+    .eq('id', orgId)
+    .single();
+
+  if (!org?.owner_id) {
+    throw new Error('Organization owner not found.');
+  }
+
+  // Create a system notification directed to owner
+  const { error } = await supabase
+    .from('notifications')
+    .insert({
+      recipient_user_id: org.owner_id,
+      organization_id: orgId,
+      type: 'system',
+      title: `Membership Request: ${userEmail}`,
+      message: `User ${userEmail} has requested to join ${PRIMARY_ORG_NAME}.`,
+      entity_type: 'org_join_request',
+      entity_id: userId,
+    });
+
+  if (error) {
+    throw new Error(error.message || 'Could not send join request.');
+  }
+};
+
+/**
+ * Fetch pending join requests (for Owner/Admin)
+ */
+export const getJoinRequests = async (orgId: string): Promise<OrgJoinRequestItem[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('organization_id', orgId)
+      .eq('type', 'system')
+      .eq('entity_type', 'org_join_request')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+
+    return data.map((n: any) => {
+      const emailMatch = n.title?.replace('Membership Request: ', '').trim() || 'User';
+      return {
+        id: n.id,
+        user_id: n.entity_id,
+        user_email: emailMatch,
+        org_id: n.organization_id,
+        created_at: n.created_at,
+        is_read: n.is_read,
+      };
+    });
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Fetch employees from Employee Directory
+ */
+export const getOrgEmployees = async (orgId: string): Promise<ErpEmployee[]> => {
+  if (!orgId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('erp_employees')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('first_name', { ascending: true });
+
+    if (error || !data) return [];
+    return data as ErpEmployee[];
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Create employee in directory
+ */
+export const createOrgEmployee = async (
+  orgId: string,
+  input: {
+    first_name: string;
+    last_name?: string;
+    designation: string;
+    department_id?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    user_id?: string | null;
+  }
+): Promise<ErpEmployee> => {
+  const employeeCode = `EMP-${Date.now().toString().slice(-4)}`;
+  const { data, error } = await supabase
+    .from('erp_employees')
+    .insert({
+      org_id: orgId,
+      first_name: input.first_name.trim(),
+      last_name: input.last_name?.trim() || null,
+      designation: input.designation.trim(),
+      department_id: input.department_id || null,
+      phone: input.phone || null,
+      email: input.email || null,
+      user_id: input.user_id || null,
+      employee_code: employeeCode,
+      status: 'active',
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || 'Failed to create employee record');
+  }
+
+  return data as ErpEmployee;
+};
+
+/**
+ * Update employee in directory
+ */
+export const updateOrgEmployee = async (
+  empId: string,
+  input: Partial<ErpEmployee>
+): Promise<ErpEmployee> => {
+  const { data, error } = await supabase
+    .from('erp_employees')
+    .update({
+      ...input,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', empId)
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || 'Failed to update employee record');
+  }
+
+  return data as ErpEmployee;
+};
+
+/**
+ * Delete employee from directory
+ */
+export const deleteOrgEmployee = async (empId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('erp_employees')
+    .delete()
+    .eq('id', empId);
+
+  if (error) {
+    throw new Error(error.message || 'Failed to delete employee record');
+  }
+};
+
+/**
+ * Fetch departments
+ */
+export const getOrgDepartments = async (orgId: string): Promise<OrgDepartment[]> => {
+  if (!orgId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('org_departments')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('name', { ascending: true });
+
+    if (error || !data) return [];
+    return data as OrgDepartment[];
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Fetch Assignment History across tasks
+ */
+export const getAssignmentHistory = async (
+  orgId: string,
+  taskId?: string
+): Promise<TaskAssignment[]> => {
+  if (!orgId) return [];
+  try {
+    let query = supabase
+      .from('task_assignments')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('assigned_at', { ascending: false });
+
+    if (taskId) {
+      query = query.eq('task_id', taskId);
     }
-    return DEFAULT_DEPTS;
+
+    const { data, error } = await query;
+    if (error || !data) return [];
+    return data as TaskAssignment[];
+  } catch {
+    return [];
   }
-  return depts;
 };

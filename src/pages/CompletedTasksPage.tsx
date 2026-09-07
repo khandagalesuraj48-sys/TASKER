@@ -23,6 +23,7 @@ export const CompletedTasksPage: React.FC = () => {
       const data = await getTasks({
         status: 'completed',
         includeDeleted: false,
+        scope: 'personal',
         search: globalSearch,
         sortBy: 'recently_updated',
       });

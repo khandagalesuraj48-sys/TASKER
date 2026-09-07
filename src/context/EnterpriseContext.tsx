@@ -1,19 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Organization, OrgProject, OrgSite, OrgDepartment } from '../types/enterprise';
+import { Organization, OrgMembership, OrgProject, OrgSite, OrgDepartment } from '../types/enterprise';
 import {
   getOrganizations,
+  getPrimaryOrg,
   getActiveOrgId,
   setActiveOrgId,
-  getOrgProjects,
-  getActiveProjectId,
-  setActiveProjectId,
-  getOrgSites,
-  getActiveSiteId,
-  setActiveSiteId,
-  getOrgDepartments,
-  getActiveDeptId,
-  setActiveDeptId,
+  getUserMembership,
+  requestJoinOrg,
+  OWNER_EMAIL,
 } from '../services/enterpriseService';
+import { useAuth } from './AuthContext';
 
 interface EnterpriseContextType {
   isEnterpriseMode: boolean;
@@ -21,6 +17,16 @@ interface EnterpriseContextType {
   organizations: Organization[];
   currentOrg: Organization | null;
   switchOrg: (id: string) => void;
+  isOwner: boolean;
+  isAdmin: boolean;
+  isMember: boolean;
+  userMembership: OrgMembership | null;
+  requestJoin: () => Promise<void>;
+  isJoining: boolean;
+  hasRequestedJoin: boolean;
+  reloadEnterpriseData: () => Promise<void>;
+  isLoading: boolean;
+  // Backward-compatibility stubs for deactivated ERP views
   projects: OrgProject[];
   selectedProject: OrgProject | null;
   selectProject: (id: string | null) => void;
@@ -30,60 +36,72 @@ interface EnterpriseContextType {
   departments: OrgDepartment[];
   selectedDepartment: OrgDepartment | null;
   selectDepartment: (id: string | null) => void;
-  reloadEnterpriseData: () => Promise<void>;
-  isLoading: boolean;
 }
 
 const EnterpriseContext = createContext<EnterpriseContextType | undefined>(undefined);
 
 export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, userEmail } = useAuth();
   const [isEnterpriseMode, setIsEnterpriseMode] = useState<boolean>(() => {
     return localStorage.getItem('tasker_mode') === 'enterprise';
   });
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
-  const [projects, setProjects] = useState<OrgProject[]>([]);
-  const [selectedProject, setSelectedProject] = useState<OrgProject | null>(null);
-  const [sites, setSites] = useState<OrgSite[]>([]);
-  const [selectedSite, setSelectedSite] = useState<OrgSite | null>(null);
-  const [departments, setDepartments] = useState<OrgDepartment[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<OrgDepartment | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [userMembership, setUserMembership] = useState<OrgMembership | null>(null);
+  const [isJoining, setIsJoining] = useState<boolean>(false);
+  const [hasRequestedJoin, setHasRequestedJoin] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Determine owner status
+  const isOwner = Boolean(
+    (userEmail && userEmail.toLowerCase() === OWNER_EMAIL.toLowerCase()) ||
+    (currentOrg?.owner_id && user?.id && currentOrg.owner_id === user.id)
+  );
+
+  // Determine admin status
+  const isAdmin = Boolean(
+    isOwner ||
+    userMembership?.role === 'org_owner' ||
+    userMembership?.role === 'org_admin'
+  );
+
+  // Determine member status
+  const isMember = Boolean(isOwner || userMembership);
 
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       const orgs = await getOrganizations();
       setOrganizations(orgs);
+
+      let activeOrg: Organization | null = null;
       const activeOrgId = getActiveOrgId();
-      const activeOrg = orgs.find((o) => o.id === activeOrgId) || orgs[0] || null;
+
+      if (activeOrgId) {
+        activeOrg = orgs.find((o) => o.id === activeOrgId) || null;
+      }
+
+      if (!activeOrg) {
+        activeOrg = await getPrimaryOrg();
+        if (activeOrg) {
+          setActiveOrgId(activeOrg.id);
+        }
+      }
+
       setCurrentOrg(activeOrg);
 
-      if (activeOrg) {
-        const prjs = await getOrgProjects(activeOrg.id);
-        setProjects(prjs);
-        const activePrjId = getActiveProjectId();
-        const activePrj = prjs.find((p) => p.id === activePrjId) || null;
-        setSelectedProject(activePrj);
-
-        const sts = await getOrgSites(activePrj ? activePrj.id : null, activeOrg.id);
-        setSites(sts);
-        const activeSiteId = getActiveSiteId();
-        const activeSt = sts.find((s) => s.id === activeSiteId) || null;
-        setSelectedSite(activeSt);
-
-        const dpts = await getOrgDepartments(activeOrg.id);
-        setDepartments(dpts);
-        const activeDeptId = getActiveDeptId();
-        const activeDpt = dpts.find((d) => d.id === activeDeptId) || null;
-        setSelectedDepartment(activeDpt);
+      if (activeOrg && user?.id) {
+        const membership = await getUserMembership(user.id, activeOrg.id);
+        setUserMembership(membership);
+      } else {
+        setUserMembership(null);
       }
     } catch (err) {
       console.error('Error loading enterprise context data:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     loadData();
@@ -99,31 +117,30 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const toggleMode = (enabled: boolean) => {
     setIsEnterpriseMode(enabled);
     localStorage.setItem('tasker_mode', enabled ? 'enterprise' : 'personal');
-    window.dispatchEvent(new CustomEvent('app-mode-changed', { detail: { mode: enabled ? 'enterprise' : 'personal' } }));
+    window.dispatchEvent(
+      new CustomEvent('app-mode-changed', {
+        detail: { mode: enabled ? 'enterprise' : 'personal' },
+      })
+    );
   };
 
   const switchOrg = (id: string) => {
     setActiveOrgId(id);
-    setActiveProjectId(null);
-    setActiveSiteId(null);
-    setActiveDeptId(null);
     loadData();
   };
 
-  const selectProject = (id: string | null) => {
-    setActiveProjectId(id);
-    setActiveSiteId(null);
-    loadData();
-  };
-
-  const selectSite = (id: string | null) => {
-    setActiveSiteId(id);
-    loadData();
-  };
-
-  const selectDepartment = (id: string | null) => {
-    setActiveDeptId(id);
-    loadData();
+  const handleRequestJoin = async () => {
+    if (!currentOrg || !user?.id || !userEmail) return;
+    setIsJoining(true);
+    try {
+      await requestJoinOrg(currentOrg.id, userEmail, user.id);
+      setHasRequestedJoin(true);
+    } catch (err) {
+      console.error('Error requesting join:', err);
+      throw err;
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   return (
@@ -134,17 +151,24 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         organizations,
         currentOrg,
         switchOrg,
-        projects,
-        selectedProject,
-        selectProject,
-        sites,
-        selectedSite,
-        selectSite,
-        departments,
-        selectedDepartment,
-        selectDepartment,
+        isOwner,
+        isAdmin,
+        isMember,
+        userMembership,
+        requestJoin: handleRequestJoin,
+        isJoining,
+        hasRequestedJoin,
         reloadEnterpriseData: loadData,
         isLoading,
+        projects: [],
+        selectedProject: null,
+        selectProject: () => {},
+        sites: [],
+        selectedSite: null,
+        selectSite: () => {},
+        departments: [],
+        selectedDepartment: null,
+        selectDepartment: () => {},
       }}
     >
       {children}

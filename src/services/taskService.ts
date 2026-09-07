@@ -426,10 +426,16 @@ export const permanentDeleteTask = async (id: string): Promise<void> => {
   }
 };
 
-export const getTaskStats = async (): Promise<TaskStats> => {
-  const { data: allTasks, error } = await supabase
+export const getTaskStats = async (scope?: 'personal' | 'workplace'): Promise<TaskStats> => {
+  let query = supabase
     .from('tasks')
     .select('id, status, due_date, is_deleted');
+
+  if (scope) {
+    query = query.eq('scope', scope);
+  }
+
+  const { data: allTasks, error } = await query;
 
   if (error || !allTasks) {
     return {

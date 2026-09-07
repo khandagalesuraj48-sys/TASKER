@@ -33,6 +33,7 @@ export const AllTasksPage: React.FC = () => {
       const data = await getTasks({
         ...filters,
         includeDeleted: false,
+        scope: 'personal',
         search: globalSearch,
       });
       setTasks(data);

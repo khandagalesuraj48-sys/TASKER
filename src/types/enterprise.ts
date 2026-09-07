@@ -2,6 +2,7 @@ export type OrgRole =
   | 'org_owner' 
   | 'org_admin' 
   | 'project_manager' 
+  | 'team_member'
   | 'site_engineer' 
   | 'store_keeper' 
   | 'accountant' 
