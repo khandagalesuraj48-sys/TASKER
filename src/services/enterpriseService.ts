@@ -3,6 +3,7 @@ import {
   Organization,
   OrgRole,
   OrgMembership,
+  OrgSite,
   ErpEmployee,
   OrgDepartment,
 } from '../types/enterprise';
@@ -78,6 +79,26 @@ export const checkUserPendingRequest = async (userId: string, orgId: string): Pr
       .maybeSingle();
 
     if (error || !data) return false;
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Check whether user has ANY pending join request
+ */
+export const checkAnyPendingRequest = async (userId: string): Promise<boolean> => {
+  if (!userId) return false;
+  try {
+    const { data, error } = await supabase
+      .from('org_join_requests')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+      .limit(1);
+
+    if (error || !data || data.length === 0) return false;
     return true;
   } catch {
     return false;
@@ -531,5 +552,124 @@ export const getAssignmentHistory = async (
     return data as TaskAssignment[];
   } catch {
     return [];
+  }
+};
+
+/**
+ * Fetch all sites under an organization
+ */
+export const getOrgSites = async (orgId: string): Promise<OrgSite[]> => {
+  if (!orgId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('org_sites')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('name', { ascending: true });
+
+    if (error || !data) return [];
+    return data as OrgSite[];
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Create a new site under an organization (e.g., 'VTR', '18 B')
+ */
+export const createOrgSite = async (
+  orgId: string,
+  name: string,
+  code: string,
+  address?: string
+): Promise<OrgSite | null> => {
+  if (!orgId || !name) return null;
+  try {
+    const { data, error } = await supabase
+      .from('org_sites')
+      .insert({
+        org_id: orgId,
+        name: name.trim(),
+        code: code.trim().toUpperCase() || name.trim().toUpperCase().replace(/\s+/g, '_'),
+        address: address ? address.trim() : null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.warn('Could not create org site:', error.message);
+      return null;
+    }
+    return data as OrgSite;
+  } catch (e) {
+    console.error('Error creating site:', e);
+    return null;
+  }
+};
+
+/**
+ * Fetch site IDs assigned to a specific user
+ */
+export const getUserAssignedSites = async (
+  userId: string,
+  orgId: string
+): Promise<string[]> => {
+  if (!userId || !orgId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('org_user_sites')
+      .select('site_id')
+      .eq('user_id', userId)
+      .eq('org_id', orgId);
+
+    if (error || !data) return [];
+    return data.map((d: any) => d.site_id);
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Assign a user to a specific site
+ */
+export const assignUserToSite = async (
+  userId: string,
+  orgId: string,
+  siteId: string
+): Promise<boolean> => {
+  if (!userId || !orgId || !siteId) return false;
+  try {
+    const { error } = await supabase
+      .from('org_user_sites')
+      .upsert({
+        user_id: userId,
+        org_id: orgId,
+        site_id: siteId,
+      }, { onConflict: 'user_id,site_id' });
+
+    return !error;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Remove a user from a site
+ */
+export const removeUserFromSite = async (
+  userId: string,
+  siteId: string
+): Promise<boolean> => {
+  if (!userId || !siteId) return false;
+  try {
+    const { error } = await supabase
+      .from('org_user_sites')
+      .delete()
+      .eq('user_id', userId)
+      .eq('site_id', siteId);
+
+    return !error;
+  } catch {
+    return false;
   }
 };

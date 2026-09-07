@@ -38,8 +38,8 @@ export const useAppUpdate = (): AppUpdateState => {
   const isAndroid = Capacitor.getPlatform() === 'android';
 
   const [installedVersion, setInstalledVersion] = useState<{ versionName: string; versionCode: number }>({
-    versionName: '1.0.11',
-    versionCode: 14,
+    versionName: '1.0.12',
+    versionCode: 15,
   });
   const [latestRelease, setLatestRelease] = useState<AppRelease | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);
@@ -213,7 +213,7 @@ export const useAppUpdate = (): AppUpdateState => {
         } else {
           // Failed or Cancelled: Returned to app, but still running older version
           setError(
-            `Update to v${pendingVersion || '1.0.11'} was not installed. If Android cancelled the update, please enable "Install unknown apps" in Settings and try again.`
+            `Update to v${pendingVersion || '1.0.12'} was not installed. If Android cancelled the update, please enable "Install unknown apps" in Settings and try again.`
           );
           // PREVENT UPDATE LOOP: Dismiss modal so user isn't trapped in an infinite modal popup
           setIsDismissed(true);

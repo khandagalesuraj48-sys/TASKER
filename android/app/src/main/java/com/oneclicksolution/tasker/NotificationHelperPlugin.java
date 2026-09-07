@@ -190,16 +190,25 @@ public class NotificationHelperPlugin extends Plugin {
             if (supabaseAnonKey != null) editor.putString(TaskerSyncService.KEY_SUPABASE_ANON_KEY, supabaseAnonKey.trim());
             editor.apply();
 
-            Intent serviceIntent = new Intent(context, TaskerSyncService.class);
-            serviceIntent.putExtra(TaskerSyncService.KEY_USER_ID, userId.trim());
-            serviceIntent.putExtra(TaskerSyncService.KEY_SUPABASE_URL, supabaseUrl);
-            serviceIntent.putExtra(TaskerSyncService.KEY_SUPABASE_ANON_KEY, supabaseAnonKey);
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent);
-            } else {
-                context.startService(serviceIntent);
+            // Cancel any old sticky notification (ID 9001) and delete sync channel so it never appears
+            android.app.NotificationManager nm = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(TaskerSyncService.SERVICE_NOTIFICATION_ID);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    try {
+                        nm.deleteNotificationChannel(TaskerSyncService.CHANNEL_ID_SERVICE);
+                    } catch (Exception ignored) {}
+                }
             }
+
+            // Stop old foreground service
+            try {
+                Intent stopOld = new Intent(context, TaskerSyncService.class);
+                context.stopService(stopOld);
+            } catch (Exception ignored) {}
+
+            // Start silent WhatsApp-style background checking with ZERO sticky notifications
+            TaskerAlarmReceiver.scheduleNextAlarm(context);
 
             JSObject ret = new JSObject();
             ret.put("success", true);

@@ -75,26 +75,19 @@ public class TaskerSyncService extends Service {
             }
         }
 
-        // Start Foreground Notification
+        // Cancel any sticky notification and switch to silent AlarmManager
         try {
-            Notification foregroundNotification = buildServiceNotification();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(SERVICE_NOTIFICATION_ID, foregroundNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-            } else {
-                startForeground(SERVICE_NOTIFICATION_ID, foregroundNotification);
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(SERVICE_NOTIFICATION_ID);
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Error starting foreground service: " + e.getMessage());
-        }
+        } catch (Exception ignored) {}
 
-        // Launch background worker thread if not running
-        if (!mIsRunning) {
-            mIsRunning = true;
-            mWorkerThread = new Thread(this::runPollingLoop, "TaskerSyncWorker");
-            mWorkerThread.start();
-        }
+        // Schedule silent background checks
+        TaskerAlarmReceiver.scheduleNextAlarm(this);
 
-        return START_STICKY;
+        stopSelf();
+        return START_NOT_STICKY;
     }
 
     private Notification buildServiceNotification() {

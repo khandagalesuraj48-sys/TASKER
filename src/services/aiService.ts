@@ -4,7 +4,7 @@ import { TaskReference } from '../types/task';
 import { formatDateTime, formatDateOnly, isTaskOverdue, parseInTimezone } from '../lib/dateUtils';
 import { isToday, isYesterday, isTomorrow } from 'date-fns';
 import { executeAIAction } from './aiActionService';
-import { queryUniversalKnowledge } from './aiWebKnowledgeService';
+import { queryUniversalKnowledge, cleanAiText } from './aiWebKnowledgeService';
 
 export interface AIResponse {
   answer: string;
@@ -212,8 +212,9 @@ CRITICAL DIRECTIVES:
 
 ${langDirective}
 
-5. CLEAN MARKDOWN FORMATTING:
-   Use structured Markdown headings, bullet points, and bold text for readability.
+5. CLEAN PLAIN TEXT FORMATTING:
+   CRITICAL: DO NOT use markdown asterisks (*, **) or hash symbols (#, ##) anywhere in your response. Do not write **bold**, *italics*, # Heading, or * bullets.
+   Write clean, crisp, natural plain text with neat paragraphs. Use clear section headers on separate lines with emojis like 📌, 🔹, 👉, 📋. For lists, use numbers (1., 2.) or clean bullets (•).
 
 --- LIVE ENTERPRISE APP CONTEXT ---
 - Logged-in User: ${currentUser.name} (${currentUser.email})
@@ -421,7 +422,7 @@ export const askTaskerAI = async (
     const actionResult = await executeAIAction(trimmed, rawTasks);
     if (actionResult.handled) {
       return {
-        answer: actionResult.answer,
+        answer: cleanAiText(actionResult.answer),
         referencedTasks: actionResult.referencedTasks,
         providerUsed: 'TASKER AI (Action Core)',
         actionTaken: actionResult.actionType,
@@ -460,7 +461,7 @@ export const askTaskerAI = async (
       });
 
       return {
-        answer: result.answer,
+        answer: cleanAiText(result.answer),
         referencedTasks: referencedTasks.slice(0, 5),
         providerUsed: result.provider,
       };
@@ -471,5 +472,9 @@ export const askTaskerAI = async (
 
   // 4. THIRD PRIORITY: Intelligent Local Task-Grounded Brain
   // Never fails, never returns Wikipedia, never says "I don't know"
-  return processLocalGroundedQuery(trimmed, appBrainContext, language);
+  const localRes = processLocalGroundedQuery(trimmed, appBrainContext, language);
+  return {
+    ...localRes,
+    answer: cleanAiText(localRes.answer),
+  };
 };

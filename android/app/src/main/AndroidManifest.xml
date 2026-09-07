@@ -53,6 +53,16 @@
                 <action android:name="com.oneclicksolution.tasker.ACTION_SYNC_NOTIFICATIONS" />
             </intent-filter>
         </receiver>
+
+        <!-- Silent background alarm receiver (WhatsApp-style: 0 sticky notification) -->
+        <receiver
+            android:name=".TaskerAlarmReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.oneclicksolution.tasker.ACTION_CHECK_NOTIFS" />
+            </intent-filter>
+        </receiver>
     </application>
 
     <!-- Permissions -->

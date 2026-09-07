@@ -9,6 +9,9 @@ import {
   getUserMembership,
   getUserApprovedOrgs,
   checkUserPendingRequest,
+  checkAnyPendingRequest,
+  getOrgSites,
+  getUserAssignedSites,
   requestJoinOrg,
 } from '../services/enterpriseService';
 import { useAuth } from './AuthContext';
@@ -25,18 +28,20 @@ interface EnterpriseContextType {
   isAdmin: boolean;
   isMember: boolean;
   userMembership: OrgMembership | null;
-  requestJoin: (notes?: string) => Promise<void>;
+  requestJoin: (notes?: string, targetOrgId?: string) => Promise<void>;
   isJoining: boolean;
   hasRequestedJoin: boolean;
   reloadEnterpriseData: () => Promise<void>;
   isLoading: boolean;
-  // Backward-compatibility stubs for deactivated ERP views
+  // Multi-Site Architecture inside Organization
   projects: OrgProject[];
   selectedProject: OrgProject | null;
   selectProject: (id: string | null) => void;
   sites: OrgSite[];
   selectedSite: OrgSite | null;
   selectSite: (id: string | null) => void;
+  userAssignedSiteIds: string[];
+  refreshSites: () => Promise<void>;
   departments: OrgDepartment[];
   selectedDepartment: OrgDepartment | null;
   selectDepartment: (id: string | null) => void;
@@ -56,6 +61,11 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isJoining, setIsJoining] = useState<boolean>(false);
   const [hasRequestedJoin, setHasRequestedJoin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Multi-Site Architecture inside Organization
+  const [sites, setSites] = useState<OrgSite[]>([]);
+  const [selectedSite, setSelectedSite] = useState<OrgSite | null>(null);
+  const [userAssignedSiteIds, setUserAssignedSiteIds] = useState<string[]>([]);
 
   // User belongs to at least one approved organization
   const hasApprovedOrg = userApprovedOrgs.length > 0;
@@ -93,36 +103,38 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
 
       // 3. Resolve active organization
+      // If user has NO approved organizations, DO NOT default to Rachana or primary org!
       let activeOrg: Organization | null = null;
       const activeOrgId = getActiveOrgId();
 
-      if (activeOrgId) {
-        activeOrg = orgs.find((o) => o.id === activeOrgId) || null;
+      if (activeOrgId && approved.some((o) => o.id === activeOrgId)) {
+        activeOrg = approved.find((o) => o.id === activeOrgId) || null;
       }
 
-      // If no active org selected or user not approved in selected, pick from approved orgs or primary org
-      if (!activeOrg) {
-        if (approved.length > 0) {
-          activeOrg = approved[0];
-          setActiveOrgId(activeOrg.id);
-        } else {
-          activeOrg = await getPrimaryOrg();
-          if (activeOrg) {
-            setActiveOrgId(activeOrg.id);
-          }
-        }
+      if (!activeOrg && approved.length > 0) {
+        activeOrg = approved[0];
+        setActiveOrgId(activeOrg.id);
       }
 
       setCurrentOrg(activeOrg);
 
-      // 4. Load membership and pending join status
+      // 4. Load membership, sites, and pending join status
       if (activeOrg && user?.id) {
-        const [membership, pending] = await Promise.all([
+        const [membership, pending, loadedSites, assignedSites] = await Promise.all([
           getUserMembership(user.id, activeOrg.id),
           checkUserPendingRequest(user.id, activeOrg.id),
+          getOrgSites(activeOrg.id),
+          getUserAssignedSites(user.id, activeOrg.id),
         ]);
         setUserMembership(membership);
         setHasRequestedJoin(pending);
+        setSites(loadedSites);
+        setUserAssignedSiteIds(assignedSites);
+
+        setSelectedSite((prev) => {
+          if (!prev) return null;
+          return loadedSites.find((s) => s.id === prev.id) || null;
+        });
 
         // If user has no approved membership, force personal mode
         if (!membership && isEnterpriseMode) {
@@ -131,7 +143,17 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
       } else {
         setUserMembership(null);
-        setHasRequestedJoin(false);
+        setSites([]);
+        setSelectedSite(null);
+        setUserAssignedSiteIds([]);
+
+        if (user?.id) {
+          const anyPending = await checkAnyPendingRequest(user.id);
+          setHasRequestedJoin(anyPending);
+        } else {
+          setHasRequestedJoin(false);
+        }
+
         if (isEnterpriseMode) {
           setIsEnterpriseMode(false);
           localStorage.setItem('tasker_mode', 'personal');
@@ -211,20 +233,41 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadData();
   };
 
-  const handleRequestJoin = async (notes?: string) => {
+  const selectSite = (id: string | null) => {
+    if (!id || id === 'all') {
+      setSelectedSite(null);
+      return;
+    }
+    const found = sites.find((s) => s.id === id);
+    setSelectedSite(found || null);
+  };
+
+  const refreshSites = async () => {
+    if (!currentOrg) return;
+    try {
+      const [loadedSites, assignedSites] = await Promise.all([
+        getOrgSites(currentOrg.id),
+        user?.id ? getUserAssignedSites(user.id, currentOrg.id) : Promise.resolve([]),
+      ]);
+      setSites(loadedSites);
+      setUserAssignedSiteIds(assignedSites);
+    } catch (err) {
+      console.warn('Failed refreshing sites:', err);
+    }
+  };
+
+  const handleRequestJoin = async (notes?: string, targetOrgId?: string) => {
     if (!user?.id || !userEmail) return;
     setIsJoining(true);
     try {
-      let targetOrg = currentOrg;
-      if (!targetOrg) {
-        targetOrg = await getPrimaryOrg();
-        if (targetOrg) {
-          setCurrentOrg(targetOrg);
-        }
+      let orgId = targetOrgId || currentOrg?.id;
+      if (!orgId) {
+        const primary = await getPrimaryOrg();
+        orgId = primary?.id || '';
       }
 
       await requestJoinOrg(
-        targetOrg?.id || '',
+        orgId,
         userEmail,
         user.id,
         displayName || userEmail.split('@')[0],
@@ -261,9 +304,11 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         projects: [],
         selectedProject: null,
         selectProject: () => {},
-        sites: [],
-        selectedSite: null,
-        selectSite: () => {},
+        sites,
+        selectedSite,
+        selectSite,
+        userAssignedSiteIds,
+        refreshSites,
         departments: [],
         selectedDepartment: null,
         selectDepartment: () => {},

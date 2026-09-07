@@ -13,7 +13,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { askTaskerAI } from '../../services/aiService';
-import { getGeminiApiKey, setGeminiApiKey } from '../../services/aiWebKnowledgeService';
+import { getGeminiApiKey, setGeminiApiKey, cleanAiText } from '../../services/aiWebKnowledgeService';
 import { AIMessage } from '../../types/task';
 import { useBackButton } from '../../hooks/useBackButton';
 import { useTask } from '../../context/TaskContext';
@@ -24,29 +24,26 @@ interface AIAssistantDrawerProps {
   onClose: () => void;
 }
 
-const SUGGESTIONS_MAP = {
+const SUGGESTIONS_MAP: Record<'mr' | 'hi' | 'en', string[]> = {
   mr: [
-    'आज कोणते tasks करायचे आहेत?',
-    'माझे urgent pending tasks कोणते?',
-    'Add task: राहुलला उद्या ५ वाजता कॉल करा',
-    'Complete task Call Rahul',
-    'कंपनीतील कर्मचाऱ्यांची यादी दाखवा',
-    'रजेसाठी मराठीत एक अर्ज लिहून दे',
-    '15% of 8500 किती?',
-    'कामाचे उत्कृष्ट नियोजन कसे करावे?',
+    'माझे तातडीचे प्रलंबित टास्क दाखवा',
+    'नवीन टास्क तयार करा: राहुलला उद्या दुपारी ५ वाजता कॉल करणे',
+    'टास्क पूर्ण करा: राहुलला कॉल करणे',
+    'कंपनीची कर्मचारी यादी दाखवा',
+    'कामावरून रजेचा अर्ज ड्राफ्ट करा',
+    '८५०० चे १५% किती होतात?',
+    'कामाचे नियोजन कसे करावे?',
   ],
   hi: [
-    'आज कौन से tasks करने हैं?',
-    'मेरे urgent pending tasks कौन से हैं?',
-    'Add task: कल शाम ५ बजे मीटिंग',
-    'Complete task मीटिंग',
-    'कंपनी के कर्मचारियों की सूची दिखाएं',
-    'छुट्टी के लिए एक आवेदन पत्र लिखें',
-    '15% of 8500 कितना होगा?',
-    'काम का बेहतरीन नियोजन कैसे करें?',
+    'मेरे जरूरी पेंडिंग टास्क दिखाएं',
+    'नया टास्क बनाएं: राहुल को कल शाम ५ बजे कॉल करना',
+    'टास्क पूरा करें: राहुल को कॉल करना',
+    'कंपनी की कर्मचारी सूची दिखाएं',
+    'अवकाश हेतु आवेदन पत्र ड्राफ्ट करें',
+    '८५०० का १५% कितना होगा?',
+    'दैनिक कार्य योजना कैसे बनाएं?',
   ],
   en: [
-    'What tasks are due today?',
     'Show my urgent pending tasks',
     'Add task: Call Rahul tomorrow at 5pm',
     'Complete task Call Rahul',
@@ -59,12 +56,12 @@ const SUGGESTIONS_MAP = {
 
 const getWelcomeMessage = (lang: 'mr' | 'hi' | 'en'): string => {
   if (lang === 'hi') {
-    return 'नमस्ते! मैं **TASKER AI** हूँ — आपका स्मार्ट ऐप असिस्टेंट।\n\nमैं ऐप के सभी **Tasks, कर्मचारियों की जानकारी, अंतिम तिथियाँ और आंकड़े** जानता हूँ। इसके अलावा आप मुझसे काम की योजना, हिसाब-किताब, पत्र/ईमेल लेखन या किसी भी विषय पर प्रश्न पूछ सकते हैं!\n\nनीचे दिए गए विकल्प चुनें या अपना प्रश्न टाइप करें:';
+    return 'नमस्ते! मैं TASKER AI हूँ — आपका स्मार्ट ऐप असिस्टेंट।\n\nमैं ऐप के सभी Tasks, कर्मचारियों की जानकारी, अंतिम तिथियाँ और आंकड़े जानता हूँ। इसके अलावा आप मुझसे काम की योजना, हिसाब-किताब, पत्र/ईमेल लेखन या किसी भी विषय पर प्रश्न पूछ सकते हैं!\n\nनीचे दिए गए विकल्प चुनें या अपना प्रश्न टाइप करें:';
   }
   if (lang === 'en') {
-    return 'Hello! I am **TASKER AI** — your smart executive assistant.\n\nI have complete visibility into all your **Tasks, team directory, deadlines, and metrics**. You can also ask me about project planning, calculations, emails, or any topic worldwide!\n\nSelect a suggestion below or type your question:';
+    return 'Hello! I am TASKER AI — your smart executive assistant.\n\nI have complete visibility into all your Tasks, team directory, deadlines, and metrics. You can also ask me about project planning, calculations, emails, or any topic worldwide!\n\nSelect a suggestion below or type your question:';
   }
-  return 'नमस्कार! मी **TASKER AI** आहे — तुमचा स्मार्ट ॲप असिस्टंट.\n\nमी ॲपमधील सर्व **Tasks, कर्मचाऱ्यांची माहिती, मुदती आणि आकडेवारी** जाणतो. तसेच तुम्ही मला कामाचे नियोजन, गणिते, पत्र/ईमेल लेखन किंवा जगातील कोणत्याही विषयावर प्रश्न विचारू शकता!\n\nखालीलपैकी पर्याय निवडा किंवा तुमचा प्रश्न टाईप करा:';
+  return 'नमस्कार! मी TASKER AI आहे — तुमचा स्मार्ट ॲप असिस्टंट.\n\nमी ॲपमधील सर्व Tasks, कर्मचाऱ्यांची माहिती, मुदती आणि आकडेवारी जाणतो. तसेच तुम्ही मला कामाचे नियोजन, गणिते, पत्र/ईमेल लेखन किंवा जगातील कोणत्याही विषयावर प्रश्न विचारू शकता!\n\nखालीलपैकी पर्याय निवडा किंवा तुमचा प्रश्न टाईप करा:';
 };
 
 export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, onClose }) => {
@@ -406,7 +403,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-xs border border-slate-200/60 dark:border-slate-700/60'
                 }`}
               >
-                <p className="whitespace-pre-line">{msg.content}</p>
+                <p className="whitespace-pre-line">{cleanAiText(msg.content)}</p>
               </div>
 
               {/* Clickable Referenced Tasks */}

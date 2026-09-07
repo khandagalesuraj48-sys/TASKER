@@ -7,11 +7,15 @@ import {
   User,
   Calendar,
   Send,
+  MapPin,
+  X,
+  Loader2,
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
 import { useEnterprise } from '../context/EnterpriseContext';
 import { useToast } from '../context/ToastContext';
 import { getTasks } from '../services/taskService';
+import { createOrgSite } from '../services/enterpriseService';
 import { Task } from '../types/task';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { PriorityBadge } from '../components/common/PriorityBadge';
@@ -20,7 +24,19 @@ import { formatDateOnly, isTaskOverdue } from '../lib/dateUtils';
 
 export const OrgTasksPage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentOrg, isMember, requestJoin, isJoining, hasRequestedJoin } = useEnterprise();
+  const {
+    currentOrg,
+    isMember,
+    requestJoin,
+    isJoining,
+    hasRequestedJoin,
+    sites,
+    selectedSite,
+    selectSite,
+    isAdmin,
+    isOwner,
+    refreshSites,
+  } = useEnterprise();
   const { openCreateModal, refreshKey } = useTask();
   const { showToast } = useToast();
 
@@ -29,6 +45,13 @@ export const OrgTasksPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+
+  // New Site Modal State
+  const [isAddSiteOpen, setIsAddSiteOpen] = useState<boolean>(false);
+  const [newSiteName, setNewSiteName] = useState<string>('');
+  const [newSiteCode, setNewSiteCode] = useState<string>('');
+  const [newSiteAddress, setNewSiteAddress] = useState<string>('');
+  const [isCreatingSite, setIsCreatingSite] = useState<boolean>(false);
 
   useEffect(() => {
     if (!currentOrg?.id || !isMember) {
@@ -56,6 +79,7 @@ export const OrgTasksPage: React.FC = () => {
     return tasks.filter((t) => {
       if (statusFilter !== 'all' && t.status !== statusFilter) return false;
       if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
+      if (selectedSite && t.site_id !== selectedSite.id) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = t.title.toLowerCase().includes(q);
@@ -65,18 +89,51 @@ export const OrgTasksPage: React.FC = () => {
       }
       return true;
     });
-  }, [tasks, statusFilter, priorityFilter, searchQuery]);
+  }, [tasks, statusFilter, priorityFilter, selectedSite, searchQuery]);
 
   const handleSendJoinRequest = async () => {
     try {
       await requestJoin();
-      showToast('Join request sent to Organization Owner. Awaiting approval.', 'success');
+      showToast('कार्यस्थळ प्रवेश विनंती पाठवली आहे. ॲडमिन मंजुरीची प्रतीक्षा आहे.', 'success');
     } catch {
-      showToast('Failed to send join request.', 'error');
+      showToast('विनंती पाठवण्यात त्रुटी आली.', 'error');
     }
   };
 
-  if (!isMember) {
+  const handleCreateSite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentOrg?.id || !newSiteName.trim()) {
+      showToast('कृपया साईटचे नाव प्रविष्ट करा.', 'error');
+      return;
+    }
+    setIsCreatingSite(true);
+    try {
+      const created = await createOrgSite(
+        currentOrg.id,
+        newSiteName.trim(),
+        newSiteCode.trim() || newSiteName.trim().toUpperCase().replace(/\s+/g, '_'),
+        newSiteAddress.trim()
+      );
+      if (created) {
+        showToast(`'${created.name}' नवीन साईट तयार केली!`, 'success');
+        await refreshSites();
+        selectSite(created.id);
+        setIsAddSiteOpen(false);
+        setNewSiteName('');
+        setNewSiteCode('');
+        setNewSiteAddress('');
+      } else {
+        showToast('साईट्स तयार करण्यात त्रुटी आली.', 'error');
+      }
+    } catch {
+      showToast('साईट्स तयार करण्यात त्रुटी आली.', 'error');
+    } finally {
+      setIsCreatingSite(false);
+    }
+  };
+
+  // Neutral onboarding view when user does not have approved membership in any organization
+  if (!isMember || !currentOrg) {
     return (
       <div className="max-w-xl mx-auto my-12 p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-5">
         <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center">
@@ -84,22 +141,24 @@ export const OrgTasksPage: React.FC = () => {
         </div>
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-            {currentOrg?.legal_name || 'SAMAJ RACHANA CONSTRUCTION LIMITED'}
+            {currentOrg?.legal_name || 'कार्यस्थळ कार्यक्षेत्र (Workplace Space)'}
           </h2>
           <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold uppercase tracking-wider mt-1">
-            Workplace Task Space
+            Enterprise & Multi-Site Tasks
           </p>
         </div>
 
         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-md mx-auto">
-          Your Personal Task Space is completely private and active. To view and collaborate on Workplace Tasks in{' '}
-          <strong>{currentOrg?.legal_name || 'this Organization'}</strong>, your account must be approved by the Organization Owner.
+          तुमचे वैयक्तिक टास्क स्पेस (Personal Space) नेहमीप्रमाणे सुरक्षित आणि सक्रिय आहे. कंपनी किंवा संस्थेच्या कार्यस्थळावर (उदा. VTR, 18 B साईट्स) काम करण्यासाठी आणि सहकाऱ्यांसोबत जोडले जाण्यासाठी ॲडमिन मंजुरी आवश्यक आहे.
         </p>
 
         <div className="pt-2">
           {hasRequestedJoin ? (
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300 font-semibold">
-              ⏳ Join request submitted. You will gain access once the Owner approves your account.
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl text-xs text-amber-800 dark:text-amber-300 font-semibold space-y-1">
+              <p>⏳ कार्यस्थळ प्रवेश विनंती पाठवली आहे.</p>
+              <p className="text-[11px] font-normal text-amber-700 dark:text-amber-400">
+                ॲडमिनने मंजुरी देऊन तुम्हाला संस्थेत आणि संबंधित साईटवर समाविष्ट केल्यावर तुम्हाला सर्व कामे दिसतील.
+              </p>
             </div>
           ) : (
             <Button
@@ -108,7 +167,7 @@ export const OrgTasksPage: React.FC = () => {
               leftIcon={<Send className="w-4 h-4" />}
               className="w-full sm:w-auto"
             >
-              Request to Join Organization
+              कार्यस्थळ प्रवेशाची विनंती पाठवा (Request Workplace Access)
             </Button>
           )}
         </div>
@@ -127,19 +186,76 @@ export const OrgTasksPage: React.FC = () => {
           </div>
           <h1 className="text-xl sm:text-2xl font-black">{currentOrg?.legal_name || 'Organization Tasks'}</h1>
           <p className="text-xs text-indigo-200/80">
-            Assigned tasks, delegated work, and real-time team collaboration with strict multi-user privacy.
+            Assigned tasks, delegated work, and real-time multi-site team collaboration.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Button
             variant="primary"
-            onClick={() => openCreateModal({ scope: 'workplace', org_id: currentOrg?.id })}
+            onClick={() => openCreateModal({ scope: 'workplace', org_id: currentOrg?.id, site_id: selectedSite?.id })}
             leftIcon={<Plus className="w-4 h-4" />}
           >
             Create Workplace Task
           </Button>
         </div>
+      </div>
+
+      {/* Multi-Site Switcher Bar */}
+      <div className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full sm:w-auto">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 mr-1">
+            <MapPin className="w-4 h-4 text-indigo-500" />
+            <span>साईट्स (Sites):</span>
+          </div>
+
+          <button
+            onClick={() => selectSite('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              !selectedSite
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            सर्व साईट्स (All Sites)
+          </button>
+
+          {sites.map((s) => {
+            const isSelected = selectedSite?.id === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => selectSite(s.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span>{s.name}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${
+                    isSelected
+                      ? 'bg-indigo-700 text-indigo-100'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  {s.code}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {(isAdmin || isOwner) && (
+          <button
+            onClick={() => setIsAddSiteOpen(true)}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/60 transition-colors shrink-0 flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>नवीन साईट जोडा</span>
+          </button>
+        )}
       </div>
 
       {/* Filters Bar */}
@@ -193,13 +309,13 @@ export const OrgTasksPage: React.FC = () => {
           <Building2 className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Workplace Tasks Found</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-            {searchQuery || statusFilter !== 'all'
+            {searchQuery || statusFilter !== 'all' || selectedSite
               ? 'No tasks match your current filters.'
               : 'Create a workplace task and assign it to a team member to begin collaborating.'}
           </p>
           <Button
             size="sm"
-            onClick={() => openCreateModal({ scope: 'workplace', org_id: currentOrg?.id })}
+            onClick={() => openCreateModal({ scope: 'workplace', org_id: currentOrg?.id, site_id: selectedSite?.id })}
             leftIcon={<Plus className="w-4 h-4" />}
             className="mt-2"
           >
@@ -210,6 +326,7 @@ export const OrgTasksPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTasks.map((t) => {
             const overdue = isTaskOverdue(t.due_date, t.status);
+            const taskSite = sites.find((s) => s.id === t.site_id);
             return (
               <div
                 key={t.id}
@@ -217,9 +334,16 @@ export const OrgTasksPage: React.FC = () => {
                 className="group cursor-pointer p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all shadow-xs hover:shadow-md flex flex-col justify-between space-y-3"
               >
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <StatusBadge status={t.status} isOverdue={overdue} size="sm" />
-                    <PriorityBadge priority={t.priority} size="sm" />
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <StatusBadge status={t.status} isOverdue={overdue} size="sm" />
+                      <PriorityBadge priority={t.priority} size="sm" />
+                    </div>
+                    {taskSite && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50">
+                        📍 {taskSite.name}
+                      </span>
+                    )}
                   </div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     {t.title}
@@ -249,6 +373,89 @@ export const OrgTasksPage: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Add New Site Modal */}
+      {isAddSiteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  नवीन साईट तयार करा
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddSiteOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSite} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  साईटचे नाव (Site Name) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="उदा. VTR Site किंवा 18 B Site"
+                  value={newSiteName}
+                  onChange={(e) => setNewSiteName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  साईट कोड (Site Code)
+                </label>
+                <input
+                  type="text"
+                  placeholder="उदा. VTR किंवा 18_B"
+                  value={newSiteCode}
+                  onChange={(e) => setNewSiteCode(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  पत्ता / लोकेशन (Address / Location)
+                </label>
+                <input
+                  type="text"
+                  placeholder="साईटचा पत्ता किंवा स्थान"
+                  value={newSiteAddress}
+                  onChange={(e) => setNewSiteAddress(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsAddSiteOpen(false)}
+                >
+                  रद्द करा
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  isLoading={isCreatingSite}
+                  leftIcon={isCreatingSite ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                >
+                  साईट जोडा
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

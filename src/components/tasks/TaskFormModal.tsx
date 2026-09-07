@@ -49,7 +49,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const { triggerRefresh } = useTask();
   const { displayName, userEmail } = useAuth();
   const currentUser = displayName || userEmail || DEFAULT_USER_NAME;
-  const { currentOrg, isEnterpriseMode, organizations, userApprovedOrgs } = useEnterprise();
+  const { currentOrg, isEnterpriseMode, organizations, userApprovedOrgs, sites, selectedSite } = useEnterprise();
   const { isPlatformAdmin } = useAdmin();
 
   const [title, setTitle] = useState<string>('');
@@ -70,6 +70,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   // Scope & Enterprise Assignment State
   const [scope, setScope] = useState<TaskScope>('personal');
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
+  const [selectedSiteId, setSelectedSiteId] = useState<string>('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [employees, setEmployees] = useState<ErpEmployee[]>([]);
 
@@ -110,6 +111,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setSelectedFiles([]);
       setScope(taskToEdit.scope || 'personal');
       setSelectedOrgId(taskToEdit.org_id || currentOrg?.id || availableOrgs[0]?.id || '');
+      setSelectedSiteId(taskToEdit.site_id || '');
       setSelectedEmployeeId(taskToEdit.assigned_employee_id || '');
 
       getTaskReminder(taskToEdit.id).then((rem) => {
@@ -142,6 +144,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setScope(defaultScope);
       const defaultOrg = defaultScope === 'workplace' ? (initialValues?.org_id || currentOrg?.id || availableOrgs[0]?.id || '') : '';
       setSelectedOrgId(defaultOrg);
+      setSelectedSiteId(initialValues?.site_id || selectedSite?.id || '');
       setSelectedEmployeeId(initialValues?.assigned_employee_id || '');
       setReminder({
         is_enabled: false,
@@ -231,6 +234,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
           due_date: dueDate ? new Date(dueDate).toISOString() : null,
           scope,
           org_id: activeOrgId,
+          site_id: scope === 'workplace' ? (selectedSiteId || null) : null,
           assigned_employee_id: scope === 'workplace' ? (selectedEmployeeId || null) : null,
           assigned_to: scope === 'workplace' ? (selectedEmp?.user_id || null) : null,
         });
@@ -277,6 +281,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
           initialNote: initialNote.trim() || undefined,
           scope,
           org_id: activeOrgId,
+          site_id: scope === 'workplace' ? (selectedSiteId || null) : null,
           assigned_employee_id: scope === 'workplace' ? (selectedEmployeeId || null) : null,
           assigned_to: scope === 'workplace' ? (selectedEmp?.user_id || null) : null,
         });
@@ -387,6 +392,32 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               {availableOrgs.map((org) => (
                 <option key={org.id} value={org.id}>
                   {org.trade_name || org.legal_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Site Selector (When in Workplace Scope) */}
+        {scope === 'workplace' && sites && sites.length > 0 && (
+          <div className="space-y-1.5 p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                कामाची साईट / लोकेशन (Site)
+              </label>
+              <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">
+                {sites.length} साईट्स उपलब्ध
+              </span>
+            </div>
+            <select
+              value={selectedSiteId}
+              onChange={(e) => setSelectedSiteId(e.target.value)}
+              className="w-full rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-indigo-950 dark:text-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">सर्व साईट्स / सामान्य (All Sites / General)</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.code})
                 </option>
               ))}
             </select>
