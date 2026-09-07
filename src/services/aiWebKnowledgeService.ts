@@ -146,7 +146,8 @@ export async function callGeminiApi(
   apiKey: string,
   systemInstruction?: string
 ): Promise<string | null> {
-  const defaultInstruction = `You are TASKER Super-Brain AI, the intelligent, omniscient enterprise core inside TASKER (developed by Suraj Khandagale / One Click Solution).
+  const defaultInstruction = `You are TASKER AI, the intelligent, proprietary universal assistant inside TASKER (developed by Suraj Khandagale / One Click Solution).
+Always refer to yourself strictly as TASKER AI. Never mention underlying AI providers, models, or platforms.
 Provide complete, accurate, authoritative, and helpful answers in structured Markdown.
 Never say "मला माहिती नाही" or "I don't know". Always provide deep, insightful, and practical solutions.
 Fluent in Marathi (मराठी) and English. When addressed in Marathi or Marathi-English, reply in polite, fluent Marathi.`;
@@ -255,23 +256,22 @@ export function generateLocalSuperBrainAnswer(
 
   // 3. General Business & Work Knowledge
   if (isMarathi) {
-    return `🎯 **TASKER Super-Brain मार्गदर्शक:**\n\n` +
+    return `🎯 **TASKER AI मार्गदर्शक:**\n\n` +
       `मी तुमच्या प्रश्नाचा सखोल विचार केला आहे:\n` +
       `- तुम्ही विचारलेला प्रश्न: **"${query}"**\n` +
       `- कामाच्या दृष्टिकोनातून हे नियोजनबद्ध पद्धतीने पूर्ण करणे सोयीचे ठरेल. तुम्ही यासाठी नवीन टास्क तयार करू शकता किंवा रिमाइंडर्स सेट करू शकता.\n` +
-      `- थेट Google Gemini AI च्या सुपर-फास्ट रिस्पॉन्ससाठी Settings मधून तुमची विनामूल्य **Gemini API Key** सक्रिय करू शकता.`;
+      `- अधिक सखोल माहिती हवी असल्यास मला स्पष्टपणे पुढील उपप्रश्न विचारू शकता.`;
   } else {
-    return `🎯 **TASKER Super-Brain Insights:**\n\n` +
+    return `🎯 **TASKER AI Insights:**\n\n` +
       `Here is an expert perspective regarding your inquiry on **"${query}"**:\n` +
       `- Ensure all deliverables related to this objective are documented and assigned with clear milestones.\n` +
       `- You can trigger instant actions like *"Create task: ... tomorrow 5pm"* or *"Set reminder..."* right here.\n` +
-      `- For live cloud AI reasoning, verify that your Google Gemini API Key is configured in settings.`;
+      `- Feel free to ask me for detailed breakdowns, task schedules, or drafts anytime.`;
   }
 }
 
 /**
- * Main Universal Knowledge Handler for TASKER Super-Brain.
- * Seamlessly integrates Google Gemini AI with App Brain Context.
+ * Main Universal Knowledge Handler for TASKER AI.
  */
 export async function queryUniversalKnowledge(
   question: string,
@@ -287,7 +287,7 @@ export async function queryUniversalKnowledge(
   if (mathResult) {
     return {
       answer: mathResult,
-      provider: 'TASKER Super-Brain (Math Core)',
+      provider: 'TASKER AI',
       success: true,
     };
   }
@@ -309,15 +309,14 @@ export async function queryUniversalKnowledge(
       : `📅 Current Date and Time: **${formatted}** (Indian Standard Time).`;
     return {
       answer: ans,
-      provider: 'TASKER Super-Brain (System Clock)',
+      provider: 'TASKER AI',
       success: true,
     };
   }
 
-  // 3. Try Google Gemini API (Primary Engine)
+  // 3. Try AI Core API
   let geminiKey = getGeminiApiKey();
   if (!geminiKey) {
-    // Attempt fast background fetch from remote config
     geminiKey = await fetchRemoteGeminiKey();
   }
 
@@ -326,18 +325,17 @@ export async function queryUniversalKnowledge(
     if (geminiReply) {
       return {
         answer: geminiReply,
-        provider: 'TASKER Super-Brain (Google Gemini AI)',
+        provider: 'TASKER AI',
         success: true,
       };
     }
   }
 
   // 4. Intelligent Offline / Local Super-Brain Answer
-  // Never returns Wikipedia and NEVER says "I don't know"!
   const localReply = generateLocalSuperBrainAnswer(trimmed, isMarathi);
   return {
     answer: localReply,
-    provider: 'TASKER Super-Brain (Offline Reasoning Core)',
+    provider: 'TASKER AI',
     success: true,
   };
 }

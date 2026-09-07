@@ -385,8 +385,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="pt-1 text-center">
-          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 tracking-tight leading-tight">
+        <div className="pt-1.5 flex flex-col items-center gap-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+              TASKER v1.0.7
+            </span>
+          </div>
+          <p className="text-[9.5px] font-medium text-slate-400 dark:text-slate-500 tracking-tight leading-tight">
             Developed by Suraj Khandagale | One Click Solution
           </p>
         </div>

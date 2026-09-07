@@ -39,6 +39,8 @@ export const Logo: React.FC<LogoProps> = ({
     xl: 'text-sm',
   };
 
+  const [imgError, setImgError] = React.useState(false);
+
   const uniqueGradId = `tasker_brand_grad_${size}`;
 
   return (
@@ -49,51 +51,60 @@ export const Logo: React.FC<LogoProps> = ({
           animate ? 'animate-pulse' : ''
         }`}
       >
-        <svg
-          viewBox="0 0 48 48"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
-        >
-          <defs>
-            <linearGradient id={uniqueGradId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#2563eb" />
-              <stop offset="100%" stopColor="#4f46e5" />
-            </linearGradient>
-          </defs>
-
-          {/* Squircle Background */}
-          <rect width="48" height="48" rx="12" fill={`url(#${uniqueGradId})`} />
-
-          {/* Subtle Inner Highlight Border */}
-          <rect
-            x="0.75"
-            y="0.75"
-            width="46.5"
-            height="46.5"
-            rx="11.25"
-            stroke="white"
-            strokeOpacity="0.15"
-            strokeWidth="1.5"
+        {!imgError ? (
+          <img
+            src="/icon-192.png"
+            alt="TASKER"
+            onError={() => setImgError(true)}
+            className="w-full h-full object-cover rounded-[22%] shadow-sm transition-transform duration-200 group-hover:scale-105"
           />
+        ) : (
+          <svg
+            viewBox="0 0 48 48"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-full h-full drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
+          >
+            <defs>
+              <linearGradient id={uniqueGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#2563eb" />
+                <stop offset="100%" stopColor="#4f46e5" />
+              </linearGradient>
+            </defs>
 
-          {/* Top Task Bar */}
-          <path
-            d="M13 14.5H35"
-            stroke="white"
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
+            {/* Squircle Background */}
+            <rect width="48" height="48" rx="12" fill={`url(#${uniqueGradId})`} />
 
-          {/* Dynamic Action Checkmark (forming the T + Execution) */}
-          <path
-            d="M14 26L21.5 33.5L35 18"
-            stroke="white"
-            strokeWidth="4.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+            {/* Subtle Inner Highlight Border */}
+            <rect
+              x="0.75"
+              y="0.75"
+              width="46.5"
+              height="46.5"
+              rx="11.25"
+              stroke="white"
+              strokeOpacity="0.15"
+              strokeWidth="1.5"
+            />
+
+            {/* Top Task Bar */}
+            <path
+              d="M13 14.5H35"
+              stroke="white"
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+
+            {/* Dynamic Action Checkmark (forming the T + Execution) */}
+            <path
+              d="M14 26L21.5 33.5L35 18"
+              stroke="white"
+              strokeWidth="4.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
       </div>
 
       {/* Wordmark */}

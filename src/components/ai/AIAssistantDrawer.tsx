@@ -49,7 +49,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
       id: 'welcome',
       role: 'assistant',
       content:
-        'नमस्कार! मी **TASKER Super-Brain** आहे — Google Gemini AI द्वारे समर्थित तुमचा स्मार्ट ॲप असिस्टंट.\n\nमी ॲपमधील सर्व **Tasks, कर्मचाऱ्यांची माहिती, मुदती आणि आकडेवारी** जाणतो. तसेच तुम्ही मला जगातील कोणत्याही विषयावर (गणिते, व्यावसायिक पत्रे, नियोजन, सामान्य ज्ञान) प्रश्न विचारू शकता!\n\nखालीलपैकी पर्याय निवडा किंवा तुमचा प्रश्न टाईप करा:',
+        'नमस्कार! मी **TASKER AI** आहे — तुमचा स्मार्ट ॲप असिस्टंट.\n\nमी ॲपमधील सर्व **Tasks, कर्मचाऱ्यांची माहिती, मुदती आणि आकडेवारी** जाणतो. तसेच तुम्ही मला कामाचे नियोजन, गणिते, पत्र/ईमेल लेखन किंवा जगातील कोणत्याही विषयावर प्रश्न विचारू शकता!\n\nखालीलपैकी पर्याय निवडा किंवा तुमचा प्रश्न टाईप करा:',
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -164,7 +164,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
   const handleSaveApiKey = async () => {
     await setGeminiApiKey(customKeyInput.trim(), true);
     setHasKeyConfigured(Boolean(customKeyInput.trim()));
-    setKeySavedMessage('Google Gemini API Key सेव्ह करण्यात आली!');
+    setKeySavedMessage('TASKER AI Engine Key सेव्ह करण्यात आली!');
     setTimeout(() => {
       setKeySavedMessage('');
       setShowKeyModal(false);
@@ -188,26 +188,26 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm tracking-tight">TASKER Super-Brain</h3>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm tracking-tight">TASKER AI</h3>
                 <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs">
-                  Gemini AI
+                  Pro Assistant
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Universal Knowledge • Live App Brain • Actions</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Universal Intelligence • Live App Brain • Actions</p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Gemini API Key config button */}
+            {/* AI Engine Key config button */}
             <button
               onClick={() => setShowKeyModal(true)}
-              title="Google Gemini API Key Settings"
+              title="AI Activation Key"
               className={`p-2 rounded-xl border transition-all min-w-[38px] min-h-[38px] flex items-center justify-center ${
                 hasKeyConfigured
                   ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800'
                   : 'text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
               }`}
-              aria-label="API Key Settings"
+              aria-label="AI Key Settings"
             >
               <Key className="w-4 h-4" />
             </button>
@@ -238,10 +238,10 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
         <div className="px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-b border-blue-100 dark:border-blue-900/40 flex items-center justify-between gap-2 text-[11px] text-blue-900 dark:text-blue-200 shrink-0">
           <div className="flex items-center gap-1.5 truncate">
             <Zap className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span className="truncate font-medium">TASKER Super-Brain सक्रिय आहे • लाइव्ह डेटाबेस व ज्ञानकोश</span>
+            <span className="truncate font-medium">TASKER AI सक्रिय आहे • लाइव्ह डेटाबेस व ज्ञानकोश</span>
           </div>
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-200/70 dark:bg-blue-900 text-blue-800 dark:text-blue-300 shrink-0">
-            {hasKeyConfigured ? 'Gemini Live' : 'AI Active'}
+            {hasKeyConfigured ? 'AI Online' : 'AI Active'}
           </span>
         </div>
 
@@ -293,7 +293,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
           {isSearching && (
             <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 w-fit text-xs text-slate-600 dark:text-slate-300">
               <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
-              <span>TASKER Super-Brain विचार करत आहे...</span>
+              <span>TASKER AI विचार करत आहे...</span>
             </div>
           )}
 
@@ -341,7 +341,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
         </div>
       </div>
 
-      {/* Gemini API Key Configuration Modal */}
+      {/* AI Engine Key Configuration Modal */}
       {showKeyModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
@@ -350,7 +350,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
                 <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400">
                   <Key className="w-4 h-4" />
                 </div>
-                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">Google Gemini AI Key</h4>
+                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">TASKER AI Engine Key</h4>
               </div>
               <button
                 onClick={() => setShowKeyModal(false)}
@@ -361,18 +361,18 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              Google Gemini AI द्वारे सुपरफास्ट आणि अमर्याद उत्तरे मिळवण्यासाठी तुमची विनामूल्य Google Gemini API Key खाली टाका.
+              TASKER AI च्या प्रगत इंजिनला सुपरफास्ट आणि अमर्याद विचारशक्ती देण्यासाठी तुमची AI ॲक्टिव्हेशन की खाली नमूद करा.
             </p>
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                Gemini API Key (AI Studio):
+                AI Engine Key:
               </label>
               <input
                 type="password"
                 value={customKeyInput}
                 onChange={(e) => setCustomKeyInput(e.target.value)}
-                placeholder="AIzaSy..."
+                placeholder="AI Engine Key..."
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -380,7 +380,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
             {keySavedMessage && (
               <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>{keySavedMessage}</span>
+                <span>TASKER AI Key सेव्ह करण्यात आली!</span>
               </div>
             )}
 
@@ -391,7 +391,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
                 rel="noreferrer"
                 className="text-[11px] text-blue-600 hover:underline flex items-center gap-1 font-medium"
               >
-                <span>Get Free Key (Google)</span>
+                <span>Get Free Key</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
 

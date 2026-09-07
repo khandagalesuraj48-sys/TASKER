@@ -181,7 +181,7 @@ function buildGeminiSystemInstruction(context: Awaited<ReturnType<typeof gatherA
     ? employees.map((e) => `- ${e.full_name} (${e.designation || 'Staff'}, Dept: ${e.department || 'General'}${e.phone ? `, Phone: ${e.phone}` : ''})`).join('\n')
     : 'None explicitly listed.';
 
-  return `You are TASKER Super-Brain, the omniscient enterprise AI core of TASKER (an advanced task and workforce management platform developed by Suraj Khandagale / One Click Solution).
+  return `You are TASKER AI, the intelligent, proprietary enterprise AI core of TASKER (an advanced task and workforce management platform developed by Suraj Khandagale / One Click Solution). Always identify yourself strictly as TASKER AI. Never mention third-party AI models or platforms.
 
 CRITICAL DIRECTIVES:
 1. APP BRAIN MASTERY:
@@ -250,7 +250,7 @@ function processLocalGroundedQuery(
       const ans = isMarathi
         ? `तुमच्याकडे सध्या एकूण **${stats.pending}** प्रलंबित (Pending) tasks आहेत.`
         : `You currently have **${stats.pending}** pending tasks.`;
-      return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+      return { answer: ans, referencedTasks, providerUsed: 'TASKER AI (Local Grounding)' };
     }
     if (qLower.includes('completed') || qLower.includes('पूर्ण') || qLower.includes('झालेले')) {
       const comp = rawTasks.filter((t) => t.status === 'completed');
@@ -258,7 +258,7 @@ function processLocalGroundedQuery(
       const ans = isMarathi
         ? `एकूण **${stats.completed}** tasks पूर्ण (Completed) झाले आहेत.`
         : `A total of **${stats.completed}** tasks have been completed.`;
-      return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+      return { answer: ans, referencedTasks, providerUsed: 'TASKER AI (Local Grounding)' };
     }
     if (qLower.includes('overdue') || qLower.includes('मुदत संपलेले')) {
       const overdue = rawTasks.filter((t) => isTaskOverdue(t.due_date, t.status));
@@ -266,7 +266,7 @@ function processLocalGroundedQuery(
       const ans = isMarathi
         ? `सध्या **${stats.overdue}** tasks ची मुदत उलटून गेली आहे (Overdue).`
         : `You currently have **${stats.overdue}** overdue tasks.`;
-      return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+      return { answer: ans, referencedTasks, providerUsed: 'TASKER AI (Local Grounding)' };
     }
     if (qLower.includes('urgent') || qLower.includes('तातडीचे')) {
       const urgent = rawTasks.filter((t) => t.priority === 'urgent' && t.status !== 'completed');
@@ -274,7 +274,7 @@ function processLocalGroundedQuery(
       const ans = isMarathi
         ? `सध्या **${stats.urgent}** urgent tasks बाकी आहेत.`
         : `You currently have **${stats.urgent}** urgent tasks pending.`;
-      return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+      return { answer: ans, referencedTasks, providerUsed: 'TASKER AI (Local Grounding)' };
     }
   }
 
@@ -286,7 +286,7 @@ function processLocalGroundedQuery(
       const ans = isMarathi
         ? `📅 **${currentDateTimeIST}**\n\nआजसाठी कोणताही task due नाही. सर्व कामे सुरळीत आहेत!`
         : `📅 **${currentDateTimeIST}**\n\nThere are no tasks due today. All scheduled work is on track!`;
-      return { answer: ans, referencedTasks: [], providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+      return { answer: ans, referencedTasks: [], providerUsed: 'TASKER AI (Local Grounding)' };
     }
     const listStr = todayTasks
       .map((t) => `- **${t.title}** (${isMarathi ? translateStatusMr(t.status) : t.status}, Due: ${formatConversationalDate(t.due_date, isMarathi)})`)
@@ -294,7 +294,7 @@ function processLocalGroundedQuery(
     const ans = isMarathi
       ? `📅 आज एकूण **${todayTasks.length}** tasks पूर्ण करायचे आहेत:\n\n${listStr}`
       : `📅 Here are the **${todayTasks.length}** tasks due today:\n\n${listStr}`;
-    return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    return { answer: ans, referencedTasks, providerUsed: 'TASKER AI (Local Grounding)' };
   }
 
   // 3. OVERDUE TASKS
@@ -305,7 +305,7 @@ function processLocalGroundedQuery(
       return {
         answer: isMarathi ? '✅ छान! कोणताही task overdue नाही.' : '✅ Great! There are no overdue tasks.',
         referencedTasks: [],
-        providerUsed: 'TASKER Super-Brain (Local Grounding)',
+        providerUsed: 'TASKER AI (Local Grounding)',
       };
     }
     const listStr = overdue
@@ -314,7 +314,7 @@ function processLocalGroundedQuery(
     const ans = isMarathi
       ? `⚠️ हे **${overdue.length}** tasks मुदत उलटून गेलेले (Overdue) आहेत, यावर तातडीने लक्ष द्या:\n\n${listStr}`
       : `⚠️ These **${overdue.length}** tasks are overdue and require immediate attention:\n\n${listStr}`;
-    return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    return { answer: ans, referencedTasks, providerUsed: 'TASKER AI (Local Grounding)' };
   }
 
   // 4. SEARCH BY PERSON OR TASK KEYWORD
@@ -339,7 +339,7 @@ function processLocalGroundedQuery(
     const ans = isMarathi
       ? `तुमच्या शोधानुसार **${matchingTasks.length}** tasks सापडले:\n\n${listStr}`
       : `Found **${matchingTasks.length}** tasks matching your inquiry:\n\n${listStr}`;
-    return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    return { answer: ans, referencedTasks, providerUsed: 'TASKER AI (Local Grounding)' };
   }
 
   // 5. GENERAL PENDING TASKS LIST
@@ -353,17 +353,17 @@ function processLocalGroundedQuery(
     const ans = isMarathi
       ? `तुमच्याकडे **${pendingTasks.length}** चालू tasks आहेत. मुख्य tasks:\n\n${listStr}`
       : `You have **${pendingTasks.length}** active tasks. Top items:\n\n${listStr}`;
-    return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    return { answer: ans, referencedTasks, providerUsed: 'TASKER AI (Local Grounding)' };
   }
 
   const defaultAns = isMarathi
-    ? `**TASKER Super-Brain**:\nतुमचा प्रश्न समजला: "${question}".\n\nसध्या तुमच्याकडे कोणतेही प्रलंबित काम नाही. नवीन कार्य सुरू करण्यासाठी "Add task: [कामाचे नाव]" अशी सूचना देऊ शकता.`
-    : `**TASKER Super-Brain**:\nUnderstood your query: "${question}".\n\nAll tasks are currently up to date. You can say "Add task: [Title]" to create new work items.`;
-  return { answer: defaultAns, referencedTasks: [], providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    ? `**TASKER AI**:\nतुमचा प्रश्न समजला: "${question}".\n\nसध्या तुमच्याकडे कोणतेही प्रलंबित काम नाही. नवीन कार्य सुरू करण्यासाठी "Add task: [कामाचे नाव]" अशी सूचना देऊ शकता.`
+    : `**TASKER AI**:\nUnderstood your query: "${question}".\n\nAll tasks are currently up to date. You can say "Add task: [Title]" to create new work items.`;
+  return { answer: defaultAns, referencedTasks: [], providerUsed: 'TASKER AI (Local Grounding)' };
 }
 
 /**
- * Public Entrypoint for TASKER Super-Brain Assistant.
+ * Public Entrypoint for TASKER AI Assistant.
  * Seamlessly integrates:
  * 1. Natural Language Task Action Engine (Instant Task CRUD)
  * 2. Google Gemini AI Super-Brain with Deep App Context
@@ -373,9 +373,9 @@ export const askTaskerAI = async (question: string): Promise<AIResponse> => {
   const trimmed = question.trim();
   if (!trimmed) {
     return {
-      answer: 'नमस्कार! मी TASKER Super-Brain आहे. कृपया तुमचा प्रश्न विचारा किंवा नवीन टास्क तयार करा (उदा. "Add task: Meeting tomorrow 4pm").',
+      answer: 'नमस्कार! मी TASKER AI आहे. कृपया तुमचा प्रश्न विचारा किंवा नवीन टास्क तयार करा (उदा. "Add task: Meeting tomorrow 4pm").',
       referencedTasks: [],
-      providerUsed: 'TASKER Super-Brain',
+      providerUsed: 'TASKER AI',
     };
   }
 
@@ -390,7 +390,7 @@ export const askTaskerAI = async (question: string): Promise<AIResponse> => {
       return {
         answer: actionResult.answer,
         referencedTasks: actionResult.referencedTasks,
-        providerUsed: 'TASKER Super-Brain (Action Core)',
+        providerUsed: 'TASKER AI (Action Core)',
         actionTaken: actionResult.actionType,
       };
     }
