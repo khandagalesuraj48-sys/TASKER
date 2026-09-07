@@ -75,33 +75,43 @@ export const AppLayout: React.FC = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    // 1. Ensure high-importance notification channels exist
-    initNotificationChannels().catch(() => {});
-
-    // 2. Initial sync of unread notifications
-    syncUnreadNotificationsToLocal(user.id).catch(() => {});
-
-    // 3. Realtime subscription for immediate push
-    const unsubscribe = subscribeToNotifications(user.id, (notif) => {
-      console.log('Realtime notification received in AppLayout:', notif.title);
-    });
-
-    // 4. Foreground / Resume sync
+    let unsubscribe = () => {};
     let appStateHandle: any = null;
-    if (Capacitor.isNativePlatform()) {
-      App.addListener('appStateChange', ({ isActive }) => {
-        if (isActive) {
-          syncUnreadNotificationsToLocal(user.id).catch(() => {});
-        }
-      }).then((handle) => {
-        appStateHandle = handle;
+
+    try {
+      // 1. Ensure high-importance notification channels exist
+      initNotificationChannels().catch(() => {});
+
+      // 2. Initial sync of unread notifications
+      syncUnreadNotificationsToLocal(user.id).catch(() => {});
+
+      // 3. Realtime subscription for immediate push
+      unsubscribe = subscribeToNotifications(user.id, (notif) => {
+        console.log('Realtime notification received in AppLayout:', notif.title);
       });
+
+      // 4. Foreground / Resume sync
+      if (Capacitor.isNativePlatform()) {
+        App.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) {
+            syncUnreadNotificationsToLocal(user.id).catch(() => {});
+          }
+        }).then((handle) => {
+          appStateHandle = handle;
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Error in notification setup in AppLayout:', err);
     }
 
     return () => {
-      unsubscribe();
+      try {
+        unsubscribe();
+      } catch {}
       if (appStateHandle) {
-        appStateHandle.remove();
+        try {
+          appStateHandle.remove();
+        } catch {}
       }
     };
   }, [user?.id]);

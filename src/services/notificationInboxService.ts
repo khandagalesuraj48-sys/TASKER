@@ -168,55 +168,71 @@ export const subscribeToNotifications = (
   userId: string,
   onNewNotification: (notification: InAppNotification) => void
 ) => {
-  const channel = supabase
-    .channel(`user-notifications:${userId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `recipient_user_id=eq.${userId}`,
-      },
-      async (payload) => {
-        if (payload.new) {
-          const newNotif = payload.new as InAppNotification;
-          onNewNotification(newNotif);
+  if (!userId) return () => {};
 
-          // If on Android / Native platform, push directly to system status bar with HIGH importance
-          if (Capacitor.isNativePlatform()) {
-            try {
-              await LocalNotifications.schedule({
-                notifications: [
-                  {
-                    id: Math.floor(Math.random() * 899999) + 1,
-                    title: newNotif.title,
-                    body: newNotif.message,
-                    channelId: 'tasker_alerts',
-                    smallIcon: 'ic_launcher_foreground',
-                    iconColor: '#2563eb',
-                    sound: 'default',
-                    autoCancel: true,
-                    extra: {
-                      taskId: newNotif.entity_id,
-                      entity_type: newNotif.entity_type,
-                      entity_id: newNotif.entity_id,
-                      path: newNotif.entity_id ? `/tasks/${newNotif.entity_id}` : '/notifications',
-                    },
-                  },
-                ],
-              });
-            } catch (e) {
-              console.warn('Error scheduling local notification on arrival:', e);
+  try {
+    const channelId = `user-notif-${userId}-${Math.random().toString(36).slice(2, 9)}`;
+    const channel = supabase
+      .channel(channelId)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `recipient_user_id=eq.${userId}`,
+        },
+        async (payload) => {
+          try {
+            if (payload.new) {
+              const newNotif = payload.new as InAppNotification;
+              onNewNotification(newNotif);
+
+              // If on Android / Native platform, push directly to system status bar with HIGH importance
+              if (Capacitor.isNativePlatform()) {
+                try {
+                  await LocalNotifications.schedule({
+                    notifications: [
+                      {
+                        id: Math.floor(Math.random() * 899999) + 1,
+                        title: newNotif.title,
+                        body: newNotif.message,
+                        channelId: 'tasker_alerts',
+                        smallIcon: 'ic_launcher_foreground',
+                        iconColor: '#2563eb',
+                        sound: 'default',
+                        autoCancel: true,
+                        extra: {
+                          taskId: newNotif.entity_id,
+                          entity_type: newNotif.entity_type,
+                          entity_id: newNotif.entity_id,
+                          path: newNotif.entity_id ? `/tasks/${newNotif.entity_id}` : '/notifications',
+                        },
+                      },
+                    ],
+                  });
+                } catch (e) {
+                  console.warn('Error scheduling local notification on arrival:', e);
+                }
+              }
             }
+          } catch (payloadErr) {
+            console.warn('Error in notification payload handler:', payloadErr);
           }
         }
-      }
-    )
-    .subscribe();
+      )
+      .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
+    return () => {
+      try {
+        supabase.removeChannel(channel);
+      } catch {
+        // ignore
+      }
+    };
+  } catch (err) {
+    console.warn('Error setting up notification subscription:', err);
+    return () => {};
+  }
 };
 
