@@ -8,8 +8,12 @@ import {
   Trash2,
   ArrowRight,
   Zap,
+  Key,
+  CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import { askTaskerAI } from '../../services/aiService';
+import { getGeminiApiKey, setGeminiApiKey } from '../../services/aiWebKnowledgeService';
 import { AIMessage } from '../../types/task';
 import { useBackButton } from '../../hooks/useBackButton';
 import { useTask } from '../../context/TaskContext';
@@ -20,14 +24,14 @@ interface AIAssistantDrawerProps {
 }
 
 const INITIAL_SUGGESTIONS = [
-  'Add task: Call Rahul tomorrow at 5pm',
-  'आज कोणते tasks आहेत?',
+  'आज कोणते tasks करायचे आहेत?',
   'माझे urgent pending tasks कोणते?',
-  'Set reminder for Call Rahul in 15 mins',
+  'Add task: Call Rahul tomorrow at 5pm',
   'Complete task Call Rahul',
-  'Who is the CEO of Google?',
-  'कोणते tasks overdue आहेत?',
+  'कंपनीतील कर्मचाऱ्यांची यादी दाखवा',
+  'रजेसाठी मराठीत एक अर्ज लिहून दे',
   '15% of 8500 किती?',
+  'कामाचे उत्कृष्ट नियोजन कसे करावे?',
 ];
 
 export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, onClose }) => {
@@ -45,31 +49,47 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
       id: 'welcome',
       role: 'assistant',
       content:
-        'नमस्कार! मी **TASKER AI 2.0** आहे — तुमचा universal smart assistant.\n\nमी तुमचे tasks तयार करू शकतो, पूर्ण करू शकतो, रिमाइंडर्स लावू शकतो आणि जगातील कोणत्याही प्रश्नाचे उत्तर देऊ शकतो. खालीलपैकी पर्याय निवडा किंवा टाइप करा:',
+        'नमस्कार! मी **TASKER Super-Brain** आहे — Google Gemini AI द्वारे समर्थित तुमचा स्मार्ट ॲप असिस्टंट.\n\nमी ॲपमधील सर्व **Tasks, कर्मचाऱ्यांची माहिती, मुदती आणि आकडेवारी** जाणतो. तसेच तुम्ही मला जगातील कोणत्याही विषयावर (गणिते, व्यावसायिक पत्रे, नियोजन, सामान्य ज्ञान) प्रश्न विचारू शकता!\n\nखालीलपैकी पर्याय निवडा किंवा तुमचा प्रश्न टाईप करा:',
       timestamp: new Date().toISOString(),
     },
   ]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
+  const [customKeyInput, setCustomKeyInput] = useState<string>('');
+  const [hasKeyConfigured, setHasKeyConfigured] = useState<boolean>(false);
+  const [keySavedMessage, setKeySavedMessage] = useState<string>('');
+
+  useEffect(() => {
+    const key = getGeminiApiKey();
+    setHasKeyConfigured(Boolean(key));
+    if (key) {
+      setCustomKeyInput(key);
+    }
+  }, [isOpen]);
 
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+      if (e.key === 'Escape') {
+        if (showKeyModal) {
+          setShowKeyModal(false);
+        } else if (isOpen) {
+          onClose();
+        }
       }
     };
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, showKeyModal]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !showKeyModal) {
       setTimeout(() => inputRef.current?.focus(), 150);
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [isOpen, messages]);
+  }, [isOpen, messages, showKeyModal]);
 
   const handleSend = async (queryText?: string) => {
     const q = (queryText || inputQuery).trim();
@@ -109,7 +129,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
         {
           id: 'err_' + Date.now(),
           role: 'assistant',
-          content: 'मला उत्तर देताना अडचण आली. कृपया प्रश्न पुन्हा विचारा.',
+          content: 'माफ करा, उत्तर तयार करताना अडचण आली. कृपया तुमचा प्रश्न पुन्हा विचारा.',
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -135,10 +155,20 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
       {
         id: 'welcome_reset',
         role: 'assistant',
-        content: 'चॅट साफ केली आहे. तुम्ही तुमच्या टास्कविषयी किंवा जगातील कोणत्याही विषयावर प्रश्न विचारू शकता.',
+        content: 'चॅट साफ केली आहे. तुम्ही तुमच्या टास्कविषयी, कर्मचाऱ्यांविषयी किंवा जगातील कोणत्याही विषयावर प्रश्न विचारू शकता.',
         timestamp: new Date().toISOString(),
       },
     ]);
+  };
+
+  const handleSaveApiKey = async () => {
+    await setGeminiApiKey(customKeyInput.trim(), true);
+    setHasKeyConfigured(Boolean(customKeyInput.trim()));
+    setKeySavedMessage('Google Gemini API Key सेव्ह करण्यात आली!');
+    setTimeout(() => {
+      setKeySavedMessage('');
+      setShowKeyModal(false);
+    }, 1200);
   };
 
   if (!isOpen) return null;
@@ -150,37 +180,51 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
 
       {/* Main Drawer: Fullscreen on mobile, 440px slide-over on desktop */}
       <div className="relative w-full sm:max-w-md md:max-w-lg h-full max-h-[100dvh] bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col z-10">
-        {/* Top Header - ALWAYS VISIBLE CLOSE BUTTON */}
+        {/* Top Header */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/80 backdrop-blur-sm flex items-center justify-between shrink-0 pt-safe">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-md">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+              <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">TASKER AI 2.0</h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
-                  Universal & Actions
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm tracking-tight">TASKER Super-Brain</h3>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs">
+                  Gemini AI
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Universal Knowledge • Live Actions • Task Aware</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Universal Knowledge • Live App Brain • Actions</p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Gemini API Key config button */}
+            <button
+              onClick={() => setShowKeyModal(true)}
+              title="Google Gemini API Key Settings"
+              className={`p-2 rounded-xl border transition-all min-w-[38px] min-h-[38px] flex items-center justify-center ${
+                hasKeyConfigured
+                  ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800'
+                  : 'text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
+              }`}
+              aria-label="API Key Settings"
+            >
+              <Key className="w-4 h-4" />
+            </button>
+
             <button
               onClick={handleClearHistory}
-              title="Clear chat history"
+              title="चॅट साफ करा"
               className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 min-w-[38px] min-h-[38px] flex items-center justify-center transition-colors"
               aria-label="Clear chat"
             >
               <Trash2 className="w-4 h-4" />
             </button>
 
-            {/* HIGH VISIBILITY ACCESSIBLE CLOSE BUTTON */}
+            {/* Accessible Close Button */}
             <button
               onClick={onClose}
-              className="px-2.5 py-1.5 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl min-h-[38px] flex items-center gap-1.5 transition-colors shadow-xs border border-slate-200 dark:border-slate-700 font-semibold text-xs"
+              className="px-2.5 py-1.5 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl min-h-[38px] flex items-center gap-1.5 transition-colors shadow-xs border border-slate-200 dark:border-slate-700 font-semibold text-xs"
               aria-label="Close assistant"
               title="Close assistant (Esc)"
             >
@@ -191,9 +235,14 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
         </div>
 
         {/* Realtime database status badge */}
-        <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900/60 flex items-center gap-2 text-[11px] text-emerald-800 dark:text-emerald-300 shrink-0">
-          <Zap className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span className="truncate">TASKER AI 2.0 active • Live database & universal web intelligence</span>
+        <div className="px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-b border-blue-100 dark:border-blue-900/40 flex items-center justify-between gap-2 text-[11px] text-blue-900 dark:text-blue-200 shrink-0">
+          <div className="flex items-center gap-1.5 truncate">
+            <Zap className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span className="truncate font-medium">TASKER Super-Brain सक्रिय आहे • लाइव्ह डेटाबेस व ज्ञानकोश</span>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-200/70 dark:bg-blue-900 text-blue-800 dark:text-blue-300 shrink-0">
+            {hasKeyConfigured ? 'Gemini Live' : 'AI Active'}
+          </span>
         </div>
 
         {/* Chat Messages Scrolling Area */}
@@ -217,7 +266,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
               {msg.referencedTasks && msg.referencedTasks.length > 0 && (
                 <div className="mt-2.5 w-full max-w-[90%] space-y-1.5">
                   <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider pl-1">
-                    Related Tasks:
+                    संबंधित कार्ये (Related Tasks):
                   </p>
                   {msg.referencedTasks.map((refTask) => (
                     <div
@@ -242,9 +291,9 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
           ))}
 
           {isSearching && (
-            <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 w-fit text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 w-fit text-xs text-slate-600 dark:text-slate-300">
               <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
-              <span>Checking your tasks...</span>
+              <span>TASKER Super-Brain विचार करत आहे...</span>
             </div>
           )}
 
@@ -267,7 +316,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
           </div>
         </div>
 
-        {/* Sticky Input Footer */}
+        {/* Pure Conversational Input (STRICTLY NO ATTACHMENTS) */}
         <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pb-safe shrink-0">
           <div className="flex items-center gap-2">
             <input
@@ -276,7 +325,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask anything, or say 'Add task: ...', 'Complete task ...', 'Remind me...'"
+              placeholder="काहीही विचारा, किंवा सांगा 'Add task: ...', 'Complete task ...'"
               disabled={isSearching}
               className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             />
@@ -291,6 +340,79 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
           </div>
         </div>
       </div>
+
+      {/* Gemini API Key Configuration Modal */}
+      {showKeyModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <Key className="w-4 h-4" />
+                </div>
+                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">Google Gemini AI Key</h4>
+              </div>
+              <button
+                onClick={() => setShowKeyModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Google Gemini AI द्वारे सुपरफास्ट आणि अमर्याद उत्तरे मिळवण्यासाठी तुमची विनामूल्य Google Gemini API Key खाली टाका.
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                Gemini API Key (AI Studio):
+              </label>
+              <input
+                type="password"
+                value={customKeyInput}
+                onChange={(e) => setCustomKeyInput(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {keySavedMessage && (
+              <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{keySavedMessage}</span>
+              </div>
+            )}
+
+            <div className="pt-2 flex items-center justify-between">
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-blue-600 hover:underline flex items-center gap-1 font-medium"
+              >
+                <span>Get Free Key (Google)</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowKeyModal(false)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  रद्द करा
+                </button>
+                <button
+                  onClick={handleSaveApiKey}
+                  className="px-4 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                >
+                  Save & Activate
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

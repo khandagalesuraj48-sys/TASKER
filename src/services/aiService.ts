@@ -1,3 +1,4 @@
+// src/services/aiService.ts
 import { supabase } from '../lib/supabase';
 import { TaskReference } from '../types/task';
 import { formatDateTime, formatDateOnly, isTaskOverdue, parseInTimezone } from '../lib/dateUtils';
@@ -10,13 +11,6 @@ export interface AIResponse {
   referencedTasks: TaskReference[];
   providerUsed: string;
   actionTaken?: 'create' | 'complete' | 'reminder' | 'update' | 'delete' | null;
-}
-
-// AI Provider Interface to allow pluggable LLM integrations later
-export interface AIProvider {
-  name: string;
-  isAvailable: () => boolean;
-  processQuery: (question: string, contextTasks: any[]) => Promise<AIResponse>;
 }
 
 // Helper to format date in conversational style
@@ -63,368 +57,42 @@ const translatePriorityMr = (p: string): string => {
   }
 };
 
-// Built-in Task-Aware Grounding Engine
-class TaskAwareGroundingEngine implements AIProvider {
-  name = 'TASKER AI 2.0 (Task Grounded)';
-
-  isAvailable() {
-    return true;
-  }
-
-  async processQuery(question: string, tasks: any[]): Promise<AIResponse> {
-    const qLower = question.toLowerCase().trim();
-    const isMarathi = /[\u0900-\u097F]/.test(question) ||
-      qLower.includes('aahe') || qLower.includes('ahet') || qLower.includes('kadh') ||
-      qLower.includes('dakhva') || qLower.includes('maze') || qLower.includes('konte');
-
-    const referencedTasks: TaskReference[] = [];
-
-    // Helper to register task reference
-    const addRef = (t: any) => {
-      if (!referencedTasks.some((r) => r.id === t.id)) {
-        referencedTasks.push({
-          id: t.id,
-          title: t.title,
-          status: t.status,
-          priority: t.priority,
-          due_date: t.due_date,
-        });
-      }
-    };
-
-    // 1. COUNT INQUIRIES: "किती pending tasks आहेत?", "how many pending tasks?"
-    if (
-      qLower.includes('किती') ||
-      qLower.includes('how many') ||
-      qLower.includes('count')
-    ) {
-      if (qLower.includes('pending') || qLower.includes('प्रलंबित') || qLower.includes('बाकी')) {
-        const pending = tasks.filter((t) => t.status === 'pending');
-        pending.forEach(addRef);
-        const count = pending.length;
-        const ans = isMarathi
-          ? `तुमच्याकडे सध्या **${count}** pending tasks आहेत.`
-          : `You currently have **${count}** pending tasks.`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-      if (qLower.includes('completed') || qLower.includes('पूर्ण') || qLower.includes('झालेले')) {
-        const comp = tasks.filter((t) => t.status === 'completed');
-        comp.forEach(addRef);
-        const ans = isMarathi
-          ? `तुमचे एकूण **${comp.length}** tasks complete झाले आहेत.`
-          : `You have completed **${comp.length}** tasks in total.`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-      if (qLower.includes('आज') || qLower.includes('today')) {
-        const todayTasks = tasks.filter((t) => t.due_date && isToday(new Date(t.due_date)));
-        todayTasks.forEach(addRef);
-        const ans = isMarathi
-          ? `आज एकूण **${todayTasks.length}** tasks due आहेत.`
-          : `There are **${todayTasks.length}** tasks due today.`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-      if (qLower.includes('overdue') || qLower.includes('मुदत संपलेले')) {
-        const overdue = tasks.filter((t) => isTaskOverdue(t.due_date, t.status));
-        overdue.forEach(addRef);
-        const ans = isMarathi
-          ? `सध्या **${overdue.length}** tasks overdue (मुदत उलटून गेलेले) आहेत.`
-          : `You currently have **${overdue.length}** overdue tasks.`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-    }
-
-    // 2. TODAY'S TASKS: "आज कोणते tasks आहेत?", "today tasks"
-    if (qLower.includes('आज') || qLower.includes('today')) {
-      const todayTasks = tasks.filter((t) => t.due_date && isToday(new Date(t.due_date)));
-      if (todayTasks.length === 0) {
-        return {
-          answer: isMarathi ? 'आज कोणतीही tasks due नाहीत.' : 'There are no tasks due today.',
-          referencedTasks: [],
-          providerUsed: this.name,
-        };
-      }
-      todayTasks.forEach(addRef);
-      const listStr = todayTasks
-        .map((t) => `- **${t.title}** (${isMarathi ? translateStatusMr(t.status) : t.status}, Due: ${formatConversationalDate(t.due_date, isMarathi)})`)
-        .join('\n');
-      const ans = isMarathi
-        ? `आज एकूण **${todayTasks.length}** tasks आहेत:\n\n${listStr}`
-        : `Here are the **${todayTasks.length}** tasks due today:\n\n${listStr}`;
-      return { answer: ans, referencedTasks, providerUsed: this.name };
-    }
-
-    // 3. YESTERDAY'S COMPLETED TASKS: "काल कोणते tasks complete झाले?", "yesterday completed"
-    if (qLower.includes('काल') || qLower.includes('yesterday')) {
-      const yestComp = tasks.filter(
-        (t) => t.status === 'completed' && t.completed_at && isYesterday(new Date(t.completed_at))
-      );
-      if (yestComp.length === 0) {
-        return {
-          answer: isMarathi ? 'काल कोणताही task complete झालेला नाही.' : 'No tasks were completed yesterday.',
-          referencedTasks: [],
-          providerUsed: this.name,
-        };
-      }
-      yestComp.forEach(addRef);
-      const listStr = yestComp.map((t) => `- **${t.title}**`).join('\n');
-      const ans = isMarathi
-        ? `काल हे **${yestComp.length}** tasks complete झाले आहेत:\n\n${listStr}`
-        : `These **${yestComp.length}** tasks were completed yesterday:\n\n${listStr}`;
-      return { answer: ans, referencedTasks, providerUsed: this.name };
-    }
-
-    // 4. OVERDUE TASKS: "कोणते tasks overdue आहेत?", "overdue tasks"
-    if (qLower.includes('overdue') || qLower.includes('मुदत उलटून') || qLower.includes('उलटलेले')) {
-      const overdue = tasks.filter((t) => isTaskOverdue(t.due_date, t.status));
-      if (overdue.length === 0) {
-        return {
-          answer: isMarathi ? 'कोणताही task overdue नाही.' : 'There are no overdue tasks.',
-          referencedTasks: [],
-          providerUsed: this.name,
-        };
-      }
-      overdue.forEach(addRef);
-      const listStr = overdue
-        .map((t) => `- **${t.title}** (Due: ${formatConversationalDate(t.due_date, isMarathi)}, Priority: ${isMarathi ? translatePriorityMr(t.priority) : t.priority})`)
-        .join('\n');
-      const ans = isMarathi
-        ? `हे **${overdue.length}** tasks overdue आहेत:\n\n${listStr}`
-        : `These **${overdue.length}** tasks are overdue:\n\n${listStr}`;
-      return { answer: ans, referencedTasks, providerUsed: this.name };
-    }
-
-    // 5. URGENT PENDING TASKS: "माझे urgent pending tasks कोणते?", "urgent tasks"
-    if (qLower.includes('urgent') || qLower.includes('तातडीचे')) {
-      const urgentTasks = tasks.filter(
-        (t) => t.priority === 'urgent' && t.status !== 'completed' && t.status !== 'cancelled'
-      );
-      if (urgentTasks.length === 0) {
-        return {
-          answer: isMarathi ? 'कोणताही urgent pending task नाही.' : 'There are no urgent pending tasks.',
-          referencedTasks: [],
-          providerUsed: this.name,
-        };
-      }
-      urgentTasks.forEach(addRef);
-      const listStr = urgentTasks
-        .map((t) => `- **${t.title}** (${isMarathi ? translateStatusMr(t.status) : t.status}, Due: ${formatConversationalDate(t.due_date, isMarathi)})`)
-        .join('\n');
-      const ans = isMarathi
-        ? `तुमचे urgent tasks:\n\n${listStr}`
-        : `Your urgent tasks:\n\n${listStr}`;
-      return { answer: ans, referencedTasks, providerUsed: this.name };
-    }
-
-    // 6. GENERAL PENDING TASKS: "माझे pending tasks कोणते?", "pending tasks"
-    if (
-      (qLower.includes('pending') || qLower.includes('प्रलंबित') || qLower.includes('बाकी')) &&
-      !qLower.includes('disha') && !qLower.includes('call')
-    ) {
-      const pendingTasks = tasks.filter((t) => t.status === 'pending' || t.status === 'in_progress');
-      if (pendingTasks.length === 0) {
-        return {
-          answer: isMarathi ? 'तुमच्याकडे सध्या कोणतेही pending tasks नाहीत.' : 'You have no pending tasks.',
-          referencedTasks: [],
-          providerUsed: this.name,
-        };
-      }
-      pendingTasks.forEach(addRef);
-      const listStr = pendingTasks
-        .slice(0, 10)
-        .map((t) => `- **${t.title}** (${isMarathi ? translateStatusMr(t.status) : t.status}, Due: ${formatConversationalDate(t.due_date, isMarathi)})`)
-        .join('\n');
-      const ans = isMarathi
-        ? `तुमचे pending tasks (${pendingTasks.length}):\n\n${listStr}`
-        : `Your pending tasks (${pendingTasks.length}):\n\n${listStr}`;
-      return { answer: ans, referencedTasks, providerUsed: this.name };
-    }
-
-    // 7. COMPLETED TASKS: "माझे completed tasks कोणते?", "completed tasks"
-    if (
-      (qLower.includes('completed') || qLower.includes('पूर्ण झालेले') || qLower.includes('झालेले')) &&
-      !qLower.includes('disha') && !qLower.includes('call')
-    ) {
-      const completedTasks = tasks.filter((t) => t.status === 'completed');
-      if (completedTasks.length === 0) {
-        return {
-          answer: isMarathi ? 'कोणताही task complete झालेला नाही.' : 'No tasks have been completed yet.',
-          referencedTasks: [],
-          providerUsed: this.name,
-        };
-      }
-      completedTasks.forEach(addRef);
-      const listStr = completedTasks
-        .slice(0, 10)
-        .map((t) => `- **${t.title}** (Completed at: ${formatConversationalDate(t.completed_at, isMarathi)})`)
-        .join('\n');
-      const ans = isMarathi
-        ? `तुमचे completed tasks (${completedTasks.length}):\n\n${listStr}`
-        : `Your completed tasks (${completedTasks.length}):\n\n${listStr}`;
-      return { answer: ans, referencedTasks, providerUsed: this.name };
-    }
-
-    // 8. SPECIFIC TASK / PERSON SEARCH:
-    // e.g. "Disha ला call कधी करायचा आहे?", "Disha चे सगळे tasks दाखव", "Call Disha"
-    const tokens = qLower
-      .replace(/[?.,!लाचेचाचीचेनाना]/g, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length > 2 && !['tasks', 'task', 'kadh', 'aahe', 'ahet', 'kay', 'hoti'].includes(w));
-
-    const candidateTasks = tasks.filter((t) => {
-      const titleL = t.title.toLowerCase();
-      const descL = (t.description || '').toLowerCase();
-      const personL = (t.person_name || '').toLowerCase();
-
-      return tokens.some((tok) => titleL.includes(tok) || personL.includes(tok) || descL.includes(tok));
-    });
-
-    // Score candidates based on relevance
-    const scoredCandidates = candidateTasks.map((t) => {
-      const titleL = t.title.toLowerCase();
-      const descL = (t.description || '').toLowerCase();
-      const personL = (t.person_name || '').toLowerCase();
-      let score = 0;
-
-      if (titleL === qLower || qLower.includes(titleL)) score += 12;
-      if (tokens.length > 0 && tokens.every((tok) => titleL.includes(tok))) score += 8;
-      if (titleL.includes('call') && titleL.includes('disha')) score += 6;
-      if (personL.includes('disha') || titleL.includes('disha')) score += 4;
-      if (descL.includes('project requirements')) score += 4;
-      // Prefer active tasks over cancelled
-      if (t.status === 'pending' || t.status === 'in_progress') score += 4;
-      if (t.status === 'cancelled') score -= 3;
-
-      return { task: t, score };
-    });
-
-    scoredCandidates.sort((a, b) => b.score - a.score);
-
-    // If user explicitly asks for "all tasks" / "सगळे tasks":
-    if (
-      qLower.includes('सगळे') ||
-      qLower.includes('सर्व') ||
-      qLower.includes('all tasks') ||
-      qLower.includes('दाखव') && !qLower.includes('कधी') && !qLower.includes('description')
-    ) {
-      if (candidateTasks.length > 0) {
-        candidateTasks.forEach(addRef);
-        const listStr = candidateTasks
-          .map((t) => `- **${t.title}** (${isMarathi ? translateStatusMr(t.status) : t.status}, Due: ${formatConversationalDate(t.due_date, isMarathi)})`)
-          .join('\n');
-        const ans = isMarathi
-          ? `या संदर्भात **${candidateTasks.length}** tasks सापडले:\n\n${listStr}`
-          : `Found **${candidateTasks.length}** tasks matching your query:\n\n${listStr}`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-    }
-
-    // Single target candidate response
-    if (scoredCandidates.length > 0 && scoredCandidates[0].score > 0) {
-      const t = scoredCandidates[0].task;
-      addRef(t);
-
-      // A. Due date inquiry: "कधी", "when", "due"
-      if (qLower.includes('कधी') || qLower.includes('when') || qLower.includes('due date') || qLower.includes('वेळ')) {
-        const dueDateFormatted = formatConversationalDate(t.due_date, isMarathi);
-        const prioStr = isMarathi ? translatePriorityMr(t.priority) : t.priority;
-        const statusStr = isMarathi ? translateStatusMr(t.status) : t.status;
-
-        const ans = isMarathi
-          ? `**${t.title}** चा task **${dueDateFormatted}** ला due आहे. Priority **${prioStr}** आहे आणि task सध्या **${statusStr}** आहे.`
-          : `The task **${t.title}** is due on **${dueDateFormatted}**. Priority is **${prioStr}** and status is currently **${statusStr}**.`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-
-      // B. Description inquiry: "description काय आहे"
-      if (qLower.includes('description') || qLower.includes('तपशील') || qLower.includes('माहिती')) {
-        const descText = t.description?.trim() || (isMarathi ? 'कोणतीही description दिलेली नाही.' : 'No description provided.');
-        const ans = isMarathi
-          ? `**${t.title}** ची description:\n\n> "${descText}"`
-          : `Description for **${t.title}**:\n\n> "${descText}"`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-
-      // C. Priority inquiry: "priority काय आहे"
-      if (qLower.includes('priority') || qLower.includes('महत्त्व')) {
-        const prioStr = isMarathi ? translatePriorityMr(t.priority) : t.priority;
-        const ans = isMarathi
-          ? `**${t.title}** ची priority **${prioStr}** आहे.`
-          : `The priority for **${t.title}** is **${prioStr}**.`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-
-      // D. Completion status inquiry: "complete झाला आहे का?", "is it completed?"
-      if (qLower.includes('complete') || qLower.includes('झाला आहे का') || qLower.includes('status')) {
-        const isComp = t.status === 'completed';
-        const ans = isMarathi
-          ? isComp
-            ? `होय, **${t.title}** हा task **${formatConversationalDate(t.completed_at, isMarathi)}** रोजी Complete झाला आहे.`
-            : `नाही, **${t.title}** हा task अजून Complete झालेला नाही. सध्याचा status **${translateStatusMr(t.status)}** आहे.`
-          : isComp
-            ? `Yes, the task **${t.title}** was completed on **${formatConversationalDate(t.completed_at, false)}**.`
-            : `No, the task **${t.title}** is not yet completed. Current status is **${t.status}**.`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-
-      // E. Status history inquiry: "history काय आहे"
-      if (qLower.includes('history') || qLower.includes('इतिहास') || qLower.includes('बदल')) {
-        const hist = t.task_status_history || [];
-        if (hist.length === 0) {
-          const ans = isMarathi
-            ? `**${t.title}** साठी कोणतीही वेगळी history नोंदवलेली नाही.`
-            : `No status history recorded for **${t.title}**.`;
-          return { answer: ans, referencedTasks, providerUsed: this.name };
-        }
-        const histStr = hist
-          .map((h: any) => `- ${formatDateTime(h.changed_at)}: **${h.new_status}** (${h.remarks || 'No remarks'})`)
-          .join('\n');
-        const ans = isMarathi
-          ? `**${t.title}** चा Status History:\n\n${histStr}`
-          : `Status history for **${t.title}**:\n\n${histStr}`;
-        return { answer: ans, referencedTasks, providerUsed: this.name };
-      }
-
-      // Default single task summary
-      const ans = isMarathi
-        ? `**${t.title}**:\n- **Status**: ${translateStatusMr(t.status)}\n- **Priority**: ${translatePriorityMr(t.priority)}\n- **Due Date**: ${formatConversationalDate(t.due_date, isMarathi)}\n- **Description**: ${t.description || 'N/A'}`
-        : `**${t.title}**:\n- **Status**: ${t.status}\n- **Priority**: ${t.priority}\n- **Due Date**: ${formatConversationalDate(t.due_date, false)}\n- **Description**: ${t.description || 'N/A'}`;
-      return { answer: ans, referencedTasks, providerUsed: this.name };
-    }
-
-    // 9. GENERAL / WORLD / WEB QUESTION — DELEGATE TO UNIVERSAL KNOWLEDGE ENGINE
-    const universal = await queryUniversalKnowledge(question);
-    return {
-      answer: universal.answer,
-      referencedTasks: [],
-      providerUsed: universal.provider,
-    };
-  }
-}
-
-// Active provider instance
-const activeProvider: AIProvider = new TaskAwareGroundingEngine();
-
-// Public entrypoint for AI Assistant
-export const askTaskerAI = async (question: string): Promise<AIResponse> => {
-  const trimmed = question.trim();
-  if (!trimmed) {
-    return {
-      answer: 'कृपया तुमचा प्रश्न विचारा किंवा कमांड द्या (उदा. "Add task: Call Rahul tomorrow at 5pm").',
-      referencedTasks: [],
-      providerUsed: activeProvider.name,
-    };
-  }
-
-  // 1. Fetch live task data with relations from Supabase
+/**
+ * Gathers complete live data across the application to empower TASKER Super-Brain.
+ */
+async function gatherAppBrainContext() {
+  let currentUser = {
+    name: 'Authorized User',
+    email: '',
+    role: 'Employee',
+  };
+  let organizationName = 'TASKER Enterprise';
   let rawTasks: any[] = [];
+  let employees: any[] = [];
+
+  // 1. Current user session
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user) {
+      currentUser.email = authData.user.email || '';
+      currentUser.name =
+        authData.user.user_metadata?.full_name ||
+        authData.user.user_metadata?.name ||
+        authData.user.email?.split('@')[0] ||
+        'User';
+    }
+  } catch {
+    // Fail gracefully
+  }
+
+  // 2. Fetch live tasks
   try {
     const { data, error } = await supabase
       .from('tasks')
       .select(`
         *,
         task_notes(note, created_at, created_by),
-        task_status_history(old_status, new_status, changed_at, remarks),
-        task_attachments(file_name, file_type, uploaded_at)
+        task_status_history(old_status, new_status, changed_at, remarks)
       `)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false });
@@ -436,14 +104,293 @@ export const askTaskerAI = async (question: string): Promise<AIResponse> => {
     console.warn('Live task query warning:', err);
   }
 
-  // 2. First Priority: Check for natural-language TASKER action commands (Create, Complete, Reminder, Update, Delete)
+  // 3. Fetch active organization and employees
+  try {
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (orgData?.name) {
+      organizationName = orgData.name;
+    }
+
+    const { data: empData } = await supabase
+      .from('erp_employees')
+      .select('full_name, designation, department, phone, email, is_active')
+      .limit(30);
+
+    if (empData) {
+      employees = empData;
+    }
+  } catch {
+    // Fail gracefully
+  }
+
+  // 4. Calculate task metrics
+  const now = new Date();
+  const pendingTasks = rawTasks.filter((t) => t.status === 'pending');
+  const inProgressTasks = rawTasks.filter((t) => t.status === 'in_progress');
+  const completedTasks = rawTasks.filter((t) => t.status === 'completed');
+  const overdueTasks = rawTasks.filter((t) => isTaskOverdue(t.due_date, t.status));
+  const urgentTasks = rawTasks.filter((t) => t.priority === 'urgent' && t.status !== 'completed');
+  const todayTasks = rawTasks.filter((t) => t.due_date && isToday(new Date(t.due_date)));
+
+  const stats = {
+    total: rawTasks.length,
+    pending: pendingTasks.length,
+    in_progress: inProgressTasks.length,
+    completed: completedTasks.length,
+    overdue: overdueTasks.length,
+    urgent: urgentTasks.length,
+    dueToday: todayTasks.length,
+  };
+
+  const currentDateTimeIST = formatDateTime(now.toISOString());
+
+  return {
+    currentUser,
+    organizationName,
+    currentDateTimeIST,
+    rawTasks,
+    employees,
+    stats,
+  };
+}
+
+/**
+ * Builds the Master System Instruction for Google Gemini AI with App Brain Context.
+ */
+function buildGeminiSystemInstruction(context: Awaited<ReturnType<typeof gatherAppBrainContext>>): string {
+  const { currentUser, organizationName, currentDateTimeIST, rawTasks, employees, stats } = context;
+
+  // Format top tasks
+  const topTasksStr = rawTasks
+    .slice(0, 40)
+    .map((t) => {
+      const due = t.due_date ? formatDateTime(t.due_date) : 'No due date';
+      const person = t.person_name ? ` | Assigned/Pending with: ${t.person_name}` : '';
+      return `- [Task ID: ${t.id}] "${t.title}" | Status: ${t.status} | Priority: ${t.priority} | Due: ${due}${person}`;
+    })
+    .join('\n');
+
+  // Format employees
+  const employeesStr = employees.length > 0
+    ? employees.map((e) => `- ${e.full_name} (${e.designation || 'Staff'}, Dept: ${e.department || 'General'}${e.phone ? `, Phone: ${e.phone}` : ''})`).join('\n')
+    : 'None explicitly listed.';
+
+  return `You are TASKER Super-Brain, the omniscient enterprise AI core of TASKER (an advanced task and workforce management platform developed by Suraj Khandagale / One Click Solution).
+
+CRITICAL DIRECTIVES:
+1. APP BRAIN MASTERY:
+   You have complete, live visibility into the enterprise database below. You know all tasks, employees, deadlines, priorities, and work statuses.
+   When the user asks anything about tasks, team members, pending work, deadlines, or progress, use the live data below to answer with 100% precision.
+   Always state task titles in bold, mention assignees, status, and due dates clearly.
+
+2. UNIVERSAL & WORLD KNOWLEDGE:
+   When asked about anything outside the app — business planning, construction estimation, accounting, GST, drafting professional emails/letters, math, science, programming, history, or daily life — answer authoritatively, thoroughly, and intelligently.
+
+3. NEVER SAY "I DON'T KNOW":
+   NEVER say "मला माहिती नाही" or "I don't know". If information is broad or conceptual, provide practical, well-reasoned, actionable advice.
+
+4. MULTILINGUAL EXCELLENCE (MARATHI & ENGLISH):
+   Seamlessly communicate in natural, fluent, courteous Marathi (मराठी) when addressed in Marathi or Romanized Marathi (Hinglish/Marathish). Use clear Marathi Devanagari script. Support English and Hindi equally well.
+
+5. CLEAN MARKDOWN FORMATTING:
+   Use structured Markdown headings, bullet points, and bold text for readability.
+
+--- LIVE ENTERPRISE APP CONTEXT ---
+- Logged-in User: ${currentUser.name} (${currentUser.email})
+- Organization: ${organizationName}
+- Current Date & Time (IST): ${currentDateTimeIST}
+- Overall Task Stats: ${stats.total} total active tasks (${stats.pending} pending, ${stats.in_progress} in progress, ${stats.dueToday} due today, ${stats.overdue} overdue, ${stats.urgent} urgent, ${stats.completed} completed).
+
+TEAM MEMBERS & EMPLOYEES:
+${employeesStr}
+
+LIVE TASK ROSTER:
+${topTasksStr || 'No active tasks currently recorded.'}
+-----------------------------------`;
+}
+
+/**
+ * High-speed local fallback engine that uses database context directly
+ * if Gemini API key is missing or network is offline.
+ */
+function processLocalGroundedQuery(
+  question: string,
+  context: Awaited<ReturnType<typeof gatherAppBrainContext>>
+): AIResponse {
+  const { rawTasks, stats, currentDateTimeIST } = context;
+  const qLower = question.toLowerCase().trim();
+  const isMarathi = /[\u0900-\u097F]/.test(question) ||
+    qLower.includes('aahe') || qLower.includes('ahet') || qLower.includes('kadh') ||
+    qLower.includes('dakhva') || qLower.includes('maze') || qLower.includes('konte');
+
+  const referencedTasks: TaskReference[] = [];
+  const addRef = (t: any) => {
+    if (!referencedTasks.some((r) => r.id === t.id)) {
+      referencedTasks.push({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        due_date: t.due_date,
+      });
+    }
+  };
+
+  // 1. COUNT / STATS INQUIRIES
+  if (qLower.includes('किती') || qLower.includes('how many') || qLower.includes('count') || qLower.includes('संख्या')) {
+    if (qLower.includes('pending') || qLower.includes('प्रलंबित') || qLower.includes('बाकी')) {
+      const pending = rawTasks.filter((t) => t.status === 'pending');
+      pending.forEach(addRef);
+      const ans = isMarathi
+        ? `तुमच्याकडे सध्या एकूण **${stats.pending}** प्रलंबित (Pending) tasks आहेत.`
+        : `You currently have **${stats.pending}** pending tasks.`;
+      return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    }
+    if (qLower.includes('completed') || qLower.includes('पूर्ण') || qLower.includes('झालेले')) {
+      const comp = rawTasks.filter((t) => t.status === 'completed');
+      comp.forEach(addRef);
+      const ans = isMarathi
+        ? `एकूण **${stats.completed}** tasks पूर्ण (Completed) झाले आहेत.`
+        : `A total of **${stats.completed}** tasks have been completed.`;
+      return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    }
+    if (qLower.includes('overdue') || qLower.includes('मुदत संपलेले')) {
+      const overdue = rawTasks.filter((t) => isTaskOverdue(t.due_date, t.status));
+      overdue.forEach(addRef);
+      const ans = isMarathi
+        ? `सध्या **${stats.overdue}** tasks ची मुदत उलटून गेली आहे (Overdue).`
+        : `You currently have **${stats.overdue}** overdue tasks.`;
+      return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    }
+    if (qLower.includes('urgent') || qLower.includes('तातडीचे')) {
+      const urgent = rawTasks.filter((t) => t.priority === 'urgent' && t.status !== 'completed');
+      urgent.forEach(addRef);
+      const ans = isMarathi
+        ? `सध्या **${stats.urgent}** urgent tasks बाकी आहेत.`
+        : `You currently have **${stats.urgent}** urgent tasks pending.`;
+      return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    }
+  }
+
+  // 2. TODAY'S TASKS
+  if (qLower.includes('आज') || qLower.includes('today')) {
+    const todayTasks = rawTasks.filter((t) => t.due_date && isToday(new Date(t.due_date)));
+    todayTasks.forEach(addRef);
+    if (todayTasks.length === 0) {
+      const ans = isMarathi
+        ? `📅 **${currentDateTimeIST}**\n\nआजसाठी कोणताही task due नाही. सर्व कामे सुरळीत आहेत!`
+        : `📅 **${currentDateTimeIST}**\n\nThere are no tasks due today. All scheduled work is on track!`;
+      return { answer: ans, referencedTasks: [], providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+    }
+    const listStr = todayTasks
+      .map((t) => `- **${t.title}** (${isMarathi ? translateStatusMr(t.status) : t.status}, Due: ${formatConversationalDate(t.due_date, isMarathi)})`)
+      .join('\n');
+    const ans = isMarathi
+      ? `📅 आज एकूण **${todayTasks.length}** tasks पूर्ण करायचे आहेत:\n\n${listStr}`
+      : `📅 Here are the **${todayTasks.length}** tasks due today:\n\n${listStr}`;
+    return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+  }
+
+  // 3. OVERDUE TASKS
+  if (qLower.includes('overdue') || qLower.includes('मुदत उलटून') || qLower.includes('उलटलेले')) {
+    const overdue = rawTasks.filter((t) => isTaskOverdue(t.due_date, t.status));
+    overdue.forEach(addRef);
+    if (overdue.length === 0) {
+      return {
+        answer: isMarathi ? '✅ छान! कोणताही task overdue नाही.' : '✅ Great! There are no overdue tasks.',
+        referencedTasks: [],
+        providerUsed: 'TASKER Super-Brain (Local Grounding)',
+      };
+    }
+    const listStr = overdue
+      .map((t) => `- **${t.title}** (Due: ${formatConversationalDate(t.due_date, isMarathi)}, Priority: ${isMarathi ? translatePriorityMr(t.priority) : t.priority})`)
+      .join('\n');
+    const ans = isMarathi
+      ? `⚠️ हे **${overdue.length}** tasks मुदत उलटून गेलेले (Overdue) आहेत, यावर तातडीने लक्ष द्या:\n\n${listStr}`
+      : `⚠️ These **${overdue.length}** tasks are overdue and require immediate attention:\n\n${listStr}`;
+    return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+  }
+
+  // 4. SEARCH BY PERSON OR TASK KEYWORD
+  const cleanKeywords = qLower
+    .replace(/[?.,!लाचेचाचीचेनाना]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !['tasks', 'task', 'kadh', 'aahe', 'ahet', 'kay', 'hoti', 'dakhva', 'maze'].includes(w));
+
+  const matchingTasks = rawTasks.filter((t) => {
+    const titleL = t.title.toLowerCase();
+    const descL = (t.description || '').toLowerCase();
+    const personL = (t.person_name || '').toLowerCase();
+    return cleanKeywords.some((k) => titleL.includes(k) || personL.includes(k) || descL.includes(k));
+  });
+
+  if (matchingTasks.length > 0) {
+    matchingTasks.forEach(addRef);
+    const listStr = matchingTasks
+      .slice(0, 8)
+      .map((t) => `- **${t.title}** (${isMarathi ? translateStatusMr(t.status) : t.status}, Due: ${formatConversationalDate(t.due_date, isMarathi)}${t.person_name ? `, Assigned: ${t.person_name}` : ''})`)
+      .join('\n');
+    const ans = isMarathi
+      ? `तुमच्या शोधानुसार **${matchingTasks.length}** tasks सापडले:\n\n${listStr}`
+      : `Found **${matchingTasks.length}** tasks matching your inquiry:\n\n${listStr}`;
+    return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+  }
+
+  // 5. GENERAL PENDING TASKS LIST
+  const pendingTasks = rawTasks.filter((t) => t.status === 'pending' || t.status === 'in_progress');
+  if (pendingTasks.length > 0) {
+    pendingTasks.slice(0, 5).forEach(addRef);
+    const listStr = pendingTasks
+      .slice(0, 5)
+      .map((t) => `- **${t.title}** (${isMarathi ? translateStatusMr(t.status) : t.status}, Priority: ${isMarathi ? translatePriorityMr(t.priority) : t.priority})`)
+      .join('\n');
+    const ans = isMarathi
+      ? `तुमच्याकडे **${pendingTasks.length}** चालू tasks आहेत. मुख्य tasks:\n\n${listStr}`
+      : `You have **${pendingTasks.length}** active tasks. Top items:\n\n${listStr}`;
+    return { answer: ans, referencedTasks, providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+  }
+
+  const defaultAns = isMarathi
+    ? `**TASKER Super-Brain**:\nतुमचा प्रश्न समजला: "${question}".\n\nसध्या तुमच्याकडे कोणतेही प्रलंबित काम नाही. नवीन कार्य सुरू करण्यासाठी "Add task: [कामाचे नाव]" अशी सूचना देऊ शकता.`
+    : `**TASKER Super-Brain**:\nUnderstood your query: "${question}".\n\nAll tasks are currently up to date. You can say "Add task: [Title]" to create new work items.`;
+  return { answer: defaultAns, referencedTasks: [], providerUsed: 'TASKER Super-Brain (Local Grounding)' };
+}
+
+/**
+ * Public Entrypoint for TASKER Super-Brain Assistant.
+ * Seamlessly integrates:
+ * 1. Natural Language Task Action Engine (Instant Task CRUD)
+ * 2. Google Gemini AI Super-Brain with Deep App Context
+ * 3. High-Intelligence Local Grounding Fallback (Zero "I don't know" responses)
+ */
+export const askTaskerAI = async (question: string): Promise<AIResponse> => {
+  const trimmed = question.trim();
+  if (!trimmed) {
+    return {
+      answer: 'नमस्कार! मी TASKER Super-Brain आहे. कृपया तुमचा प्रश्न विचारा किंवा नवीन टास्क तयार करा (उदा. "Add task: Meeting tomorrow 4pm").',
+      referencedTasks: [],
+      providerUsed: 'TASKER Super-Brain',
+    };
+  }
+
+  // 1. Gather comprehensive live context across the application
+  const appBrainContext = await gatherAppBrainContext();
+  const { rawTasks } = appBrainContext;
+
+  // 2. FIRST PRIORITY: Check for natural-language TASKER action commands (Create, Complete, Reminder, Update, Delete)
   try {
     const actionResult = await executeAIAction(trimmed, rawTasks);
     if (actionResult.handled) {
       return {
         answer: actionResult.answer,
         referencedTasks: actionResult.referencedTasks,
-        providerUsed: 'TASKER AI 2.0 (Action Engine)',
+        providerUsed: 'TASKER Super-Brain (Action Core)',
         actionTaken: actionResult.actionType,
       };
     }
@@ -451,16 +398,45 @@ export const askTaskerAI = async (question: string): Promise<AIResponse> => {
     console.warn('Action command execution error:', actionErr);
   }
 
-  // 3. Second Priority: Task-grounded queries or Universal Web / World Knowledge
+  // 3. SECOND PRIORITY: Google Gemini AI Super-Brain with live database context
   try {
-    return await activeProvider.processQuery(trimmed, rawTasks);
-  } catch (ex) {
-    console.error('AI assistant processing error, attempting universal fallback:', ex);
-    const universal = await queryUniversalKnowledge(trimmed);
-    return {
-      answer: universal.answer,
-      referencedTasks: [],
-      providerUsed: universal.provider,
-    };
+    const systemInstruction = buildGeminiSystemInstruction(appBrainContext);
+    const result = await queryUniversalKnowledge(trimmed, systemInstruction);
+
+    if (result && result.answer) {
+      // Cross-match referenced tasks from the AI answer with live database
+      const referencedTasks: TaskReference[] = [];
+      const answerLower = result.answer.toLowerCase();
+
+      rawTasks.forEach((t) => {
+        if (
+          answerLower.includes(t.title.toLowerCase()) ||
+          result.answer.includes(t.id) ||
+          trimmed.toLowerCase().includes(t.title.toLowerCase())
+        ) {
+          if (!referencedTasks.some((r) => r.id === t.id)) {
+            referencedTasks.push({
+              id: t.id,
+              title: t.title,
+              status: t.status,
+              priority: t.priority,
+              due_date: t.due_date,
+            });
+          }
+        }
+      });
+
+      return {
+        answer: result.answer,
+        referencedTasks: referencedTasks.slice(0, 5),
+        providerUsed: result.provider,
+      };
+    }
+  } catch (geminiErr) {
+    console.warn('Gemini query encountered issue, activating local grounding:', geminiErr);
   }
+
+  // 4. THIRD PRIORITY: Intelligent Local Task-Grounded Brain
+  // Never fails, never returns Wikipedia, never says "I don't know"
+  return processLocalGroundedQuery(trimmed, appBrainContext);
 };
