@@ -2,6 +2,8 @@ export type TaskStatus = 'pending' | 'in_progress' | 'partial' | 'completed' | '
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 
+export type TaskScope = 'personal' | 'workplace';
+
 export interface Task {
   id: string;
   title: string;
@@ -21,10 +23,53 @@ export interface Task {
   deleted_at: string | null;
   deleted_by: string | null;
   user_id?: string | null;
+  // Extended fields for personal, family & business OS
+  workspace_id?: string | null;
+  project_id?: string | null;
+  parent_task_id?: string | null;
+  is_pinned?: boolean;
+  tags?: string[];
+  custom_fields?: Record<string, any>;
+  estimated_minutes?: number | null;
+  actual_minutes?: number | null;
+  recurrence_rule?: Record<string, any> | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  // Enterprise collaboration fields
+  scope?: TaskScope;
+  org_id?: string | null;
+  site_id?: string | null;
+  department_id?: string | null;
+  assigned_to?: string | null;
+  assigned_employee_id?: string | null;
+  assigned_to_name?: string | null;
   // Computed / joined fields
   attachments_count?: number;
   notes_count?: number;
   reminder?: TaskReminder | null;
+  subtasks_count?: number;
+  completed_subtasks_count?: number;
+  dependencies_count?: number;
+}
+
+export interface TaskSubtask {
+  id: string;
+  task_id: string;
+  title: string;
+  is_completed: boolean;
+  position: number;
+  assigned_to?: string | null;
+  due_date?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskDependency {
+  id: string;
+  task_id: string;
+  depends_on_task_id: string;
+  dependency_type: 'blocks' | 'blocked_by';
+  created_at: string;
 }
 
 export interface TaskStatusHistory {
@@ -74,6 +119,11 @@ export interface TaskFilterOptions {
   search?: string;
   sortBy?: SortField;
   includeDeleted?: boolean;
+  workspaceId?: string;
+  projectId?: string;
+  scope?: TaskScope;
+  orgId?: string;
+  assignedTo?: string;
 }
 
 export interface TaskStats {
@@ -96,6 +146,22 @@ export interface CreateTaskInput {
   created_by?: string;
   user_id?: string | null;
   initialNote?: string;
+  workspace_id?: string | null;
+  project_id?: string | null;
+  parent_task_id?: string | null;
+  is_pinned?: boolean;
+  tags?: string[];
+  custom_fields?: Record<string, any>;
+  estimated_minutes?: number | null;
+  recurrence_rule?: Record<string, any> | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  scope?: TaskScope;
+  org_id?: string | null;
+  site_id?: string | null;
+  department_id?: string | null;
+  assigned_to?: string | null;
+  assigned_employee_id?: string | null;
 }
 
 export interface UpdateTaskInput {
@@ -104,6 +170,67 @@ export interface UpdateTaskInput {
   person_name?: string;
   priority?: TaskPriority;
   due_date?: string | null;
+  workspace_id?: string | null;
+  project_id?: string | null;
+  parent_task_id?: string | null;
+  is_pinned?: boolean;
+  tags?: string[];
+  custom_fields?: Record<string, any>;
+  estimated_minutes?: number | null;
+  actual_minutes?: number | null;
+  recurrence_rule?: Record<string, any> | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  scope?: TaskScope;
+  org_id?: string | null;
+  site_id?: string | null;
+  department_id?: string | null;
+  assigned_to?: string | null;
+  assigned_employee_id?: string | null;
+}
+
+export interface TaskAssignment {
+  id: string;
+  task_id: string;
+  org_id: string;
+  assigned_by: string;
+  assigned_to: string | null;
+  assigned_employee_id: string | null;
+  assigned_to_name: string | null;
+  remark: string | null;
+  status: 'assigned' | 'in_progress' | 'completed' | 'reassigned' | 'cancelled';
+  assigned_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface InAppNotification {
+  id: string;
+  recipient_user_id: string;
+  organization_id?: string | null;
+  type: 'task_assigned' | 'task_reassigned' | 'task_completed' | 'task_comment' | 'system';
+  title: string;
+  message: string;
+  entity_type: string;
+  entity_id: string | null;
+  is_read: boolean;
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface TaskShareLink {
+  id: string;
+  task_id: string;
+  created_by: string;
+  token_hash: string;
+  expires_at: string | null;
+  is_active: boolean;
+  allow_attachments: boolean;
+  view_count: number;
+  last_accessed_at: string | null;
+  created_at: string;
+  revoked_at: string | null;
 }
 
 export interface BackupMetadata {

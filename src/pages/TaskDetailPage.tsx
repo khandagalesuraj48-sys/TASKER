@@ -4,16 +4,20 @@ import { getTaskById, softDeleteTask } from '../services/taskService';
 import { getStatusHistory } from '../services/statusHistoryService';
 import { getNotes } from '../services/notesService';
 import { getAttachments } from '../services/attachmentService';
-import { Task, TaskAttachment, TaskNote, TaskReminder, TaskStatusHistory } from '../types/task';
+import { Task, TaskAssignment, TaskAttachment, TaskNote, TaskReminder, TaskStatusHistory } from '../types/task';
 import { getTaskReminder, saveTaskReminder, stopTaskReminder, snoozeTaskReminder } from '../services/reminderService';
+import { getTaskAssignments } from '../services/taskService';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { Button } from '../components/common/Button';
 import { ChangeStatusModal } from '../components/tasks/ChangeStatusModal';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
+import { TaskShareModal } from '../components/tasks/TaskShareModal';
+import { TaskAssignmentModal } from '../components/tasks/TaskAssignmentModal';
 import { StatusTimeline } from '../components/tasks/StatusTimeline';
 import { TaskNotes } from '../components/tasks/TaskNotes';
 import { TaskAttachments } from '../components/tasks/TaskAttachments';
+import { TaskSubtasks } from '../components/tasks/TaskSubtasks';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { formatDateTime, formatDateOnly, formatRelativePending, isTaskOverdue } from '../lib/dateUtils';
 import { useToast } from '../context/ToastContext';
@@ -32,6 +36,10 @@ import {
   AlertCircle,
   Bell,
   BellOff,
+  ListTodo,
+  Share2,
+  UserPlus,
+  Users,
 } from 'lucide-react';
 
 export const TaskDetailPage: React.FC = () => {
@@ -44,12 +52,15 @@ export const TaskDetailPage: React.FC = () => {
   const [history, setHistory] = useState<TaskStatusHistory[]>([]);
   const [notes, setNotes] = useState<TaskNote[]>([]);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
+  const [assignments, setAssignments] = useState<TaskAssignment[]>([]);
   const [reminder, setReminder] = useState<TaskReminder | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Modals state
   const [statusModalOpen, setStatusModalOpen] = useState<boolean>(false);
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
+  const [assignModalOpen, setAssignModalOpen] = useState<boolean>(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
@@ -60,17 +71,19 @@ export const TaskDetailPage: React.FC = () => {
       const taskData = await getTaskById(id);
       setTask(taskData);
 
-      const [histData, notesData, attachData, remData] = await Promise.all([
+      const [histData, notesData, attachData, remData, assignData] = await Promise.all([
         getStatusHistory(id),
         getNotes(id),
         getAttachments(id),
         getTaskReminder(id),
+        getTaskAssignments(id),
       ]);
 
       setHistory(histData);
       setNotes(notesData);
       setAttachments(attachData);
       setReminder(remData);
+      setAssignments(assignData);
     } catch (err: any) {
       showToast(err.message || 'Unable to load task details.', 'error');
     } finally {
@@ -182,7 +195,23 @@ export const TaskDetailPage: React.FC = () => {
         </button>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShareModalOpen(true)}
+            leftIcon={<Share2 className="w-3.5 h-3.5" />}
+          >
+            Share
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAssignModalOpen(true)}
+            leftIcon={<UserPlus className="w-3.5 h-3.5" />}
+          >
+            Assign
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -216,6 +245,15 @@ export const TaskDetailPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <StatusBadge status={task.status} isOverdue={overdue} size="md" />
             <PriorityBadge priority={task.priority} size="md" />
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ${
+                task.scope === 'workplace'
+                  ? 'bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              {task.scope === 'workplace' ? '🏢 Workplace Task' : '👤 Personal Task'}
+            </span>
           </div>
 
           <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
@@ -385,8 +423,19 @@ export const TaskDetailPage: React.FC = () => {
 
       {/* Two Column Layout: Left (Notes & Attachments) | Right (Status Timeline) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Notes and Attachments */}
+        {/* Left 2 Cols: Subtasks, Notes and Attachments */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Subtasks Checklist Section */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <ListTodo className="w-4 h-4 text-blue-500" />
+                <span>Checklist & Subtasks</span>
+              </h2>
+            </div>
+            <TaskSubtasks taskId={task.id} />
+          </div>
+
           {/* Notes Section */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -420,8 +469,65 @@ export const TaskDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right 1 Col: Status History Timeline */}
+        {/* Right 1 Col: Status History Timeline & Assignment Log */}
         <div className="space-y-6">
+          {/* Assignment History (for workplace tasks) */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Users className="w-4 h-4 text-purple-500" />
+                <span>Assignment History</span>
+                <span className="text-xs font-normal text-slate-400 dark:text-slate-500">({assignments.length})</span>
+              </h2>
+              <button
+                onClick={() => setAssignModalOpen(true)}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              >
+                + Assign
+              </button>
+            </div>
+
+            {assignments.length === 0 ? (
+              <p className="text-xs text-slate-400 italic py-2">
+                No formal workplace assignments logged yet. Click "Assign" above to hand over this task.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {assignments.map((asgn) => (
+                  <div
+                    key={asgn.id}
+                    className="p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/40 text-xs space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {asgn.assigned_to_name || 'Team Member'}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${
+                        asgn.status === 'completed'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                          : asgn.status === 'reassigned'
+                          ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
+                      }`}>
+                        {asgn.status}
+                      </span>
+                    </div>
+                    {asgn.remark && (
+                      <p className="text-slate-600 dark:text-slate-400 italic text-[11px]">
+                        "{asgn.remark}"
+                      </p>
+                    )}
+                    <div className="text-[10px] text-slate-400 flex items-center gap-1 pt-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatDateTime(asgn.assigned_at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Status History Timeline */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -434,6 +540,25 @@ export const TaskDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Share Task Modal */}
+      {shareModalOpen && (
+        <TaskShareModal
+          task={task}
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+        />
+      )}
+
+      {/* Assign Task Modal */}
+      {assignModalOpen && (
+        <TaskAssignmentModal
+          task={task}
+          isOpen={assignModalOpen}
+          onClose={() => setAssignModalOpen(false)}
+          onAssigned={loadTaskData}
+        />
+      )}
 
       {/* Change Status Modal */}
       {statusModalOpen && (

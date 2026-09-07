@@ -3,12 +3,14 @@ import { DEFAULT_USER_NAME } from '../constants';
 import {
   CreateTaskInput,
   Task,
+  TaskAssignment,
   TaskFilterOptions,
   TaskStats,
   TaskStatus,
   UniversalSearchResult,
   UpdateTaskInput,
 } from '../types/task';
+import { ErpEmployee } from '../types/enterprise';
 import { isTaskOverdue } from '../lib/dateUtils';
 import { recordStatusChange } from './statusHistoryService';
 import { addNote } from './notesService';
@@ -27,6 +29,21 @@ export const getTasks = async (options: TaskFilterOptions = {}): Promise<Task[]>
     `)
     .eq('is_deleted', isDeleted);
 
+  // Scope Filter (Personal vs Workplace)
+  if (options.scope) {
+    query = query.eq('scope', options.scope);
+  }
+
+  // Organization Filter
+  if (options.orgId) {
+    query = query.eq('org_id', options.orgId);
+  }
+
+  // Assigned To Filter
+  if (options.assignedTo) {
+    query = query.eq('assigned_to', options.assignedTo);
+  }
+
   // Status Filter
   if (options.status && options.status !== 'all') {
     query = query.eq('status', options.status);
@@ -40,6 +57,16 @@ export const getTasks = async (options: TaskFilterOptions = {}): Promise<Task[]>
   // Person / Pending With Filter
   if (options.person && options.person.trim() !== '') {
     query = query.ilike('person_name', `%${options.person.trim()}%`);
+  }
+
+  // Workspace Filter
+  if (options.workspaceId) {
+    query = query.eq('workspace_id', options.workspaceId);
+  }
+
+  // Project Filter
+  if (options.projectId) {
+    query = query.eq('project_id', options.projectId);
   }
 
   // Global Search Filter (title, description, person_name, notes, attachment filenames)
@@ -160,6 +187,22 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
     completed_at: initialStatus === 'completed' ? nowIso : null,
     completed_by: initialStatus === 'completed' ? creator : null,
     is_deleted: false,
+    workspace_id: input.workspace_id || null,
+    project_id: input.project_id || null,
+    parent_task_id: input.parent_task_id || null,
+    is_pinned: input.is_pinned ?? false,
+    tags: input.tags || [],
+    custom_fields: input.custom_fields || {},
+    estimated_minutes: input.estimated_minutes || null,
+    recurrence_rule: input.recurrence_rule || null,
+    entity_type: input.entity_type || null,
+    entity_id: input.entity_id || null,
+    scope: input.scope || 'personal',
+    org_id: input.org_id || null,
+    site_id: input.site_id || null,
+    department_id: input.department_id || null,
+    assigned_to: input.assigned_to || null,
+    assigned_employee_id: input.assigned_employee_id || null,
   };
 
   const { data, error } = await supabase
@@ -197,6 +240,23 @@ export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Ta
   if (input.person_name !== undefined) updatePayload.person_name = input.person_name?.trim() || null;
   if (input.priority !== undefined) updatePayload.priority = input.priority;
   if (input.due_date !== undefined) updatePayload.due_date = input.due_date;
+  if (input.workspace_id !== undefined) updatePayload.workspace_id = input.workspace_id;
+  if (input.project_id !== undefined) updatePayload.project_id = input.project_id;
+  if (input.parent_task_id !== undefined) updatePayload.parent_task_id = input.parent_task_id;
+  if (input.is_pinned !== undefined) updatePayload.is_pinned = input.is_pinned;
+  if (input.tags !== undefined) updatePayload.tags = input.tags;
+  if (input.custom_fields !== undefined) updatePayload.custom_fields = input.custom_fields;
+  if (input.estimated_minutes !== undefined) updatePayload.estimated_minutes = input.estimated_minutes;
+  if (input.actual_minutes !== undefined) updatePayload.actual_minutes = input.actual_minutes;
+  if (input.recurrence_rule !== undefined) updatePayload.recurrence_rule = input.recurrence_rule;
+  if (input.entity_type !== undefined) updatePayload.entity_type = input.entity_type;
+  if (input.entity_id !== undefined) updatePayload.entity_id = input.entity_id;
+  if (input.scope !== undefined) updatePayload.scope = input.scope;
+  if (input.org_id !== undefined) updatePayload.org_id = input.org_id;
+  if (input.site_id !== undefined) updatePayload.site_id = input.site_id;
+  if (input.department_id !== undefined) updatePayload.department_id = input.department_id;
+  if (input.assigned_to !== undefined) updatePayload.assigned_to = input.assigned_to;
+  if (input.assigned_employee_id !== undefined) updatePayload.assigned_employee_id = input.assigned_employee_id;
 
   const { data, error } = await supabase
     .from('tasks')
@@ -633,5 +693,92 @@ export const universalSearchTasks = async (query: string): Promise<UniversalSear
   });
 
   return results;
+};
+
+// ------------------------------------------------------------------------------
+// Enterprise Task Assignments & Directory Services
+// ------------------------------------------------------------------------------
+
+export const getTaskAssignments = async (taskId: string): Promise<TaskAssignment[]> => {
+  const { data, error } = await supabase
+    .from('task_assignments')
+    .select('*')
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching task assignments:', error);
+    return [];
+  }
+  return (data as TaskAssignment[]) || [];
+};
+
+export const assignTask = async (
+  taskId: string,
+  params: {
+    orgId: string;
+    assignedTo?: string | null;
+    assignedEmployeeId?: string | null;
+    assignedToName?: string | null;
+    remark?: string;
+  }
+): Promise<void> => {
+  await updateTask(taskId, {
+    scope: 'workplace',
+    org_id: params.orgId,
+    assigned_to: params.assignedTo || null,
+    assigned_employee_id: params.assignedEmployeeId || null,
+    person_name: params.assignedToName || undefined,
+  });
+};
+
+export const getOrgEmployees = async (orgId: string): Promise<ErpEmployee[]> => {
+  const { data, error } = await supabase
+    .from('erp_employees')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('status', 'active')
+    .order('first_name', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching org employees:', error);
+    return [];
+  }
+  return (data as ErpEmployee[]) || [];
+};
+
+export const quickCreateEmployee = async (
+  orgId: string,
+  name: string,
+  designation: string = 'Team Member',
+  phone?: string,
+  email?: string
+): Promise<ErpEmployee> => {
+  const parts = name.trim().split(' ');
+  const firstName = parts[0] || 'Employee';
+  const lastName = parts.slice(1).join(' ') || '';
+  const employeeCode = `EMP-${Date.now().toString().slice(-4)}`;
+
+  const { data, error } = await supabase
+    .from('erp_employees')
+    .insert({
+      org_id: orgId,
+      first_name: firstName,
+      last_name: lastName,
+      employee_code: employeeCode,
+      designation: designation,
+      phone: phone || null,
+      email: email || null,
+      status: 'active',
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    console.error('Error creating employee:', error);
+    throw new Error('Could not create employee.');
+  }
+
+  return data as ErpEmployee;
 };
 

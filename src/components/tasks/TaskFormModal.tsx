@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { CreateTaskInput, ReminderInput, Task, TaskPriority, TaskStatus } from '../../types/task';
-import { createTask, updateTask } from '../../services/taskService';
+import {
+  CreateTaskInput,
+  ReminderInput,
+  Task,
+  TaskPriority,
+  TaskScope,
+  TaskStatus,
+} from '../../types/task';
+import { ErpEmployee } from '../../types/enterprise';
+import {
+  createTask,
+  updateTask,
+  getOrgEmployees,
+  quickCreateEmployee,
+} from '../../services/taskService';
 import { uploadAttachment } from '../../services/attachmentService';
 import { getTaskReminder, saveTaskReminder } from '../../services/reminderService';
 import { formatInputDate } from '../../lib/dateUtils';
@@ -10,9 +23,10 @@ import { useToast } from '../../context/ToastContext';
 import { useTask } from '../../context/TaskContext';
 import { DEFAULT_USER_NAME } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
+import { useEnterprise } from '../../context/EnterpriseContext';
 import { FileUploadZone } from './FileUploadZone';
 import { ReminderControls } from '../reminders/ReminderControls';
-import { Paperclip, X } from 'lucide-react';
+import { Paperclip, X, User, Building2, UserPlus } from 'lucide-react';
 
 interface TaskFormModalProps {
   isOpen: boolean;
@@ -34,6 +48,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const { triggerRefresh } = useTask();
   const { displayName, userEmail } = useAuth();
   const currentUser = displayName || userEmail || DEFAULT_USER_NAME;
+  const { currentOrg } = useEnterprise();
 
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
@@ -44,12 +59,37 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const [initialNote, setInitialNote] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Scope & Enterprise Assignment State
+  const [scope, setScope] = useState<TaskScope>('personal');
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [employees, setEmployees] = useState<ErpEmployee[]>([]);
+
+  // Inline Quick Add Employee State
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
+  const [quickName, setQuickName] = useState<string>('');
+  const [quickDesignation, setQuickDesignation] = useState<string>('Team Member');
+  const [isCreatingEmp, setIsCreatingEmp] = useState<boolean>(false);
+
   const [reminder, setReminder] = useState<ReminderInput>({
     is_enabled: false,
     remind_at: '',
     recurrence_type: 'once',
     custom_interval_minutes: null,
   });
+
+  // Load active organization's employees when in workplace scope
+  useEffect(() => {
+    const orgIdToUse = selectedOrgId || currentOrg?.id;
+    if (scope === 'workplace' && orgIdToUse) {
+      getOrgEmployees(orgIdToUse).then((list) => {
+        setEmployees(list);
+      }).catch((err) => {
+        console.warn('Could not load employees for org:', err);
+      });
+    }
+  }, [scope, selectedOrgId, currentOrg]);
 
   useEffect(() => {
     if (taskToEdit) {
@@ -61,6 +101,9 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setDueDate(formatInputDate(taskToEdit.due_date));
       setInitialNote('');
       setSelectedFiles([]);
+      setScope(taskToEdit.scope || 'personal');
+      setSelectedOrgId(taskToEdit.org_id || currentOrg?.id || '');
+      setSelectedEmployeeId(taskToEdit.assigned_employee_id || '');
 
       getTaskReminder(taskToEdit.id).then((rem) => {
         if (rem) {
@@ -88,6 +131,10 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setDueDate(initialValues?.due_date ? formatInputDate(initialValues.due_date) : '');
       setInitialNote(initialValues?.initialNote || '');
       setSelectedFiles([]);
+      const defaultScope: TaskScope = initialValues?.scope || (currentOrg ? 'workplace' : 'personal');
+      setScope(defaultScope);
+      setSelectedOrgId(initialValues?.org_id || currentOrg?.id || '');
+      setSelectedEmployeeId(initialValues?.assigned_employee_id || '');
       setReminder({
         is_enabled: false,
         remind_at: initialValues?.due_date ? new Date(initialValues.due_date).toISOString() : '',
@@ -95,7 +142,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         custom_interval_minutes: null,
       });
     }
-  }, [taskToEdit, initialValues, isOpen]);
+  }, [taskToEdit, initialValues, isOpen, currentOrg]);
 
   const handleAddFile = (file: File) => {
     setSelectedFiles((prev) => [...prev, file]);
@@ -109,6 +156,39 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleQuickAddEmployee = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!quickName.trim()) {
+      showToast('Employee name is required.', 'error');
+      return;
+    }
+    const targetOrgId = selectedOrgId || currentOrg?.id;
+    if (!targetOrgId) {
+      showToast('Please choose an organization first.', 'error');
+      return;
+    }
+
+    setIsCreatingEmp(true);
+    try {
+      const created = await quickCreateEmployee(
+        targetOrgId,
+        quickName.trim(),
+        quickDesignation.trim() || 'Team Member'
+      );
+      showToast(`Added ${created.first_name} to employee directory!`, 'success');
+      const updatedList = await getOrgEmployees(targetOrgId);
+      setEmployees(updatedList);
+      setSelectedEmployeeId(created.id);
+      setPersonName(`${created.first_name} ${created.last_name || ''}`.trim());
+      setIsQuickAddOpen(false);
+      setQuickName('');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to add employee.', 'error');
+    } finally {
+      setIsCreatingEmp(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -118,14 +198,24 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
     setIsSubmitting(true);
     try {
+      const activeOrgId = scope === 'workplace' ? (selectedOrgId || currentOrg?.id || null) : null;
+      const selectedEmp = employees.find((emp) => emp.id === selectedEmployeeId);
+      const effectivePersonName = scope === 'workplace' && selectedEmp
+        ? `${selectedEmp.first_name} ${selectedEmp.last_name || ''}`.trim()
+        : personName.trim();
+
       if (isEditing && taskToEdit) {
         // Update existing task
         const updated = await updateTask(taskToEdit.id, {
           title: title.trim(),
           description: description.trim() || undefined,
-          person_name: personName.trim() || undefined,
+          person_name: effectivePersonName || undefined,
           priority,
           due_date: dueDate ? new Date(dueDate).toISOString() : null,
+          scope,
+          org_id: activeOrgId,
+          assigned_employee_id: scope === 'workplace' ? (selectedEmployeeId || null) : null,
+          assigned_to: scope === 'workplace' ? (selectedEmp?.user_id || null) : null,
         });
 
         // Upload any newly selected files for this task
@@ -144,6 +234,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         } else {
           showToast(`Task "${updated.title}" updated successfully.`, 'success');
         }
+
         // Save reminder if configured
         if (reminder.is_enabled) {
           try {
@@ -161,12 +252,16 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         const created = await createTask({
           title: title.trim(),
           description: description.trim() || undefined,
-          person_name: personName.trim() || undefined,
+          person_name: effectivePersonName || undefined,
           priority,
           status,
           due_date: dueDate ? new Date(dueDate).toISOString() : null,
           created_by: currentUser,
           initialNote: initialNote.trim() || undefined,
+          scope,
+          org_id: activeOrgId,
+          assigned_employee_id: scope === 'workplace' ? (selectedEmployeeId || null) : null,
+          assigned_to: scope === 'workplace' ? (selectedEmp?.user_id || null) : null,
         });
 
         // Upload any attached files
@@ -185,6 +280,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         } else {
           showToast(`Task "${created.title}" created successfully!`, 'success');
         }
+
         // Save reminder if configured
         if (reminder.is_enabled) {
           try {
@@ -214,6 +310,34 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Scope Selector: Personal vs Workplace */}
+        <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setScope('personal')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+              scope === 'personal'
+                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Personal Scope (Private to Me)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setScope('workplace')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+              scope === 'workplace'
+                ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Workplace Scope (Team / Assigned)</span>
+          </button>
+        </div>
+
         {/* Title (Required) */}
         <div>
           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
@@ -243,20 +367,91 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
           />
         </div>
 
-        {/* Grid: Person Name, Priority, Due Date, Status */}
+        {/* Grid: Pending With, Priority, Due Date, Status */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Person / Pending With */}
+          {/* Pending With / Assigned To */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-              Person / Pending With
-            </label>
-            <input
-              type="text"
-              value={personName}
-              onChange={(e) => setPersonName(e.target.value)}
-              placeholder="e.g. Ramesh, Contractor, Bank"
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+            {scope === 'personal' ? (
+              <>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Person / Pending With
+                </label>
+                <input
+                  type="text"
+                  value={personName}
+                  onChange={(e) => setPersonName(e.target.value)}
+                  placeholder="e.g. Self, Ramesh, Bank"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wider">
+                    Assigned Employee (Directory)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickAddOpen(!isQuickAddOpen)}
+                    className="text-[11px] font-medium text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5"
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    <span>{isQuickAddOpen ? 'Cancel' : '+ Quick Add'}</span>
+                  </button>
+                </div>
+
+                {isQuickAddOpen ? (
+                  <div className="p-2.5 rounded-xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/50 dark:bg-purple-950/20 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="New Employee Name *"
+                      value={quickName}
+                      onChange={(e) => setQuickName(e.target.value)}
+                      className="w-full p-2 text-xs rounded-lg border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Designation"
+                        value={quickDesignation}
+                        onChange={(e) => setQuickDesignation(e.target.value)}
+                        className="flex-1 p-2 text-xs rounded-lg border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+                      />
+                      <Button
+                        size="sm"
+                        type="button"
+                        onClick={handleQuickAddEmployee}
+                        isLoading={isCreatingEmp}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedEmployeeId}
+                    onChange={(e) => {
+                      const empId = e.target.value;
+                      setSelectedEmployeeId(empId);
+                      const emp = employees.find((m) => m.id === empId);
+                      if (emp) {
+                        setPersonName(`${emp.first_name} ${emp.last_name || ''}`.trim());
+                      } else {
+                        setPersonName('');
+                      }
+                    }}
+                    className="w-full rounded-xl border border-purple-200 dark:border-purple-900/60 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-purple-500 focus:outline-none"
+                  >
+                    <option value="">-- Unassigned (General Workplace Task) --</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.first_name} {emp.last_name || ''} ({emp.designation})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </>
+            )}
           </div>
 
           {/* Priority */}
@@ -380,4 +575,3 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
     </Modal>
   );
 };
-

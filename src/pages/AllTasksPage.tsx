@@ -100,6 +100,40 @@ export const AllTasksPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Scope Segmented Control */}
+      <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl max-w-md">
+        <button
+          onClick={() => setFilters((prev) => ({ ...prev, scope: undefined }))}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+            !filters.scope
+              ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          All Scopes
+        </button>
+        <button
+          onClick={() => setFilters((prev) => ({ ...prev, scope: 'personal' }))}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+            filters.scope === 'personal'
+              ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          👤 Personal
+        </button>
+        <button
+          onClick={() => setFilters((prev) => ({ ...prev, scope: 'workplace' }))}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+            filters.scope === 'workplace'
+              ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          🏢 Workplace
+        </button>
+      </div>
+
       {/* Filter Panel */}
       <FilterPanel
         filters={filters}

@@ -16,6 +16,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { DEFAULT_USER_NAME } from '../../constants';
 import { Logo } from '../common/Logo';
 import { useBackButton } from '../../hooks/useBackButton';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
@@ -154,6 +155,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             <Plus className="w-4 h-4" />
             <span className="hidden xs:inline">Add Task</span>
           </button>
+
+          {/* In-App Notifications Bell */}
+          <NotificationBell />
 
           {/* User Profile & Account Dropdown */}
           <div className="relative pl-1 sm:pl-2 border-l border-slate-200 dark:border-slate-800" ref={dropdownRef}>

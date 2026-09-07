@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useLocalization } from '../context/LocalizationContext';
+import { exportUserDataAsJson } from '../services/privacyService';
+import { Languages, ShieldCheck } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Button } from '../components/common/Button';
 import { UpdateModal } from '../components/UpdateModal';
@@ -33,6 +36,7 @@ export const SettingsPage: React.FC = () => {
     openPermissionSettings,
   } = useAppUpdate();
 
+  const { language, languages, setLanguage } = useLocalization();
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
 
   const handleManualCheck = async () => {
@@ -256,6 +260,78 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Language Preferences (10 Indian Languages) */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <Languages className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Language & Localization</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Choose your preferred language across 10 official Indian regional languages
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+          {languages.map((l) => (
+            <button
+              key={l.code}
+              onClick={() => {
+                setLanguage(l.code);
+                showToast(`Language switched to ${l.name} (${l.nativeName})`, 'info');
+              }}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                language === l.code
+                  ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-800 ring-2 ring-indigo-500'
+                  : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <p className="text-xs font-bold text-slate-900 dark:text-white">{l.nativeName}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{l.name}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Data Protection & DPDP Compliance */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Privacy & DPDP Compliance</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Data ownership, export, and right to be forgotten under the DPDP Act 2023
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+          <div>
+            <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Export All Account & Life Data</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Download a complete JSON archive of all tasks, notes, vehicles, bills, and family lists.</p>
+          </div>
+          <button
+            onClick={async () => {
+              const json = await exportUserDataAsJson();
+              const blob = new Blob([json], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `TASKER_complete_export_${Date.now()}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+              showToast('Data exported successfully', 'success');
+            }}
+            className="px-3.5 py-2 bg-slate-900 hover:bg-black dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition-all"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download Archive</span>
+          </button>
+        </div>
+      </div>
 
       {/* About TASKER & Attribution */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">

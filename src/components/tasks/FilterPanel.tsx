@@ -62,6 +62,22 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       {/* Expandable filters body */}
       {isOpen && (
         <div className="border-t border-slate-100 dark:border-slate-800 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          {/* Scope Filter (Personal vs Workplace) */}
+          <div>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1.5">Scope</label>
+            <select
+              value={filters.scope || 'all'}
+              onChange={(e) =>
+                onChange({ ...filters, scope: e.target.value === 'all' ? undefined : (e.target.value as any) })
+              }
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="all">All Scopes</option>
+              <option value="personal">👤 Personal Only</option>
+              <option value="workplace">🏢 Workplace Only</option>
+            </select>
+          </div>
+
           {/* Status Filter */}
           {!hideStatusFilter && (
             <div>

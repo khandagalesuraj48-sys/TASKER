@@ -3,6 +3,15 @@ import { createTask, updateTask, updateTaskStatus, softDeleteTask } from './task
 import { saveTaskReminder } from './reminderService';
 import { Task, TaskPriority, TaskReference, ReminderRecurrence } from '../types/task';
 import { formatDateTime } from '../lib/dateUtils';
+import { createFinancialRecord } from './financeService';
+import { createFamilyEntity } from './familyService';
+import { createPerson } from './businessService';
+import { PRESET_TEMPLATES, instantiateTemplate } from './templateService';
+import { getActiveWorkspaceId } from './workspaceService';
+import { getSiteStock } from './erpInventoryService';
+import { getErpParties } from './erpCrmService';
+import { getErpInvoices } from './erpAccountingService';
+import { getPendingApprovals } from './erpApprovalService';
 import { addMinutes, addHours, addDays, nextMonday, nextTuesday, nextWednesday, nextThursday, nextFriday, nextSaturday, nextSunday } from 'date-fns';
 
 export interface ActionExecutionResult {
@@ -273,6 +282,236 @@ export async function executeAIAction(
   const qLower = rawQuery.toLowerCase().trim();
   const isMarathi = /[\u0900-\u097F]/.test(rawQuery) ||
     qLower.includes('aahe') || qLower.includes('kara') || qLower.includes('banva') || qLower.includes('lava');
+
+
+  const activeWsId = getActiveWorkspaceId();
+
+  // ==========================================
+  // ACTION: TEMPLATE CHECKLIST INTENT
+  // e.g.: "Use Diwali checklist", "Start GST template"
+  // ==========================================
+  if (/(?:use|apply|start|create)s+(?:thes+)?(?:diwali|gst|travel|shifting|onboarding)s+(?:template|checklist)/i.test(qLower) ||
+      /(?:दिवाळी|जीएसटी)s+(?:चेकलिस्ट|तयारी)/i.test(rawQuery)) {
+    let matchedCategory = 'diwali';
+    if (/gst/i.test(qLower)) matchedCategory = 'gst';
+    else if (/travel/i.test(qLower)) matchedCategory = 'travel';
+    else if (/shifting/i.test(qLower)) matchedCategory = 'shifting';
+    else if (/onboarding/i.test(qLower)) matchedCategory = 'onboarding';
+
+    const tmpl = PRESET_TEMPLATES.find((t) => t.category === matchedCategory);
+    if (tmpl) {
+      const count = await instantiateTemplate(tmpl, activeWsId);
+      return {
+        handled: true,
+        answer: isMarathi
+          ? `🎉 **'${tmpl.title}' चेकलिस्ट सक्रिय केली!**\n\n${count} नवीन कार्ये तुमच्या वर्कस्पेसमध्ये जोडली गेली आहेत. तुम्ही 'Tasks' टॅबमध्ये पाहू शकता.`
+          : `🎉 **Activated '${tmpl.title}' Checklist!**\n\nSuccessfully added ${count} structured tasks to your active workspace.`,
+        referencedTasks: [],
+        actionType: 'create',
+      };
+    }
+  }
+
+  // ==========================================
+  // ACTION: BILL / FINANCIAL RECORD INTENT
+  // e.g.: "Add bill: MSEB 2400 due 15th", "Add electricity bill 1500"
+  // ==========================================
+  if (/^(?:add|create|new)s+(?:as+)?(?:bill|emi|expense|utility)/i.test(qLower) || /(?:बिल जोडा|बिल ॲड करा|नवीन बिल)/i.test(rawQuery)) {
+    const amtMatch = rawQuery.match(/(?:rs\.?|inr|₹|amount)?\s*(\d+(?:\.\d+)?)/i);
+    const amount = amtMatch ? parseFloat(amtMatch[1]) : 500;
+    const cleanTitle = rawQuery
+      .replace(/^(?:add|create|new)s+(?:as+)?(?:bill|emi|expense|utility)(?:\s*[:\-to]+)?/i, '')
+      .replace(/(?:बिल जोडा|बिल ॲड करा|नवीन बिल)/gi, '')
+      .replace(/(?:rs\.?|inr|₹|amount)?\s*(\d+(?:\.\d+)?)/gi, '')
+      .trim() || 'Utility Bill';
+
+    const { date: dueDate } = parseNaturalLanguageDateTime(rawQuery);
+
+    await createFinancialRecord({
+      workspace_id: activeWsId,
+      title: cleanTitle,
+      type: /emi/i.test(qLower) ? 'obligation' : 'bill',
+      amount,
+      currency: 'INR',
+      due_date: (dueDate || new Date()).toISOString(),
+      status: 'unpaid',
+    });
+
+    return {
+      handled: true,
+      answer: isMarathi
+        ? `💳 **नवीन बिल जोडले!**\n\n- **नाव**: ${cleanTitle}\n- **रक्कम**: ₹${amount}\n- **Due Date**: ${formatDateTime((dueDate || new Date()).toISOString())}`
+        : `💳 **Saved Financial Record!**\n\n- **Title**: ${cleanTitle}\n- **Amount**: ₹${amount.toLocaleString('en-IN')}\n- **Due Date**: ${formatDateTime((dueDate || new Date()).toISOString())}`,
+      referencedTasks: [],
+      actionType: 'create',
+    };
+  }
+
+  // ==========================================
+  // ACTION: FAMILY / GROCERY INTENT
+  // e.g.: "Add to grocery: 5kg Atta", "Add chore: Clean bedroom"
+  // ==========================================
+  if (/^(?:add|buy|get)s+(?:tos+)?(?:grocer(?:y|ies)|chore|supplies)/i.test(qLower) || /(?:किराणा|भाजी)/i.test(rawQuery)) {
+    const isGrocery = /grocer|किराणा|भाजी/i.test(rawQuery);
+    const itemTitle = rawQuery
+      .replace(/^(?:add|buy|get)s+(?:tos+)?(?:grocer(?:y|ies)|chore|supplies)(?:\s*[:\-to]+)?/i, '')
+      .replace(/(?:किराणा|भाजी)/gi, '')
+      .trim() || 'Household Item';
+
+    await createFamilyEntity({
+      workspace_id: activeWsId,
+      title: itemTitle,
+      entity_type: isGrocery ? 'grocery' : 'chore',
+      status: 'pending',
+      priority: 'medium',
+    });
+
+    return {
+      handled: true,
+      answer: isMarathi
+        ? `🛒 **कौटुंबिक यादीत जोडले!**\n\n- **वस्तू**: ${itemTitle}\n- **प्रकार**: ${isGrocery ? 'किराणा / बाजार' : 'घरकाम'}`
+        : `🛒 **Added to Family Hub!**\n\n- **Item**: ${itemTitle}\n- **Category**: ${isGrocery ? 'Groceries' : 'Chore'}`,
+      referencedTasks: [],
+      actionType: 'create',
+    };
+  }
+
+  // ==========================================
+  // ACTION: BUSINESS CONTACT INTENT
+  // e.g.: "Add client: Ramesh Bhai", "Add vendor: Sharma Logistics"
+  // ==========================================
+  if (/^(?:add|create|new)\s+(?:a\s+)?(?:client|vendor|contractor|party|contact)\b/i.test(qLower) || /(?:क्लायंट|पार्टी|काँट्रॅक्टर)/i.test(rawQuery)) {
+    const isVendor = /vendor/i.test(qLower);
+    const isContractor = /contractor|काँट्रॅक्टर/i.test(qLower);
+    const pType = isVendor ? 'vendor' : isContractor ? 'contractor' : 'client';
+    const personName = rawQuery
+      .replace(/^(?:add|create|new)\s+(?:a\s+)?(?:client|vendor|contractor|party|contact)(?:\s*[:\-to]+)?/i, '')
+      .replace(/(?:क्लायंट|पार्टी|काँट्रॅक्टर)/gi, '')
+      .trim() || 'New Contact';
+
+    await createPerson({
+      workspace_id: activeWsId,
+      name: personName,
+      person_type: pType,
+    });
+
+    return {
+      handled: true,
+      answer: isMarathi
+        ? `🤝 **नवीन संपर्क जोडला!**\n\n- **नाव**: ${personName}\n- **प्रकार**: ${pType}`
+        : `🤝 **Saved Business Contact!**\n\n- **Name**: ${personName}\n- **Category**: ${pType}`,
+      referencedTasks: [],
+      actionType: 'create',
+    };
+  }
+
+
+  // ==========================================
+  // ENTERPRISE ACTION: VENDOR OUTSTANDING BALANCE
+  // e.g.: "या vendor ला किती payment बाकी आहे?", "UltraTech payment status"
+  // ==========================================
+  if (/(?:vendor|सप्लायर|पार्टी|payment|पेमेंट).*(?:बाकी|outstanding|due|balance)/i.test(rawQuery) ||
+      /(?:किती payment बाकी|how much payment due|vendor balance)/i.test(rawQuery)) {
+    const parties = await getErpParties('vendor');
+    const matched = parties.find((p) => rawQuery.toLowerCase().includes(p.legal_name.toLowerCase()) || (p.trade_name && rawQuery.toLowerCase().includes(p.trade_name.toLowerCase()))) || parties[0];
+
+    if (matched) {
+      return {
+        handled: true,
+        answer: isMarathi
+          ? `🏢 **व्हेंडर पेमेंट लेजर माहिती:**\n\n- **व्हेंडर**: ${matched.legal_name}\n- **GSTIN**: ${matched.gstin || 'N/A'}\n- **बाकी रक्कम (Payable)**: ₹${(matched.balance_amount || 0).toLocaleString('en-IN')}\n- **Credit Days**: ${matched.credit_days} दिवस\n\nतुम्ही 'Invoicing & GL Ledger' मधून RTGS किंवा UPI द्वारे पेमेंट करू शकता.`
+          : `🏢 **Vendor Outstanding Ledger:**\n\n- **Vendor**: ${matched.legal_name}\n- **GSTIN**: ${matched.gstin || 'N/A'}\n- **Outstanding Payable**: ₹${(matched.balance_amount || 0).toLocaleString('en-IN')}\n- **Credit Terms**: ${matched.credit_days} Days\n\nYou can disburse payments via RTGS/UPI from the Accounts module.`,
+        referencedTasks: [],
+        actionType: null,
+      };
+    }
+  }
+
+  // ==========================================
+  // ENTERPRISE ACTION: SITE STOCK / INVENTORY QUERY
+  // e.g.: "Bandra site वर किती cement bags शिल्लक आहेत?", "Cement stock on hand"
+  // ==========================================
+  if (/(?:stock|शिल्लक|साठा|inventory|material|bags|cement|steel)/i.test(rawQuery) && (/(?:किती|how much|balance|available)/i.test(rawQuery) || /(?:stock|inventory)/i.test(rawQuery))) {
+    const stockItems = await getSiteStock();
+    const found = stockItems.find((s) => rawQuery.toLowerCase().includes((s.item_name || '').toLowerCase()) || rawQuery.toLowerCase().includes('cement') && (s.item_name || '').toLowerCase().includes('cement')) || stockItems[0];
+
+    if (found) {
+      return {
+        handled: true,
+        answer: isMarathi
+          ? `📦 **साइट इन्व्हेंटरी साठा (Live Stock):**\n\n- **मटेरिअल**: ${found.item_name}\n- **उपलब्ध साठा (Quantity on Hand)**: ${found.quantity_on_hand.toLocaleString('en-IN')} ${found.uom}\n- **Valuation Rate**: ₹${found.valuation_rate}/${found.uom}\n- **एकूण मूल्यांकन**: ₹${(found.quantity_on_hand * found.valuation_rate).toLocaleString('en-IN')}`
+          : `📦 **Live Site Inventory Stock:**\n\n- **Material**: ${found.item_name}\n- **Quantity on Hand**: ${found.quantity_on_hand.toLocaleString('en-IN')} ${found.uom}\n- **Valuation Rate**: ₹${found.valuation_rate}/${found.uom}\n- **Total Value**: ₹${(found.quantity_on_hand * found.valuation_rate).toLocaleString('en-IN')}`,
+        referencedTasks: [],
+        actionType: null,
+      };
+    }
+  }
+
+  // ==========================================
+  // ENTERPRISE ACTION: SITE PENDING TASKS
+  // e.g.: "Mumbai Site 2 चे pending tasks दाखव", "Site Worli tasks"
+  // ==========================================
+  if (/(?:site|साइट).*(?:tasks|कामे|कामं|pending)/i.test(rawQuery)) {
+    const pendingTasks = tasks.filter((t) => t.status === 'pending' || t.status === 'in_progress');
+    const displayTasks = pendingTasks.slice(0, 5);
+
+    return {
+      handled: true,
+      answer: isMarathi
+        ? `📍 **साइट प्रलंबित कामे (Site Pending Operations):**\n\n${displayTasks.map((t, idx) => `${idx + 1}. **${t.title}** (${t.priority.toUpperCase()})`).join('\n')}\n\nएकूण ${pendingTasks.length} कामे प्रलंबित आहेत.`
+        : `📍 **Site Pending Operations:**\n\n${displayTasks.map((t, idx) => `${idx + 1}. **${t.title}** [Priority: ${t.priority.toUpperCase()}]`).join('\n')}\n\nTotal ${pendingTasks.length} tasks currently active on site.`,
+      referencedTasks: displayTasks.map((t) => ({ id: t.id, title: t.title, status: t.status, priority: t.priority, due_date: t.due_date })),
+      actionType: null,
+    };
+  }
+
+  // ==========================================
+  // ENTERPRISE ACTION: PROJECT EXPENSE / PURCHASE REPORT
+  // e.g.: "Project A चा खर्च किती झाला?", "March purchase report"
+  // ==========================================
+  if (/(?:purchase report|खर्च|project cost|expense report)/i.test(rawQuery)) {
+    const invoices = await getErpInvoices('purchase');
+    const totalSpent = invoices.reduce((acc, inv) => acc + inv.total_amount, 0);
+
+    return {
+      handled: true,
+      answer: isMarathi
+        ? `📊 **प्रकल्प खरेदी व खर्च अहवाल (Project Purchase Summary):**\n\n- **एकूण खरेदी बिले**: ${invoices.length}\n- **एकूण खर्च (Total Outflow)**: ₹${totalSpent.toLocaleString('en-IN')}\n- **नोंदणीकृत प्रकल्प**: Mumbai Metro Phase 2\n\nसविस्तर रिपोर्टसाठी 'Executive Dashboard' पहा.`
+        : `📊 **Project Purchase & Cost Summary:**\n\n- **Total Invoices**: ${invoices.length}\n- **Total Incurred Cost**: ₹${totalSpent.toLocaleString('en-IN')}\n- **Project Code**: PRJ-MUM-02\n\nView detailed site breakdown in the Executive Dashboard.`,
+      referencedTasks: [],
+      actionType: null,
+    };
+  }
+
+  // ==========================================
+  // ENTERPRISE ACTION: PENDING APPROVALS / BILLS
+  // e.g.: "कोणती bills approval pending आहेत?", "Pending approvals"
+  // ==========================================
+  if (/(?:approval|मंजुरी|bills|बिलं|बिले).*(?:pending|बाकी|अडकलेली|प्रलंबित)/i.test(rawQuery) ||
+      /(?:कोणती bills approval pending|pending approvals)/i.test(rawQuery)) {
+    const pendingList = await getPendingApprovals();
+
+    if (pendingList.length === 0) {
+      return {
+        handled: true,
+        answer: isMarathi
+          ? '✅ **कोणतीही बिले किंवा Requisitions मंजुरीसाठी प्रलंबित नाहीत.** सर्व मान्यता पूर्ण झाल्या आहेत!'
+          : '✅ **No bills or requisitions are pending approval.** All approvals are up to date!',
+        referencedTasks: [],
+        actionType: null,
+      };
+    }
+
+    return {
+      handled: true,
+      answer: isMarathi
+        ? `📋 **मंजुरीसाठी प्रलंबित बिले व Requisitions:**\n\n${pendingList.map((a: any, i: number) => `${i + 1}. **${a.title}** - ₹${(a.amount || 0).toLocaleString('en-IN')} (आवश्यक पद: ${a.assigned_role})`).join('\n')}\n\nतुम्ही 'Approvals Center' मधून एका क्लिकवर मान्यता (Approve) देऊ शकता.`
+        : `📋 **Requisitions & Bills Pending Authorization:**\n\n${pendingList.map((a: any, i: number) => `${i + 1}. **${a.title}** - ₹${(a.amount || 0).toLocaleString('en-IN')} [Required Role: ${a.assigned_role}]`).join('\n')}\n\nYou can authorize or reject these in the Approvals Center.`,
+      referencedTasks: [],
+      actionType: null,
+    };
+  }
+
 
   // ==========================================
   // ACTION 1: CREATE TASK
