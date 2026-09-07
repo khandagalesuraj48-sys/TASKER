@@ -6,9 +6,12 @@ import { PriorityBadge } from '../common/PriorityBadge';
 import { formatDateTime, formatDateOnly, formatRelativePending, isTaskOverdue } from '../../lib/dateUtils';
 import { ChangeStatusModal } from './ChangeStatusModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { softDeleteTask, restoreTask, permanentDeleteTask } from '../../services/taskService';
+import { softDeleteTask, restoreTask, permanentDeleteTask, canUserDeleteTask } from '../../services/taskService';
 import { useToast } from '../../context/ToastContext';
 import { useTask } from '../../context/TaskContext';
+import { useAuth } from '../../context/AuthContext';
+import { useAdmin } from '../../context/AdminContext';
+import { useEnterprise } from '../../context/EnterpriseContext';
 import {
   Clock,
   Calendar,
@@ -39,6 +42,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { triggerRefresh } = useTask();
+  const { user } = useAuth();
+  const { isPlatformAdmin } = useAdmin();
+  const { isAdmin: isOrgAdmin, isOwner: isOrgOwner } = useEnterprise();
+
+  const canDelete = canUserDeleteTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner);
 
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [statusModalOpen, setStatusModalOpen] = useState<boolean>(false);
@@ -157,14 +165,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                       <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                       <span>Change Status</span>
                     </button>
-                    <div className="my-1 border-t border-slate-100 dark:border-slate-700/60" />
-                    <button
-                      onClick={() => setDeleteConfirmOpen(true)}
-                      className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                      <span>Move to Bin</span>
-                    </button>
+                    {canDelete && (
+                      <>
+                        <div className="my-1 border-t border-slate-100 dark:border-slate-700/60" />
+                        <button
+                          onClick={() => setDeleteConfirmOpen(true)}
+                          className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                          <span>Move to Bin</span>
+                        </button>
+                      </>
+                    )}
                   </>
                 ) : (
                   <>
@@ -175,13 +187,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                       <RotateCcw className="w-3.5 h-3.5 text-emerald-500" />
                       <span>Restore Task</span>
                     </button>
-                    <button
-                      onClick={() => setPermDeleteConfirmOpen(true)}
-                      className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                      <span>Delete Permanently</span>
-                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => setPermDeleteConfirmOpen(true)}
+                        className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Delete Permanently</span>
+                      </button>
+                    )}
                   </>
                 )}
               </div>

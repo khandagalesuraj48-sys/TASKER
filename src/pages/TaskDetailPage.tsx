@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTaskById, softDeleteTask } from '../services/taskService';
+import { getTaskById, softDeleteTask, canUserDeleteTask } from '../services/taskService';
 import { getStatusHistory } from '../services/statusHistoryService';
 import { getNotes } from '../services/notesService';
 import { getAttachments } from '../services/attachmentService';
@@ -22,6 +22,9 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { formatDateTime, formatDateOnly, formatRelativePending, isTaskOverdue } from '../lib/dateUtils';
 import { useToast } from '../context/ToastContext';
 import { useTask } from '../context/TaskContext';
+import { useAuth } from '../context/AuthContext';
+import { useAdmin } from '../context/AdminContext';
+import { useEnterprise } from '../context/EnterpriseContext';
 import {
   ArrowLeft,
   Calendar,
@@ -50,8 +53,15 @@ export const TaskDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { refreshKey, triggerRefresh } = useTask();
+  const { user } = useAuth();
+  const { isPlatformAdmin } = useAdmin();
+  const { isAdmin: isOrgAdmin, isOwner: isOrgOwner } = useEnterprise();
 
   const [task, setTask] = useState<Task | null>(null);
+
+  const canDelete = task
+    ? canUserDeleteTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner)
+    : false;
   const [history, setHistory] = useState<TaskStatusHistory[]>([]);
   const [notes, setNotes] = useState<TaskNote[]>([]);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
@@ -230,14 +240,16 @@ export const TaskDetailPage: React.FC = () => {
           >
             Change Status
           </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => setDeleteConfirmOpen(true)}
-            leftIcon={<Trash2 className="w-3.5 h-3.5" />}
-          >
-            Delete
-          </Button>
+          {canDelete && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setDeleteConfirmOpen(true)}
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+            >
+              Delete
+            </Button>
+          )}
         </div>
       </div>
 

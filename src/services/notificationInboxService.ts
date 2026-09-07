@@ -108,6 +108,62 @@ export const createInAppNotification = async (payload: {
   }
 };
 
+export const syncUnreadNotificationsToLocal = async (userId: string): Promise<void> => {
+  if (!Capacitor.isNativePlatform() || !userId) return;
+
+  try {
+    const LAST_NOTIF_SYNC_KEY = `tasker_last_notif_sync_${userId}`;
+    const lastSync = localStorage.getItem(LAST_NOTIF_SYNC_KEY);
+    // If never synced, check last 12 hours. If synced, check anything after last sync.
+    const sinceDate = lastSync
+      ? new Date(lastSync).toISOString()
+      : new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('recipient_user_id', userId)
+      .eq('is_read', false)
+      .gt('created_at', sinceDate)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    localStorage.setItem(LAST_NOTIF_SYNC_KEY, new Date().toISOString());
+
+    if (error || !data || data.length === 0) return;
+
+    const unreadList = data as InAppNotification[];
+    for (const newNotif of unreadList) {
+      try {
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: Math.floor(Math.random() * 899999) + 1,
+              title: newNotif.title,
+              body: newNotif.message,
+              channelId: 'tasker_alerts',
+              smallIcon: 'ic_launcher_foreground',
+              iconColor: '#2563eb',
+              sound: 'default',
+              autoCancel: true,
+              extra: {
+                taskId: newNotif.entity_id,
+                entity_type: newNotif.entity_type,
+                entity_id: newNotif.entity_id,
+                path: newNotif.entity_id ? `/tasks/${newNotif.entity_id}` : '/notifications',
+              },
+            },
+          ],
+        });
+      } catch (err) {
+        console.warn('Error scheduling unread sync notification:', err);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to sync unread notifications:', e);
+  }
+};
+
 export const subscribeToNotifications = (
   userId: string,
   onNewNotification: (notification: InAppNotification) => void
@@ -127,7 +183,7 @@ export const subscribeToNotifications = (
           const newNotif = payload.new as InAppNotification;
           onNewNotification(newNotif);
 
-          // If on Android / Native platform, push directly to system status bar
+          // If on Android / Native platform, push directly to system status bar with HIGH importance
           if (Capacitor.isNativePlatform()) {
             try {
               await LocalNotifications.schedule({
@@ -136,8 +192,17 @@ export const subscribeToNotifications = (
                     id: Math.floor(Math.random() * 899999) + 1,
                     title: newNotif.title,
                     body: newNotif.message,
+                    channelId: 'tasker_alerts',
                     smallIcon: 'ic_launcher_foreground',
                     iconColor: '#2563eb',
+                    sound: 'default',
+                    autoCancel: true,
+                    extra: {
+                      taskId: newNotif.entity_id,
+                      entity_type: newNotif.entity_type,
+                      entity_id: newNotif.entity_id,
+                      path: newNotif.entity_id ? `/tasks/${newNotif.entity_id}` : '/notifications',
+                    },
                   },
                 ],
               });

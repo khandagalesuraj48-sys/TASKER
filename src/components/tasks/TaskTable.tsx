@@ -6,9 +6,12 @@ import { PriorityBadge } from '../common/PriorityBadge';
 import { formatDateOnly, formatRelativePending, isTaskOverdue } from '../../lib/dateUtils';
 import { ChangeStatusModal } from './ChangeStatusModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { softDeleteTask, restoreTask, permanentDeleteTask } from '../../services/taskService';
+import { softDeleteTask, restoreTask, permanentDeleteTask, canUserDeleteTask } from '../../services/taskService';
 import { useToast } from '../../context/ToastContext';
 import { useTask } from '../../context/TaskContext';
+import { useAuth } from '../../context/AuthContext';
+import { useAdmin } from '../../context/AdminContext';
+import { useEnterprise } from '../../context/EnterpriseContext';
 import {
   MoreHorizontal,
   Edit2,
@@ -36,6 +39,9 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { triggerRefresh } = useTask();
+  const { user } = useAuth();
+  const { isPlatformAdmin } = useAdmin();
+  const { isAdmin: isOrgAdmin, isOwner: isOrgOwner } = useEnterprise();
 
   const [activeTaskForStatus, setActiveTaskForStatus] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -231,14 +237,18 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                                 <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                                 <span>Change Status</span>
                               </button>
-                              <div className="my-1 border-t border-slate-100 dark:border-slate-700/60" />
-                              <button
-                                onClick={() => setTaskToDelete(task)}
-                                className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                <span>Move to Bin</span>
-                              </button>
+                              {canUserDeleteTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner) && (
+                                <>
+                                  <div className="my-1 border-t border-slate-100 dark:border-slate-700/60" />
+                                  <button
+                                    onClick={() => setTaskToDelete(task)}
+                                    className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                    <span>Move to Bin</span>
+                                  </button>
+                                </>
+                              )}
                             </>
                           ) : (
                             <>
@@ -249,13 +259,15 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                                 <RotateCcw className="w-3.5 h-3.5 text-emerald-500" />
                                 <span>Restore Task</span>
                               </button>
-                              <button
-                                onClick={() => setTaskToPermDelete(task)}
-                                className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                <span>Delete Permanently</span>
-                              </button>
+                              {canUserDeleteTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner) && (
+                                <button
+                                  onClick={() => setTaskToPermDelete(task)}
+                                  className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                  <span>Delete Permanently</span>
+                                </button>
+                              )}
                             </>
                           )}
                         </div>

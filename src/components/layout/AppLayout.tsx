@@ -15,13 +15,18 @@ import { AlertTriangle, Database, Sparkles } from 'lucide-react';
 import { useAndroidBackHandler } from '../../hooks/useAndroidBackHandler';
 import { useBackButton } from '../../hooks/useBackButton';
 import { AppUpdateCard } from '../AppUpdateCard';
+import { NotificationPermissionEnforcer } from '../notifications/NotificationPermissionEnforcer';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import {
   schedulePendingTasksNotification,
-  checkNotificationPermissions,
-  requestNotificationPermissions,
+  initNotificationChannels,
 } from '../../services/notificationService';
+import {
+  subscribeToNotifications,
+  syncUnreadNotificationsToLocal,
+} from '../../services/notificationInboxService';
 
 export const AppLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -66,16 +71,40 @@ export const AppLayout: React.FC = () => {
     stats,
   } = useTask();
 
-  // Silently check/request notification permission on native launch
+  // Global Realtime Notifications & Resume Sync
   useEffect(() => {
+    if (!user?.id) return;
+
+    // 1. Ensure high-importance notification channels exist
+    initNotificationChannels().catch(() => {});
+
+    // 2. Initial sync of unread notifications
+    syncUnreadNotificationsToLocal(user.id).catch(() => {});
+
+    // 3. Realtime subscription for immediate push
+    const unsubscribe = subscribeToNotifications(user.id, (notif) => {
+      console.log('Realtime notification received in AppLayout:', notif.title);
+    });
+
+    // 4. Foreground / Resume sync
+    let appStateHandle: any = null;
     if (Capacitor.isNativePlatform()) {
-      checkNotificationPermissions().then((status) => {
-        if (status.displayState === 'prompt') {
-          requestNotificationPermissions().catch(() => {});
+      App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          syncUnreadNotificationsToLocal(user.id).catch(() => {});
         }
-      }).catch(() => {});
+      }).then((handle) => {
+        appStateHandle = handle;
+      });
     }
-  }, []);
+
+    return () => {
+      unsubscribe();
+      if (appStateHandle) {
+        appStateHandle.remove();
+      }
+    };
+  }, [user?.id]);
 
   // Listen for local notification taps and deep link to task or pending page
   useEffect(() => {
@@ -171,6 +200,8 @@ export const AppLayout: React.FC = () => {
 
         {/* Main View Router Outlet */}
         <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-12 overflow-x-hidden min-w-0">
+          {/* Notification Permission Enforcer */}
+          <NotificationPermissionEnforcer />
           {/* App Update Banner */}
           <AppUpdateCard />
           <Outlet />

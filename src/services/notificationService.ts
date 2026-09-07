@@ -125,6 +125,63 @@ export const checkNotificationPermissions = async (): Promise<SystemPermissionSt
 };
 
 /**
+ * Ensures all Android notification channels exist with appropriate importance,
+ * vibration, and sounds so notifications pop up in the status bar reliably.
+ */
+export const initNotificationChannels = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await LocalNotifications.createChannel({
+      id: 'tasker_alerts',
+      name: 'Task Alerts & Updates',
+      description: 'Immediate heads-up alerts for task assignments, reassignments, and completions',
+      importance: 5, // IMPORTANCE_HIGH
+      visibility: 1, // VISIBILITY_PUBLIC
+      sound: 'default',
+      vibration: true,
+      lights: true,
+      lightColor: '#2563eb',
+    });
+
+    await LocalNotifications.createChannel({
+      id: 'tasker_reminders',
+      name: 'Task Reminders',
+      description: 'Scheduled task reminders and due date alerts',
+      importance: 5, // IMPORTANCE_HIGH
+      visibility: 1,
+      sound: 'default',
+      vibration: true,
+      lights: true,
+      lightColor: '#e11d48',
+    });
+
+    await LocalNotifications.createChannel({
+      id: 'tasker_reassign',
+      name: 'Task Assignments',
+      description: 'Alerts when a task is assigned or reassigned to you',
+      importance: 5, // IMPORTANCE_HIGH
+      visibility: 1,
+      sound: 'default',
+      vibration: true,
+      lights: true,
+      lightColor: '#2563eb',
+    });
+
+    await LocalNotifications.createChannel({
+      id: 'tasker_pending',
+      name: 'Pending Tasks',
+      description: 'Periodic reminders and summaries of pending tasks',
+      importance: 3, // IMPORTANCE_DEFAULT
+      visibility: 1,
+      sound: 'default',
+      vibration: true,
+    });
+  } catch (e) {
+    console.warn('Error creating notification channels:', e);
+  }
+};
+
+/**
  * Requests notification permissions from user
  */
 export const requestNotificationPermissions = async (): Promise<SystemPermissionStatus> => {
@@ -136,6 +193,7 @@ export const requestNotificationPermissions = async (): Promise<SystemPermission
   }
 
   try {
+    await initNotificationChannels();
     await LocalNotifications.requestPermissions();
   } catch (e) {
     console.warn('Error requesting LocalNotification permissions:', e);

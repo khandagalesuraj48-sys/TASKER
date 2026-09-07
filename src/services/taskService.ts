@@ -17,6 +17,7 @@ import { recordStatusChange } from './statusHistoryService';
 import { addNote } from './notesService';
 import { deleteAllTaskFiles } from './attachmentService';
 import { stopTaskReminder } from './reminderService';
+import { adminService } from './adminService';
 
 export const getTasks = async (options: TaskFilterOptions = {}): Promise<Task[]> => {
   const isDeleted = options.includeDeleted ?? false;
@@ -254,6 +255,26 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
     }
   }
 
+  // Send in-app and mobile notification to assignee if assigned during creation
+  if (createdTask.assigned_to) {
+    try {
+      const { createInAppNotification } = await import('./notificationInboxService');
+      const { data: authData } = await supabase.auth.getUser();
+      const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || creator || 'व्यवस्थापक';
+      await createInAppNotification({
+        recipient_user_id: createdTask.assigned_to,
+        organization_id: createdTask.org_id,
+        type: 'task_assigned',
+        title: 'नवीन टास्क नियुक्त केला (New Task Assigned)',
+        message: `${assignerName} ने तुम्हाला "${createdTask.title}" हा नवीन टास्क सोपवला आहे.`,
+        entity_type: 'task',
+        entity_id: createdTask.id,
+      });
+    } catch (notifErr) {
+      console.warn('Failed to send assignment notification on task creation:', notifErr);
+    }
+  }
+
   return createdTask;
 };
 
@@ -318,7 +339,29 @@ export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Ta
     throw new Error(updateResult.error?.message || 'Unable to update task. Please try again.');
   }
 
-  return updateResult.data as Task;
+  const updatedTask = updateResult.data as Task;
+
+  // Send notification if task was assigned/reassigned in update
+  if (input.assigned_to && input.assigned_to.trim() !== '') {
+    try {
+      const { createInAppNotification } = await import('./notificationInboxService');
+      const { data: authData } = await supabase.auth.getUser();
+      const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || 'व्यवस्थापक';
+      await createInAppNotification({
+        recipient_user_id: input.assigned_to,
+        organization_id: updatedTask.org_id,
+        type: 'task_assigned',
+        title: 'टास्क वाटप (Task Assigned / Updated)',
+        message: `${assignerName} ने तुम्हाला "${updatedTask.title}" हा टास्क सोपवला आहे.`,
+        entity_type: 'task',
+        entity_id: updatedTask.id,
+      });
+    } catch (notifErr) {
+      console.warn('Failed to send assignment notification on updateTask:', notifErr);
+    }
+  }
+
+  return updatedTask;
 };
 
 export const updateTaskStatus = async (
@@ -425,10 +468,75 @@ export const updateTaskStatus = async (
   return await getTaskById(id);
 };
 
+export const canUserDeleteTask = (
+  task: Pick<Task, 'user_id' | 'created_by' | 'org_id'>,
+  user?: { id?: string; email?: string; user_metadata?: any } | null,
+  isPlatformAdmin?: boolean,
+  isOrgAdmin?: boolean
+): boolean => {
+  if (isPlatformAdmin) return true;
+  if (isOrgAdmin) return true;
+  if (!user || !user.id) return false;
+
+  // Check creator user_id
+  if (task.user_id && task.user_id === user.id) return true;
+
+  // Check creator email / name
+  if (task.created_by) {
+    if (user.email && task.created_by.toLowerCase() === user.email.toLowerCase()) return true;
+    if (user.user_metadata?.full_name && task.created_by.toLowerCase() === user.user_metadata.full_name.toLowerCase()) return true;
+    if (task.created_by === user.id) return true;
+  }
+
+  return false;
+};
+
+export const verifyTaskDeletePermission = async (taskId: string): Promise<Task> => {
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUser = authData?.user;
+  if (!currentUser) {
+    throw new Error('कृपया प्रथम लॉगिन करा. (User not logged in)');
+  }
+
+  const { data: task, error: fetchErr } = await supabase
+    .from('tasks')
+    .select('id, user_id, created_by, org_id, title')
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (fetchErr || !task) {
+    throw new Error('टास्क सापडला नाही. (Task not found)');
+  }
+
+  const isPlatformAdmin = await adminService.isPlatformAdmin(currentUser.id);
+  let isOrgAdmin = false;
+  if (task.org_id) {
+    const { data: membership } = await supabase
+      .from('org_memberships')
+      .select('role')
+      .eq('org_id', task.org_id)
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if (membership && (membership.role === 'org_owner' || membership.role === 'org_admin')) {
+      isOrgAdmin = true;
+    }
+  }
+
+  const allowed = canUserDeleteTask(task as Task, currentUser, isPlatformAdmin, isOrgAdmin);
+  if (!allowed) {
+    throw new Error('परमिशन नाकारली! फक्त टास्क तयार करणारा किंवा ॲडमिनच हा टास्क डिलीट करू शकतो. (Only the task creator or admin can delete this task.)');
+  }
+
+  return task as Task;
+};
+
 export const softDeleteTask = async (
   id: string,
   actor: string = DEFAULT_USER_NAME
 ): Promise<void> => {
+  // Enforce delete authorization: Creator or Admin ONLY
+  await verifyTaskDeletePermission(id);
+
   const { error } = await supabase
     .from('tasks')
     .update({
@@ -470,6 +578,9 @@ export const restoreTask = async (id: string): Promise<void> => {
 };
 
 export const permanentDeleteTask = async (id: string): Promise<void> => {
+  // Enforce delete authorization: Creator or Admin ONLY
+  await verifyTaskDeletePermission(id);
+
   // 1. Delete from database first (cascades related DB metadata)
   const { error } = await supabase
     .from('tasks')

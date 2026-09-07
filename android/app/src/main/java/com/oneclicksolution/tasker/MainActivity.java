@@ -1,5 +1,6 @@
 package com.oneclicksolution.tasker;
 
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.media.AudioAttributes;
@@ -148,8 +149,74 @@ public class MainActivity extends BridgeActivity {
             return;
         }
 
+        // Common audio attributes for high-priority notification sounds
+        AudioAttributes audioAttributes =
+                new AudioAttributes.Builder()
+                        .setContentType(
+                                AudioAttributes.CONTENT_TYPE_SONIFICATION
+                        )
+                        .setUsage(
+                                AudioAttributes.USAGE_NOTIFICATION
+                        )
+                        .build();
+
         // ========================================================
-        // 1. TASK REMINDERS
+        // 0. TASK ALERTS & UPDATES (Assigned, Completed, Priority)
+        // ========================================================
+
+        NotificationChannel alertsChannel =
+                new NotificationChannel(
+                        "tasker_alerts",
+                        "Task Alerts & Updates",
+                        NotificationManager.IMPORTANCE_HIGH
+                );
+
+        alertsChannel.setDescription(
+                "Immediate heads-up alerts for task assignments, reassignments, and completions"
+        );
+
+        alertsChannel.enableVibration(true);
+        alertsChannel.enableLights(true);
+        alertsChannel.setLightColor(Color.BLUE);
+        alertsChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        alertsChannel.setSound(
+                RingtoneManager.getDefaultUri(
+                        RingtoneManager.TYPE_NOTIFICATION
+                ),
+                audioAttributes
+        );
+
+        manager.createNotificationChannel(alertsChannel);
+
+        // ========================================================
+        // 1. TASK REASSIGNMENT
+        // ========================================================
+
+        NotificationChannel reassignChannel =
+                new NotificationChannel(
+                        "tasker_reassign",
+                        "Task Assignments",
+                        NotificationManager.IMPORTANCE_HIGH
+                );
+
+        reassignChannel.setDescription(
+                "Alerts when a task is assigned or reassigned to you"
+        );
+
+        reassignChannel.enableVibration(true);
+        reassignChannel.enableLights(true);
+        reassignChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        reassignChannel.setSound(
+                RingtoneManager.getDefaultUri(
+                        RingtoneManager.TYPE_NOTIFICATION
+                ),
+                audioAttributes
+        );
+
+        manager.createNotificationChannel(reassignChannel);
+
+        // ========================================================
+        // 2. TASK REMINDERS
         // ========================================================
 
         NotificationChannel reminderChannel =
@@ -165,18 +232,6 @@ public class MainActivity extends BridgeActivity {
 
         reminderChannel.enableVibration(true);
         reminderChannel.enableLights(true);
-
-        // Use the normal Android notification sound.
-        // USAGE_NOTIFICATION is supported safely across Android versions.
-        AudioAttributes audioAttributes =
-                new AudioAttributes.Builder()
-                        .setContentType(
-                                AudioAttributes.CONTENT_TYPE_SONIFICATION
-                        )
-                        .setUsage(
-                                AudioAttributes.USAGE_NOTIFICATION
-                        )
-                        .build();
 
         reminderChannel.setSound(
                 RingtoneManager.getDefaultUri(
