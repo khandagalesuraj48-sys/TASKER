@@ -18,11 +18,14 @@ import {
 } from 'lucide-react';
 import { useTask } from '../../context/TaskContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
+import { useAdmin } from '../../context/AdminContext';
 import { useBackButton } from '../../hooks/useBackButton';
+import { Shield } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
   const { stats } = useTask();
-  const { isEnterpriseMode, setEnterpriseMode, isAdmin } = useEnterprise();
+  const { isEnterpriseMode, setEnterpriseMode, isAdmin, hasApprovedOrg } = useEnterprise();
+  const { isPlatformAdmin } = useAdmin();
   const [moreMenuOpen, setMoreMenuOpen] = useState<boolean>(false);
 
   useBackButton(moreMenuOpen, () => setMoreMenuOpen(false), 30);
@@ -76,7 +79,13 @@ export const MobileNav: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setEnterpriseMode(true)}
+                onClick={() => {
+                  if (hasApprovedOrg) {
+                    setEnterpriseMode(true);
+                  } else {
+                    alert('You are not an approved member of any organization yet.');
+                  }
+                }}
                 className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                   isEnterpriseMode
                     ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs'
@@ -187,7 +196,18 @@ export const MobileNav: React.FC = () => {
                 </>
               )}
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                {isPlatformAdmin && (
+                  <NavLink
+                    to="/admin"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 text-xs font-bold"
+                  >
+                    <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span>Platform Admin Panel</span>
+                  </NavLink>
+                )}
+
                 <NavLink
                   to="/settings"
                   onClick={() => setMoreMenuOpen(false)}

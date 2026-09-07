@@ -6,8 +6,9 @@ import {
   getActiveOrgId,
   setActiveOrgId,
   getUserMembership,
+  getUserApprovedOrgs,
+  checkUserPendingRequest,
   requestJoinOrg,
-  OWNER_EMAIL,
 } from '../services/enterpriseService';
 import { useAuth } from './AuthContext';
 
@@ -15,13 +16,15 @@ interface EnterpriseContextType {
   isEnterpriseMode: boolean;
   setEnterpriseMode: (enabled: boolean) => void;
   organizations: Organization[];
+  userApprovedOrgs: Organization[];
+  hasApprovedOrg: boolean;
   currentOrg: Organization | null;
   switchOrg: (id: string) => void;
   isOwner: boolean;
   isAdmin: boolean;
   isMember: boolean;
   userMembership: OrgMembership | null;
-  requestJoin: () => Promise<void>;
+  requestJoin: (notes?: string) => Promise<void>;
   isJoining: boolean;
   hasRequestedJoin: boolean;
   reloadEnterpriseData: () => Promise<void>;
@@ -41,39 +44,54 @@ interface EnterpriseContextType {
 const EnterpriseContext = createContext<EnterpriseContextType | undefined>(undefined);
 
 export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, userEmail } = useAuth();
+  const { user, userEmail, displayName } = useAuth();
   const [isEnterpriseMode, setIsEnterpriseMode] = useState<boolean>(() => {
     return localStorage.getItem('tasker_mode') === 'enterprise';
   });
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [userApprovedOrgs, setUserApprovedOrgs] = useState<Organization[]>([]);
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
   const [userMembership, setUserMembership] = useState<OrgMembership | null>(null);
   const [isJoining, setIsJoining] = useState<boolean>(false);
   const [hasRequestedJoin, setHasRequestedJoin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Determine owner status
+  // User belongs to at least one approved organization
+  const hasApprovedOrg = userApprovedOrgs.length > 0;
+
+  // Determine owner status (Strictly database-backed)
   const isOwner = Boolean(
-    (userEmail && userEmail.toLowerCase() === OWNER_EMAIL.toLowerCase()) ||
-    (currentOrg?.owner_id && user?.id && currentOrg.owner_id === user.id)
+    (currentOrg?.owner_id && user?.id && currentOrg.owner_id === user.id) ||
+    userMembership?.role === 'org_owner'
   );
 
   // Determine admin status
   const isAdmin = Boolean(
     isOwner ||
-    userMembership?.role === 'org_owner' ||
     userMembership?.role === 'org_admin'
   );
 
   // Determine member status
-  const isMember = Boolean(isOwner || userMembership);
+  const isMember = Boolean(userMembership);
 
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
+
+      // 1. Fetch public organization list
       const orgs = await getOrganizations();
       setOrganizations(orgs);
 
+      // 2. Fetch user's approved organizations (ONE auth user ID, multiple workspaces)
+      let approved: Organization[] = [];
+      if (user?.id) {
+        approved = await getUserApprovedOrgs(user.id);
+        setUserApprovedOrgs(approved);
+      } else {
+        setUserApprovedOrgs([]);
+      }
+
+      // 3. Resolve active organization
       let activeOrg: Organization | null = null;
       const activeOrgId = getActiveOrgId();
 
@@ -81,27 +99,49 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         activeOrg = orgs.find((o) => o.id === activeOrgId) || null;
       }
 
+      // If no active org selected or user not approved in selected, pick from approved orgs or primary org
       if (!activeOrg) {
-        activeOrg = await getPrimaryOrg();
-        if (activeOrg) {
+        if (approved.length > 0) {
+          activeOrg = approved[0];
           setActiveOrgId(activeOrg.id);
+        } else {
+          activeOrg = await getPrimaryOrg();
+          if (activeOrg) {
+            setActiveOrgId(activeOrg.id);
+          }
         }
       }
 
       setCurrentOrg(activeOrg);
 
+      // 4. Load membership and pending join status
       if (activeOrg && user?.id) {
-        const membership = await getUserMembership(user.id, activeOrg.id);
+        const [membership, pending] = await Promise.all([
+          getUserMembership(user.id, activeOrg.id),
+          checkUserPendingRequest(user.id, activeOrg.id),
+        ]);
         setUserMembership(membership);
+        setHasRequestedJoin(pending);
+
+        // If user has no approved membership, force personal mode
+        if (!membership && isEnterpriseMode) {
+          setIsEnterpriseMode(false);
+          localStorage.setItem('tasker_mode', 'personal');
+        }
       } else {
         setUserMembership(null);
+        setHasRequestedJoin(false);
+        if (isEnterpriseMode) {
+          setIsEnterpriseMode(false);
+          localStorage.setItem('tasker_mode', 'personal');
+        }
       }
     } catch (err) {
       console.error('Error loading enterprise context data:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, isEnterpriseMode]);
 
   useEffect(() => {
     loadData();
@@ -115,6 +155,12 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [loadData]);
 
   const toggleMode = (enabled: boolean) => {
+    // Cannot enable enterprise mode if user has no approved organization
+    if (enabled && !hasApprovedOrg && !isMember) {
+      setIsEnterpriseMode(false);
+      localStorage.setItem('tasker_mode', 'personal');
+      return;
+    }
     setIsEnterpriseMode(enabled);
     localStorage.setItem('tasker_mode', enabled ? 'enterprise' : 'personal');
     window.dispatchEvent(
@@ -129,11 +175,17 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadData();
   };
 
-  const handleRequestJoin = async () => {
+  const handleRequestJoin = async (notes?: string) => {
     if (!currentOrg || !user?.id || !userEmail) return;
     setIsJoining(true);
     try {
-      await requestJoinOrg(currentOrg.id, userEmail, user.id);
+      await requestJoinOrg(
+        currentOrg.id,
+        userEmail,
+        user.id,
+        displayName || userEmail.split('@')[0],
+        notes
+      );
       setHasRequestedJoin(true);
     } catch (err) {
       console.error('Error requesting join:', err);
@@ -149,6 +201,8 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isEnterpriseMode,
         setEnterpriseMode: toggleMode,
         organizations,
+        userApprovedOrgs,
+        hasApprovedOrg,
         currentOrg,
         switchOrg,
         isOwner,

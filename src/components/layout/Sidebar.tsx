@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   Clock,
@@ -18,11 +18,14 @@ import {
   Users,
   History,
   ShieldAlert,
+  Shield,
+  User,
 } from 'lucide-react';
 import { useTask } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
+import { useAdmin } from '../../context/AdminContext';
 import { Logo } from '../common/Logo';
 import { useBackButton } from '../../hooks/useBackButton';
 
@@ -37,7 +40,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { stats, openCreateModal } = useTask();
   const { userEmail, displayName, signOut } = useAuth();
   const { effectiveTheme, toggleTheme } = useTheme();
-  const { isEnterpriseMode, setEnterpriseMode, currentOrg, isMember, isAdmin } = useEnterprise();
+  const {
+    isEnterpriseMode,
+    setEnterpriseMode,
+    currentOrg,
+    isMember,
+    isAdmin,
+    hasApprovedOrg,
+  } = useEnterprise();
+  const { isPlatformAdmin } = useAdmin();
 
   // Personal space navigation items
   const personalNavItems = [
@@ -139,7 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <span>👤</span>
+            <User className="w-3.5 h-3.5" />
             <span>Personal</span>
           </button>
           <button
@@ -151,24 +162,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <span>🏢</span>
+            <Building2 className="w-3.5 h-3.5 text-indigo-500" />
             <span>Workplace</span>
           </button>
         </div>
 
         {/* Active Space Indicator Banner */}
         {isEnterpriseMode ? (
-          <div className="p-3 rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/60 dark:bg-indigo-950/40">
-            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
-              Active Organization
-            </span>
-            <p className="text-xs font-black text-slate-900 dark:text-white truncate mt-0.5">
-              {currentOrg?.legal_name || 'SAMAJ RACHANA CONSTRUCTION LIMITED'}
-            </p>
-            <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300">
-              {isAdmin ? 'Admin / Owner' : isMember ? 'Team Member' : 'Guest / Non-Member'}
-            </span>
-          </div>
+          hasApprovedOrg || isMember ? (
+            <div className="p-3 rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/60 dark:bg-indigo-950/40">
+              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
+                Active Organization
+              </span>
+              <p className="text-xs font-black text-slate-900 dark:text-white truncate mt-0.5">
+                {currentOrg?.legal_name || 'SAMAJ RACHANA CONSTRUCTION LIMITED'}
+              </p>
+              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300">
+                {isAdmin ? 'Admin / Owner' : 'Team Member'}
+              </span>
+            </div>
+          ) : (
+            <div className="p-3 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/40 text-center space-y-1.5">
+              <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider block">
+                No Organization Access
+              </span>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-tight">
+                You are not a member of any organization yet.
+              </p>
+            </div>
+          )
         ) : (
           <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
@@ -316,6 +338,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             {effectiveTheme}
           </span>
         </button>
+
+        {/* Platform Admin Button (Visible only to verified Platform Admins) */}
+        {isPlatformAdmin && (
+          <Link
+            to="/admin"
+            onClick={onClose}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/70 hover:bg-purple-100 dark:hover:bg-purple-900/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold transition-all shadow-xs"
+          >
+            <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <span>Platform Admin Panel</span>
+          </Link>
+        )}
 
         <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs">
           <div className="flex items-center gap-2.5 min-w-0">

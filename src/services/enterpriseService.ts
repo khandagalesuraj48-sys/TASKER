@@ -9,7 +9,6 @@ import {
 import { TaskAssignment } from '../types/task';
 
 export const PRIMARY_ORG_NAME = 'SAMAJ RACHANA CONSTRUCTION LIMITED';
-export const OWNER_EMAIL = 'khandagalesuraj48@gmail.com';
 
 const ACTIVE_ORG_KEY = 'tasker_active_org_id';
 
@@ -31,6 +30,59 @@ export interface OrgJoinRequestItem {
   created_at: string;
   is_read: boolean;
 }
+
+/**
+ * Fetch all organizations where the user has an APPROVED membership
+ */
+export const getUserApprovedOrgs = async (userId: string): Promise<Organization[]> => {
+  if (!userId) return [];
+  try {
+    const { data: memberships, error } = await supabase
+      .from('org_memberships')
+      .select(`
+        org_id,
+        organization:organizations(*)
+      `)
+      .eq('user_id', userId);
+
+    if (error || !memberships) {
+      return [];
+    }
+
+    const orgList: Organization[] = [];
+    memberships.forEach((m: any) => {
+      if (m.organization && (m.organization.is_active ?? true)) {
+        orgList.push(m.organization as Organization);
+      }
+    });
+
+    return orgList;
+  } catch (err) {
+    console.error('Error fetching user approved orgs:', err);
+    return [];
+  }
+};
+
+/**
+ * Check whether user has a pending join request for an organization
+ */
+export const checkUserPendingRequest = async (userId: string, orgId: string): Promise<boolean> => {
+  if (!userId || !orgId) return false;
+  try {
+    const { data, error } = await supabase
+      .from('org_join_requests')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('org_id', orgId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (error || !data) return false;
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 /**
  * Fetch all organizations accessible to current user
@@ -217,34 +269,46 @@ export const removeOrgMember = async (membershipId: string, userId?: string): Pr
 export const requestJoinOrg = async (
   orgId: string,
   userEmail: string,
-  userId: string
+  userId: string,
+  userName?: string,
+  notes?: string
 ): Promise<void> => {
-  // Find organization owner
+  // 1. Insert into public.org_join_requests table
+  const { error: reqErr } = await supabase
+    .from('org_join_requests')
+    .insert({
+      org_id: orgId,
+      user_id: userId,
+      user_email: userEmail,
+      user_name: userName || userEmail.split('@')[0],
+      requested_role: 'team_member',
+      notes: notes || 'Requested via TASKER app',
+      status: 'pending',
+    });
+
+  if (reqErr) {
+    console.warn('Could not insert org_join_request, falling back to notification:', reqErr.message);
+  }
+
+  // 2. Also send notification to organization owner if found
   const { data: org } = await supabase
     .from('organizations')
     .select('owner_id')
     .eq('id', orgId)
     .single();
 
-  if (!org?.owner_id) {
-    throw new Error('Organization owner not found.');
-  }
-
-  // Create a system notification directed to owner
-  const { error } = await supabase
-    .from('notifications')
-    .insert({
-      recipient_user_id: org.owner_id,
-      organization_id: orgId,
-      type: 'system',
-      title: `Membership Request: ${userEmail}`,
-      message: `User ${userEmail} has requested to join ${PRIMARY_ORG_NAME}.`,
-      entity_type: 'org_join_request',
-      entity_id: userId,
-    });
-
-  if (error) {
-    throw new Error(error.message || 'Could not send join request.');
+  if (org?.owner_id) {
+    await supabase
+      .from('notifications')
+      .insert({
+        recipient_user_id: org.owner_id,
+        organization_id: orgId,
+        type: 'system',
+        title: `Membership Request: ${userEmail}`,
+        message: `User ${userEmail} has requested to join ${PRIMARY_ORG_NAME}.`,
+        entity_type: 'org_join_request',
+        entity_id: userId,
+      });
   }
 };
 
@@ -253,6 +317,26 @@ export const requestJoinOrg = async (
  */
 export const getJoinRequests = async (orgId: string): Promise<OrgJoinRequestItem[]> => {
   try {
+    // Check org_join_requests first
+    const { data: reqData, error: reqErr } = await supabase
+      .from('org_join_requests')
+      .select('*')
+      .eq('org_id', orgId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (!reqErr && reqData && reqData.length > 0) {
+      return reqData.map((r: any) => ({
+        id: r.id,
+        user_id: r.user_id,
+        user_email: r.user_email,
+        org_id: r.org_id,
+        created_at: r.created_at,
+        is_read: false,
+      }));
+    }
+
+    // Fallback to notifications table
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
