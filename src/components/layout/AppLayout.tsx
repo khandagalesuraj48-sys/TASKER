@@ -137,12 +137,12 @@ export const AppLayout: React.FC = () => {
   }, [stats.pending, stats.inProgress, stats.partial, user?.id, isEnterpriseMode]);
 
   return (
-    <div className="flex h-screen min-h-[100dvh] bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors">
+    <div className="flex h-screen min-h-[100dvh] w-full max-w-full bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors">
       {/* Desktop & Mobile Drawer Sidebar */}
       <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-y-auto min-w-0">
+      <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden min-w-0 w-full max-w-full">
         <Header onOpenMobileMenu={() => setMobileMenuOpen(true)} />
 
         {/* Due Reminders Alert Banner */}
@@ -170,7 +170,7 @@ export const AppLayout: React.FC = () => {
         )}
 
         {/* Main View Router Outlet */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-12">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-12 overflow-x-hidden min-w-0">
           {/* App Update Banner */}
           <AppUpdateCard />
           <Outlet />

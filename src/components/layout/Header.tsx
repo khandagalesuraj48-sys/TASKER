@@ -87,18 +87,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
   return (
     <header className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors pt-safe shadow-xs">
-      <div className="flex items-center justify-between h-15 sm:h-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between h-14 sm:h-16 px-2.5 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full overflow-hidden">
         {/* Mobile Left Bar: Menu trigger & Unified Brand */}
-        <div className="flex items-center gap-2.5 lg:hidden">
+        <div className="flex items-center gap-1.5 lg:hidden shrink-0">
           <button
             type="button"
             onClick={onOpenMobileMenu}
-            className="p-2 -ml-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors"
+            className="p-1.5 -ml-1 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors"
             aria-label="Open sidebar menu"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <Logo size="xs" variant="full" />
+          <div className="sm:hidden">
+            <Logo size="xs" variant="icon" />
+          </div>
+          <div className="hidden sm:block">
+            <Logo size="xs" variant="full" />
+          </div>
         </div>
 
         {/* Global Universal Search Bar Trigger (Command Palette style - Desktop) */}
@@ -119,27 +124,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
         </div>
 
         {/* Central Workspace Switcher (Mobile & Desktop) */}
-        <div className="flex items-center mx-1 sm:mx-2">
+        <div className="flex items-center mx-1 shrink min-w-0">
           {canAccessWorkplace ? (
-            <div className="flex items-center p-0.5 sm:p-1 bg-slate-100 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-xs">
+            <div className="flex items-center p-0.5 sm:p-1 bg-slate-100 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-xs max-w-full">
               <button
                 type="button"
                 onClick={() => {
                   setEnterpriseMode(false);
                   navigate('/');
                 }}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 ${
+                className={`px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 shrink-0 ${
                   !isEnterpriseMode
                     ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
                 title="Switch to Personal Space"
               >
-                <User className="w-3.5 h-3.5" />
+                <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 <span className="hidden xs:inline">Personal</span>
               </button>
 
-              <div className="relative" ref={orgMenuRef}>
+              <div className="relative min-w-0" ref={orgMenuRef}>
                 <button
                   type="button"
                   onClick={() => {
@@ -150,14 +155,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                       navigate('/org/tasks');
                     }
                   }}
-                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 max-w-[110px] sm:max-w-[180px] truncate ${
+                  className={`px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 max-w-[85px] xs:max-w-[130px] sm:max-w-[180px] truncate shrink ${
                     isEnterpriseMode
                       ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                   title={currentOrg?.legal_name || 'Workplace'}
                 >
-                  <Building2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                  <Building2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-500 shrink-0" />
                   <span className="truncate">{currentOrg?.trade_name || currentOrg?.legal_name || 'Workplace'}</span>
                   {userApprovedOrgs.length > 1 && (
                     <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
@@ -195,23 +200,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs">
-              <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Personal Task Manager</span>
+            <div className="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs">
+              <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="truncate">Personal</span>
             </div>
           )}
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Mobile Search Icon Button */}
           <button
             type="button"
             onClick={() => openUniversalSearch()}
-            className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors"
+            className="sm:hidden p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors"
             aria-label="Search"
           >
-            <Search className="w-5 h-5" />
+            <Search className="w-4.5 h-4.5" />
           </button>
 
           {/* Platform Admin Quick Shortcut (Only for verified Platform Admins) */}
@@ -237,18 +242,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             </span>
           )}
 
-          {/* Theme Quick Toggle Button */}
+          {/* Theme Quick Toggle Button (Desktop & Tablet only) */}
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+            className="hidden sm:flex p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors min-w-[38px] min-h-[38px] items-center justify-center"
             title={`Switch to ${effectiveTheme === 'dark' ? 'Light' : 'Dark'} theme`}
             aria-label="Toggle theme"
           >
             {effectiveTheme === 'dark' ? (
-              <Moon className="w-4.5 h-4.5 text-blue-400" />
+              <Moon className="w-4 h-4 text-blue-400" />
             ) : (
-              <Sun className="w-4.5 h-4.5 text-amber-500" />
+              <Sun className="w-4 h-4 text-amber-500" />
             )}
           </button>
 
@@ -263,7 +268,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             <span>Ask AI</span>
           </button>
 
-          {/* Quick + Add Task Button */}
+          {/* Quick + Add Task Button (Desktop & Tablet only) */}
           <button
             type="button"
             onClick={() =>
@@ -272,28 +277,30 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 org_id: isEnterpriseMode ? currentOrg?.id : undefined,
               })
             }
-            className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all min-h-[38px]"
+            className="hidden md:inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all min-h-[36px]"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden xs:inline">Add Task</span>
+            <span>Add Task</span>
           </button>
 
-          {/* In-App Notifications Bell */}
-          <NotificationBell />
+          {/* In-App Notifications Bell - ALWAYS VISIBLE ON MOBILE */}
+          <div className="shrink-0 flex items-center">
+            <NotificationBell />
+          </div>
 
           {/* User Profile & Account Dropdown */}
-          <div className="relative pl-1 sm:pl-2 border-l border-slate-200 dark:border-slate-800" ref={dropdownRef}>
+          <div className="relative pl-0.5 sm:pl-1.5 shrink-0" ref={dropdownRef}>
             <button
               type="button"
               onClick={() => setProfileOpen(!profileOpen)}
-              className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-h-[40px]"
+              className="flex items-center gap-1 p-1 sm:px-2 sm:py-1 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-h-[36px]"
               aria-label="User profile menu"
               aria-expanded={profileOpen}
             >
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-xs shrink-0">
                 {(displayName || userEmail || DEFAULT_USER_NAME).charAt(0).toUpperCase()}
               </div>
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 hidden sm:inline-block max-w-[120px] truncate">
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 hidden md:inline-block max-w-[120px] truncate">
                 {displayName || userEmail || DEFAULT_USER_NAME}
               </span>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 hidden sm:inline-block transition-transform duration-150 ${profileOpen ? 'rotate-180' : ''}`} />
