@@ -172,7 +172,8 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
   const creator = authData?.user?.email || input.created_by || DEFAULT_USER_NAME;
   const nowIso = new Date().toISOString();
 
-  const insertPayload = {
+  // Core essential payload fields that always exist
+  const insertPayload: Record<string, any> = {
     title: input.title.trim(),
     description: input.description?.trim() || null,
     person_name: input.person_name?.trim() || null,
@@ -188,52 +189,61 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
     completed_at: initialStatus === 'completed' ? nowIso : null,
     completed_by: initialStatus === 'completed' ? creator : null,
     is_deleted: false,
-    workspace_id: input.workspace_id || null,
-    project_id: input.project_id || null,
-    parent_task_id: input.parent_task_id || null,
-    is_pinned: input.is_pinned ?? false,
-    tags: input.tags || [],
-    ...(input.custom_fields && Object.keys(input.custom_fields).length > 0 ? { custom_fields: input.custom_fields } : {}),
-    estimated_minutes: input.estimated_minutes || null,
-    recurrence_rule: input.recurrence_rule || null,
-    entity_type: input.entity_type || null,
-    entity_id: input.entity_id || null,
     scope: input.scope || 'personal',
-    org_id: input.org_id || null,
-    site_id: input.site_id || null,
-    department_id: input.department_id || null,
-    assigned_to: input.assigned_to || null,
-    assigned_employee_id: input.assigned_employee_id || null,
   };
+
+  // Only include optional columns if explicitly defined with non-empty values
+  if (input.org_id) insertPayload.org_id = input.org_id;
+  if (input.assigned_to) insertPayload.assigned_to = input.assigned_to;
+  if (input.assigned_employee_id) insertPayload.assigned_employee_id = input.assigned_employee_id;
+  if (input.is_pinned !== undefined) insertPayload.is_pinned = input.is_pinned;
+  if (input.tags && input.tags.length > 0) insertPayload.tags = input.tags;
+  if (input.custom_fields && Object.keys(input.custom_fields).length > 0) insertPayload.custom_fields = input.custom_fields;
+  if (input.estimated_minutes !== undefined && input.estimated_minutes !== null) insertPayload.estimated_minutes = input.estimated_minutes;
+  if (input.recurrence_rule) insertPayload.recurrence_rule = input.recurrence_rule;
+  if (input.entity_type) insertPayload.entity_type = input.entity_type;
+  if (input.entity_id) insertPayload.entity_id = input.entity_id;
+  if (input.workspace_id) insertPayload.workspace_id = input.workspace_id;
+  if (input.project_id) insertPayload.project_id = input.project_id;
+  if (input.parent_task_id) insertPayload.parent_task_id = input.parent_task_id;
+  if (input.site_id) insertPayload.site_id = input.site_id;
+  if (input.department_id) insertPayload.department_id = input.department_id;
 
   if (insertPayload.scope === 'workplace' && !insertPayload.org_id) {
     throw new Error('An organization must be selected for workplace tasks.');
   }
 
-  let { data, error } = await supabase
-    .from('tasks')
-    .insert(insertPayload as any)
-    .select()
-    .single();
+  // Schema-resilient insertion with automatic missing column stripping
+  let currentPayload = { ...insertPayload };
+  let insertResult: any = null;
 
-  // Gracefully fallback if the schema cache does not have custom_fields
-  if (error && (error.message?.includes('custom_fields') || (error as any).details?.includes('custom_fields'))) {
-    delete (insertPayload as any).custom_fields;
-    const retry = await supabase
+  for (let attempt = 0; attempt < 6; attempt++) {
+    insertResult = await supabase
       .from('tasks')
-      .insert(insertPayload as any)
+      .insert(currentPayload as any)
       .select()
       .single();
-    data = retry.data;
-    error = retry.error;
+
+    if (!insertResult.error) break;
+
+    const errStr = (insertResult.error.message || '') + ' ' + ((insertResult.error as any).details || '') + ' ' + ((insertResult.error as any).hint || '');
+    const colMatch = errStr.match(/Could not find (?:the )?'([a-zA-Z0-9_]+)' column/i);
+
+    if (colMatch && colMatch[1] && currentPayload[colMatch[1]] !== undefined) {
+      console.warn(`Stripping missing column '${colMatch[1]}' from tasks insert payload and retrying...`);
+      delete currentPayload[colMatch[1]];
+      continue;
+    }
+
+    break;
   }
 
-  if (error || !data) {
-    console.error('Error creating task:', error);
-    throw new Error(error?.message || 'Unable to save task. Please try again.');
+  if (insertResult.error || !insertResult.data) {
+    console.error('Error creating task:', insertResult.error);
+    throw new Error(insertResult.error?.message || 'Unable to save task. Please try again.');
   }
 
-  const createdTask = data as Task;
+  const createdTask = insertResult.data as Task;
 
   // Add initial note if provided
   if (input.initialNote && input.initialNote.trim() !== '') {
@@ -248,7 +258,7 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
 };
 
 export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Task> => {
-  const updatePayload: any = {
+  const updatePayload: Record<string, any> = {
     updated_at: new Date().toISOString(),
   };
 
@@ -257,9 +267,6 @@ export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Ta
   if (input.person_name !== undefined) updatePayload.person_name = input.person_name?.trim() || null;
   if (input.priority !== undefined) updatePayload.priority = input.priority;
   if (input.due_date !== undefined) updatePayload.due_date = input.due_date;
-  if (input.workspace_id !== undefined) updatePayload.workspace_id = input.workspace_id;
-  if (input.project_id !== undefined) updatePayload.project_id = input.project_id;
-  if (input.parent_task_id !== undefined) updatePayload.parent_task_id = input.parent_task_id;
   if (input.is_pinned !== undefined) updatePayload.is_pinned = input.is_pinned;
   if (input.tags !== undefined) updatePayload.tags = input.tags;
   if (input.custom_fields !== undefined && Object.keys(input.custom_fields).length > 0) {
@@ -268,40 +275,50 @@ export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Ta
   if (input.estimated_minutes !== undefined) updatePayload.estimated_minutes = input.estimated_minutes;
   if (input.actual_minutes !== undefined) updatePayload.actual_minutes = input.actual_minutes;
   if (input.recurrence_rule !== undefined) updatePayload.recurrence_rule = input.recurrence_rule;
-  if (input.entity_type !== undefined) updatePayload.entity_type = input.entity_type;
-  if (input.entity_id !== undefined) updatePayload.entity_id = input.entity_id;
   if (input.scope !== undefined) updatePayload.scope = input.scope;
   if (input.org_id !== undefined) updatePayload.org_id = input.org_id;
-  if (input.site_id !== undefined) updatePayload.site_id = input.site_id;
-  if (input.department_id !== undefined) updatePayload.department_id = input.department_id;
   if (input.assigned_to !== undefined) updatePayload.assigned_to = input.assigned_to;
   if (input.assigned_employee_id !== undefined) updatePayload.assigned_employee_id = input.assigned_employee_id;
+  if (input.site_id !== undefined) updatePayload.site_id = input.site_id;
+  if (input.department_id !== undefined) updatePayload.department_id = input.department_id;
+  if (input.project_id !== undefined) updatePayload.project_id = input.project_id;
+  if (input.workspace_id !== undefined) updatePayload.workspace_id = input.workspace_id;
+  if (input.parent_task_id !== undefined) updatePayload.parent_task_id = input.parent_task_id;
+  if (input.entity_type !== undefined) updatePayload.entity_type = input.entity_type;
+  if (input.entity_id !== undefined) updatePayload.entity_id = input.entity_id;
 
-  let { data, error } = await supabase
-    .from('tasks')
-    .update(updatePayload as any)
-    .eq('id', id)
-    .select()
-    .single();
+  // Schema-resilient update with automatic missing column stripping
+  let currentUpdatePayload = { ...updatePayload };
+  let updateResult: any = null;
 
-  if (error && (error.message?.includes('custom_fields') || (error as any).details?.includes('custom_fields'))) {
-    delete updatePayload.custom_fields;
-    const retry = await supabase
+  for (let attempt = 0; attempt < 6; attempt++) {
+    updateResult = await supabase
       .from('tasks')
-      .update(updatePayload as any)
+      .update(currentUpdatePayload as any)
       .eq('id', id)
       .select()
       .single();
-    data = retry.data;
-    error = retry.error;
+
+    if (!updateResult.error) break;
+
+    const errStr = (updateResult.error.message || '') + ' ' + ((updateResult.error as any).details || '') + ' ' + ((updateResult.error as any).hint || '');
+    const colMatch = errStr.match(/Could not find (?:the )?'([a-zA-Z0-9_]+)' column/i);
+
+    if (colMatch && colMatch[1] && currentUpdatePayload[colMatch[1]] !== undefined) {
+      console.warn(`Stripping missing column '${colMatch[1]}' from tasks update payload and retrying...`);
+      delete currentUpdatePayload[colMatch[1]];
+      continue;
+    }
+
+    break;
   }
 
-  if (error || !data) {
-    console.error('Error updating task:', error);
-    throw new Error(error?.message || 'Unable to update task. Please try again.');
+  if (updateResult.error || !updateResult.data) {
+    console.error('Error updating task:', updateResult.error);
+    throw new Error(updateResult.error?.message || 'Unable to update task. Please try again.');
   }
 
-  return data as Task;
+  return updateResult.data as Task;
 };
 
 export const updateTaskStatus = async (

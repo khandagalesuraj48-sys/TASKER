@@ -11,13 +11,30 @@
 -- ==============================================================================
 
 -- ------------------------------------------------------------------------------
--- 0. Ensure tasks table schema columns
+-- 0. Ensure tasks table schema columns are fully synchronized
 -- ------------------------------------------------------------------------------
-ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS custom_fields JSONB DEFAULT '{}'::jsonb;
-ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS assigned_employee_id UUID;
-ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS assigned_to UUID;
 ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS scope TEXT DEFAULT 'personal';
 ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS org_id UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS assigned_to UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS assigned_employee_id UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS department_id UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS site_id UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS project_id UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS workspace_id UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS parent_task_id UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS custom_fields JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}'::text[];
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS order_index INTEGER DEFAULT 0;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS actual_minutes INTEGER;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS recurrence_rule JSONB;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS entity_type TEXT;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS entity_id UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS pending_since TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS completed_by TEXT;
 
 -- Notify PostgREST to reload schema cache immediately
 NOTIFY pgrst, 'reload schema';
