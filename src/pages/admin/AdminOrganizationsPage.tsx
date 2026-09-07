@@ -6,6 +6,8 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
+  Users,
+  Trash2,
 } from 'lucide-react';
 import { adminService } from '../../services/adminService';
 import { Organization } from '../../types/enterprise';
@@ -57,6 +59,45 @@ export const AdminOrganizationsPage: React.FC = () => {
       showToast(err.message || 'Failed to create organization', 'error');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const [selectedOrgForMembers, setSelectedOrgForMembers] = useState<Organization | null>(null);
+  const [orgMembers, setOrgMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState<boolean>(false);
+  const [deletingOrgId, setDeletingOrgId] = useState<string | null>(null);
+
+  const handleOpenMembers = async (org: Organization) => {
+    setSelectedOrgForMembers(org);
+    setLoadingMembers(true);
+    try {
+      const members = await adminService.getOrganizationMembers(org.id);
+      setOrgMembers(members);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to load organization members', 'error');
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  const handleDeleteOrg = async (org: Organization) => {
+    const confirmed = confirm(
+      `⚠️ PERMANENT DELETION WARNING:\n\nAre you sure you want to permanently delete "${org.legal_name}"?\n\nThis will remove organization memberships and references. This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeletingOrgId(org.id);
+    try {
+      await adminService.deleteOrganization(org.id);
+      showToast(`Organization "${org.legal_name}" deleted successfully`, 'info');
+      loadOrgs();
+      if (selectedOrgForMembers?.id === org.id) {
+        setSelectedOrgForMembers(null);
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete organization', 'error');
+    } finally {
+      setDeletingOrgId(null);
     }
   };
 
@@ -171,6 +212,13 @@ export const AdminOrganizationsPage: React.FC = () => {
                   </td>
                   <td className="py-3.5 text-right space-x-2">
                     <button
+                      onClick={() => handleOpenMembers(org)}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border-indigo-500/20 inline-flex items-center gap-1"
+                    >
+                      <Users className="w-3 h-3" />
+                      <span>Members</span>
+                    </button>
+                    <button
                       onClick={() => handleToggleStatus(org)}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
                         org.is_active
@@ -179,6 +227,15 @@ export const AdminOrganizationsPage: React.FC = () => {
                       }`}
                     >
                       {org.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteOrg(org)}
+                      disabled={deletingOrgId === org.id}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20 inline-flex items-center gap-1"
+                      title="Delete Organization"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>{deletingOrgId === org.id ? 'Deleting...' : 'Delete'}</span>
                     </button>
                   </td>
                 </tr>
@@ -283,6 +340,76 @@ export const AdminOrganizationsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Organization Members Inspection Modal */}
+      {selectedOrgForMembers && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {selectedOrgForMembers.legal_name}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Organization Members ({orgMembers.length})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedOrgForMembers(null)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {loadingMembers ? (
+              <div className="py-8 text-center text-slate-400">
+                <RefreshCw className="w-6 h-6 mx-auto mb-2 animate-spin text-indigo-400" />
+                <p className="text-xs">Loading members...</p>
+              </div>
+            ) : orgMembers.length === 0 ? (
+              <div className="py-8 text-center text-slate-500">
+                <Users className="w-8 h-8 mx-auto mb-2 text-slate-600" />
+                <p className="text-xs">No members enrolled in this organization yet.</p>
+              </div>
+            ) : (
+              <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                {orgMembers.map((m) => (
+                  <div
+                    key={m.id}
+                    className="p-3 bg-slate-800/60 border border-slate-800 rounded-xl flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div>
+                      <p className="font-mono text-slate-200 text-[11px]">{m.user_id}</p>
+                      <p className="text-slate-400 text-[10px]">
+                        Joined: {new Date(m.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+                      {m.role}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedOrgForMembers(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

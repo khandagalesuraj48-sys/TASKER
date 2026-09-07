@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 import { Organization, OrgMembership, OrgProject, OrgSite, OrgDepartment } from '../types/enterprise';
 import {
   getOrganizations,
@@ -153,6 +154,41 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     window.addEventListener('enterprise-context-changed', handleContextChanged);
     return () => window.removeEventListener('enterprise-context-changed', handleContextChanged);
   }, [loadData]);
+
+  // Supabase Realtime: instantly unlock workplace access or update request status without page refresh
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channelName = `enterprise-realtime-${user.id}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'org_memberships' },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'org_join_requests' },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'organizations' },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, loadData]);
 
   const toggleMode = (enabled: boolean) => {
     // Cannot enable enterprise mode if user has no approved organization

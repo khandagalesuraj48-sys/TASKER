@@ -293,12 +293,13 @@ export const adminService = {
   },
 
   /**
-   * Approve a join request
+   * Approve a join request into a selected organization
    */
-  async approveJoinRequest(requestId: string, role = 'team_member'): Promise<void> {
+  async approveJoinRequest(requestId: string, role = 'team_member', targetOrgId?: string): Promise<void> {
     const { data, error } = await supabase.rpc('approve_join_request', {
       p_request_id: requestId,
       p_role: role,
+      p_target_org_id: targetOrgId || null,
     });
 
     if (error || (data && !data.success)) {
@@ -311,10 +312,11 @@ export const adminService = {
 
       if (notif) {
         await supabase.from('notifications').update({ is_read: true }).eq('id', requestId);
-        if (notif.entity_id && notif.organization_id) {
+        const effectiveOrgId = targetOrgId || notif.organization_id;
+        if (notif.entity_id && effectiveOrgId) {
           await supabase.from('org_memberships').upsert({
             user_id: notif.entity_id,
-            org_id: notif.organization_id,
+            org_id: effectiveOrgId,
             role: role || 'team_member',
           });
           return;
@@ -322,6 +324,35 @@ export const adminService = {
       }
       throw new Error(data?.error || error?.message || 'Failed to approve request');
     }
+  },
+
+  /**
+   * Delete an organization (Platform Admin only)
+   */
+  async deleteOrganization(orgId: string): Promise<void> {
+    const { data, error } = await supabase.rpc('delete_organization_admin', {
+      p_org_id: orgId,
+    });
+
+    if (error || (data && !data.success)) {
+      // Fallback direct delete
+      const { error: delErr } = await supabase.from('organizations').delete().eq('id', orgId);
+      if (delErr) throw new Error(delErr.message || 'Failed to delete organization');
+    }
+  },
+
+  /**
+   * Get members belonging to a specific organization
+   */
+  async getOrganizationMembers(orgId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('org_memberships')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   },
 
   /**

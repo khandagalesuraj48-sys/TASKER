@@ -8,7 +8,7 @@ import {
 } from '../types/enterprise';
 import { TaskAssignment } from '../types/task';
 
-export const PRIMARY_ORG_NAME = 'SAMAJ RACHANA CONSTRUCTION LIMITED';
+export const PRIMARY_ORG_NAME = 'Organization';
 
 const ACTIVE_ORG_KEY = 'tasker_active_org_id';
 
@@ -107,21 +107,23 @@ export const getOrganizations = async (): Promise<Organization[]> => {
 };
 
 /**
- * Fetch primary organization: SAMAJ RACHANA CONSTRUCTION LIMITED
+ * Fetch primary active organization
  */
 export const getPrimaryOrg = async (): Promise<Organization | null> => {
   try {
     const { data, error } = await supabase
       .from('organizations')
       .select('*')
-      .ilike('legal_name', `%${PRIMARY_ORG_NAME}%`)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true })
+      .limit(1)
       .maybeSingle();
 
     if (!error && data) {
       return data as Organization;
     }
 
-    // Fallback to first active organization
+    // Fallback to any active organization
     const orgs = await getOrganizations();
     return orgs[0] || null;
   } catch (err) {

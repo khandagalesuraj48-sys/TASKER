@@ -115,21 +115,22 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </button>
         </div>
 
-        {/* Central Workspace Switcher (Desktop & Tablet) */}
-        <div className="hidden lg:flex items-center mx-2">
+        {/* Central Workspace Switcher (Mobile & Desktop) */}
+        <div className="flex items-center mx-1 sm:mx-2">
           {hasApprovedOrg ? (
-            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-xs">
+            <div className="flex items-center p-0.5 sm:p-1 bg-slate-100 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-xs">
               <button
                 type="button"
                 onClick={() => setEnterpriseMode(false)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 ${
                   !isEnterpriseMode
                     ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
+                title="Switch to Personal Space"
               >
                 <User className="w-3.5 h-3.5" />
-                <span>Personal</span>
+                <span className="hidden xs:inline">Personal</span>
               </button>
 
               <div className="relative" ref={orgMenuRef}>
@@ -142,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                       setEnterpriseMode(true);
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 max-w-[180px] truncate ${
+                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 max-w-[110px] sm:max-w-[180px] truncate ${
                     isEnterpriseMode
                       ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
