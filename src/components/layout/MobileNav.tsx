@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Clock,
@@ -23,6 +23,7 @@ import { useBackButton } from '../../hooks/useBackButton';
 import { Shield } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
+  const navigate = useNavigate();
   const { stats } = useTask();
   const { isEnterpriseMode, setEnterpriseMode, isAdmin, hasApprovedOrg } = useEnterprise();
   const { isPlatformAdmin } = useAdmin();
@@ -30,7 +31,14 @@ export const MobileNav: React.FC = () => {
 
   useBackButton(moreMenuOpen, () => setMoreMenuOpen(false), 30);
 
-  const mainItems = [
+  interface NavItem {
+    to: string;
+    label: string;
+    icon: React.ReactNode;
+    badge?: number | null;
+  }
+
+  const personalItems: NavItem[] = [
     { to: '/', label: 'My Tasks', icon: <LayoutDashboard className="w-5 h-5" /> },
     {
       to: '/pending',
@@ -38,9 +46,18 @@ export const MobileNav: React.FC = () => {
       icon: <Clock className="w-5 h-5" />,
       badge: stats.pending + stats.inProgress + stats.partial > 0 ? stats.pending + stats.inProgress + stats.partial : null,
     },
-    { to: '/org/tasks', label: 'Workplace', icon: <Building2 className="w-5 h-5 text-indigo-500" /> },
-    { to: '/reminders', label: 'Remind', icon: <Bell className="w-5 h-5" /> },
+    { to: '/completed', label: 'Completed', icon: <CheckCircle2 className="w-5 h-5" /> },
+    { to: '/reminders', label: 'Reminders', icon: <Bell className="w-5 h-5" /> },
   ];
+
+  const workplaceItems: NavItem[] = [
+    { to: '/org/tasks', label: 'Org Tasks', icon: <Building2 className="w-5 h-5 text-indigo-500" /> },
+    { to: '/org/assigned-to-me', label: 'Assigned', icon: <UserCheck className="w-5 h-5 text-blue-500" /> },
+    { to: '/org/created-by-me', label: 'Created', icon: <Send className="w-5 h-5 text-emerald-500" /> },
+    { to: '/org/employees', label: 'Team', icon: <Users className="w-5 h-5 text-purple-500" /> },
+  ];
+
+  const mainItems: NavItem[] = isEnterpriseMode ? workplaceItems : personalItems;
 
   return (
     <>
@@ -67,7 +84,11 @@ export const MobileNav: React.FC = () => {
             <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
               <button
                 type="button"
-                onClick={() => setEnterpriseMode(false)}
+                onClick={() => {
+                  setEnterpriseMode(false);
+                  navigate('/');
+                  setMoreMenuOpen(false);
+                }}
                 className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                   !isEnterpriseMode
                     ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
@@ -80,8 +101,10 @@ export const MobileNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (hasApprovedOrg) {
+                  if (hasApprovedOrg || isPlatformAdmin) {
                     setEnterpriseMode(true);
+                    navigate('/org/tasks');
+                    setMoreMenuOpen(false);
                   } else {
                     alert('You are not an approved member of any organization yet.');
                   }
@@ -233,7 +256,9 @@ export const MobileNav: React.FC = () => {
               className={({ isActive }) =>
                 `relative flex flex-col items-center justify-center w-14 h-full text-[10px] font-semibold transition-colors ${
                   isActive
-                    ? 'text-blue-600 dark:text-blue-400 font-bold'
+                    ? isEnterpriseMode
+                      ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                      : 'text-blue-600 dark:text-blue-400 font-bold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`
               }

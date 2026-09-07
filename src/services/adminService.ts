@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { PlatformAdmin, OrgJoinRequest, AdminAuditLog, AdminDashboardMetrics } from '../types/admin';
+import { PlatformAdmin, OrgJoinRequest, AdminAuditLog, AdminDashboardMetrics, AppUserAdminView } from '../types/admin';
 import { Organization, OrgMembership, ErpEmployee } from '../types/enterprise';
 
 export const adminService = {
@@ -493,5 +493,128 @@ export const adminService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  /**
+   * Get all registered app users with names, emails, and organization memberships
+   */
+  async getAllAppUsers(): Promise<AppUserAdminView[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_all_app_users_admin');
+      if (!error && Array.isArray(data)) {
+        return data as AppUserAdminView[];
+      }
+      if (error) {
+        console.warn('RPC get_all_app_users_admin failed, falling back to memberships:', error.message);
+      }
+    } catch (e) {
+      console.warn('Error calling get_all_app_users_admin:', e);
+    }
+
+    // Fallback using public tables if RPC not migrated yet
+    const [memsRes, orgsRes, adminsRes] = await Promise.all([
+      supabase.from('org_memberships').select('*'),
+      supabase.from('organizations').select('id, legal_name, trade_name'),
+      supabase.from('platform_admins').select('user_id, email, is_active'),
+    ]);
+
+    const orgMap = new Map((orgsRes.data || []).map((o: any) => [o.id, o]));
+    const adminSet = new Set((adminsRes.data || []).filter((a: any) => a.is_active).map((a: any) => a.user_id));
+
+    const userMap = new Map<string, AppUserAdminView>();
+
+    (adminsRes.data || []).forEach((a: any) => {
+      if (!userMap.has(a.user_id)) {
+        userMap.set(a.user_id, {
+          id: a.user_id,
+          email: a.email || 'Admin User',
+          display_name: a.email ? a.email.split('@')[0] : 'Platform Admin',
+          created_at: new Date().toISOString(),
+          is_platform_admin: true,
+          organizations: [],
+        });
+      }
+    });
+
+    (memsRes.data || []).forEach((m: any) => {
+      const org = orgMap.get(m.org_id);
+      let u = userMap.get(m.user_id);
+      if (!u) {
+        u = {
+          id: m.user_id,
+          email: `user_${m.user_id.substring(0, 8)}@tasker.local`,
+          display_name: `User ${m.user_id.substring(0, 6)}`,
+          created_at: m.created_at || new Date().toISOString(),
+          is_platform_admin: adminSet.has(m.user_id),
+          organizations: [],
+        };
+        userMap.set(m.user_id, u);
+      }
+      u.organizations.push({
+        membership_id: m.id,
+        org_id: m.org_id,
+        org_name: org?.legal_name || 'Organization',
+        trade_name: org?.trade_name,
+        role: m.role,
+        created_at: m.created_at,
+      });
+    });
+
+    return Array.from(userMap.values());
+  },
+
+  /**
+   * Assign or Move user to an organization
+   */
+  async assignUserToOrganization(
+    userId: string,
+    targetOrgId: string,
+    role: string = 'team_member',
+    removeFromOtherOrgs: boolean = false
+  ): Promise<void> {
+    const { data, error } = await supabase.rpc('assign_user_to_organization_admin', {
+      p_user_id: userId,
+      p_target_org_id: targetOrgId,
+      p_role: role,
+      p_remove_from_other_orgs: removeFromOtherOrgs,
+    });
+
+    if (error) {
+      // Fallback direct insert if RPC not migrated yet
+      if (removeFromOtherOrgs) {
+        await supabase.from('org_memberships').delete().eq('user_id', userId).neq('org_id', targetOrgId);
+      }
+      const { error: insertErr } = await supabase.from('org_memberships').upsert({
+        user_id: userId,
+        org_id: targetOrgId,
+        role,
+      }, { onConflict: 'user_id,org_id' });
+      if (insertErr) throw insertErr;
+      return;
+    }
+
+    if (data && data.success === false) {
+      throw new Error(data.error || 'Failed to assign user to organization');
+    }
+  },
+
+  /**
+   * Remove user from an organization
+   */
+  async removeUserFromOrganization(userId: string, orgId: string): Promise<void> {
+    const { data, error } = await supabase.rpc('remove_user_from_organization_admin', {
+      p_user_id: userId,
+      p_org_id: orgId,
+    });
+
+    if (error) {
+      const { error: delErr } = await supabase.from('org_memberships').delete().eq('user_id', userId).eq('org_id', orgId);
+      if (delErr) throw delErr;
+      return;
+    }
+
+    if (data && data.success === false) {
+      throw new Error(data.error || 'Failed to remove user from organization');
+    }
   },
 };

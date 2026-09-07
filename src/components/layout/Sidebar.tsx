@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Clock,
@@ -49,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     hasApprovedOrg,
   } = useEnterprise();
   const { isPlatformAdmin } = useAdmin();
+  const navigate = useNavigate();
 
   // Personal space navigation items
   const personalNavItems = [
@@ -143,7 +144,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
           <button
             type="button"
-            onClick={() => setEnterpriseMode(false)}
+            onClick={() => {
+              setEnterpriseMode(false);
+              navigate('/');
+              onClose();
+            }}
             className={`py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               !isEnterpriseMode
                 ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
@@ -155,7 +160,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             type="button"
-            onClick={() => setEnterpriseMode(true)}
+            onClick={() => {
+              setEnterpriseMode(true);
+              navigate('/org/tasks');
+              onClose();
+            }}
             className={`py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               isEnterpriseMode
                 ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs'

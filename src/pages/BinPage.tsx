@@ -26,6 +26,7 @@ export const BinPage: React.FC = () => {
     try {
       const data = await getTasks({
         includeDeleted: true,
+        scope: 'personal',
         sortBy: 'recently_updated',
       });
       setDeletedTasks(data.filter((t: Task) => t.is_deleted === true));

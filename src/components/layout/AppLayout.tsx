@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
 import { useTask } from '../../context/TaskContext';
+import { useEnterprise } from '../../context/EnterpriseContext';
 import { TaskFormModal } from '../tasks/TaskFormModal';
 import { UniversalSearchModal } from '../search/UniversalSearchModal';
 import { AIAssistantDrawer } from '../ai/AIAssistantDrawer';
@@ -22,6 +23,23 @@ import {
 
 export const AppLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isEnterpriseMode, setEnterpriseMode } = useEnterprise();
+
+  // Sync mode with route if navigating directly
+  useEffect(() => {
+    if (location.pathname.startsWith('/org/')) {
+      if (!isEnterpriseMode) {
+        setEnterpriseMode(true);
+      }
+    } else if (
+      ['/', '/pending', '/completed', '/today', '/upcoming', '/reminders', '/bin'].includes(location.pathname)
+    ) {
+      if (isEnterpriseMode) {
+        setEnterpriseMode(false);
+      }
+    }
+  }, [location.pathname, isEnterpriseMode, setEnterpriseMode]);
 
   // Initialize native Android hardware back button handler
   useAndroidBackHandler();

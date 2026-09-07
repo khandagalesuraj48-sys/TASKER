@@ -15,6 +15,7 @@ import { StatusBadge } from '../common/StatusBadge';
 import { PriorityBadge } from '../common/PriorityBadge';
 import { formatDateTime } from '../../lib/dateUtils';
 import { useBackButton } from '../../hooks/useBackButton';
+import { useEnterprise } from '../../context/EnterpriseContext';
 
 interface UniversalSearchModalProps {
   isOpen: boolean;
@@ -52,6 +53,7 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { isEnterpriseMode, currentOrg } = useEnterprise();
 
   // Register with Android hardware back button handler (Priority 40: Command Palettes)
   useBackButton(isOpen, onClose, 40);
@@ -96,7 +98,9 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
     setIsLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await universalSearchTasks(clean);
+        const targetScope = isEnterpriseMode ? 'workplace' : 'personal';
+        const targetOrgId = isEnterpriseMode ? currentOrg?.id : undefined;
+        const res = await universalSearchTasks(clean, targetScope, targetOrgId);
         setResults(res);
         setSelectedIndex(0);
       } catch (err) {
@@ -107,7 +111,7 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
     }, 200);
 
     return () => clearTimeout(timer);
-  }, [query, isOpen]);
+  }, [query, isOpen, isEnterpriseMode, currentOrg?.id]);
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {

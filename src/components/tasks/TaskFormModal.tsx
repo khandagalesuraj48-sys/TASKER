@@ -24,6 +24,7 @@ import { useTask } from '../../context/TaskContext';
 import { DEFAULT_USER_NAME } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
+import { useAdmin } from '../../context/AdminContext';
 import { FileUploadZone } from './FileUploadZone';
 import { ReminderControls } from '../reminders/ReminderControls';
 import { Paperclip, X, User, Building2, UserPlus } from 'lucide-react';
@@ -48,7 +49,8 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const { triggerRefresh } = useTask();
   const { displayName, userEmail } = useAuth();
   const currentUser = displayName || userEmail || DEFAULT_USER_NAME;
-  const { currentOrg } = useEnterprise();
+  const { currentOrg, isEnterpriseMode, organizations, userApprovedOrgs } = useEnterprise();
+  const { isPlatformAdmin } = useAdmin();
 
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
@@ -59,6 +61,11 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const [initialNote, setInitialNote] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Available organizations: platform admins see all orgs; members see approved orgs
+  const availableOrgs = isPlatformAdmin
+    ? organizations
+    : (userApprovedOrgs.length > 0 ? userApprovedOrgs : organizations);
 
   // Scope & Enterprise Assignment State
   const [scope, setScope] = useState<TaskScope>('personal');
@@ -81,7 +88,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
   // Load active organization's employees when in workplace scope
   useEffect(() => {
-    const orgIdToUse = selectedOrgId || currentOrg?.id;
+    const orgIdToUse = selectedOrgId || currentOrg?.id || availableOrgs[0]?.id;
     if (scope === 'workplace' && orgIdToUse) {
       getOrgEmployees(orgIdToUse).then((list) => {
         setEmployees(list);
@@ -89,7 +96,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         console.warn('Could not load employees for org:', err);
       });
     }
-  }, [scope, selectedOrgId, currentOrg]);
+  }, [scope, selectedOrgId, currentOrg, availableOrgs]);
 
   useEffect(() => {
     if (taskToEdit) {
@@ -102,7 +109,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setInitialNote('');
       setSelectedFiles([]);
       setScope(taskToEdit.scope || 'personal');
-      setSelectedOrgId(taskToEdit.org_id || currentOrg?.id || '');
+      setSelectedOrgId(taskToEdit.org_id || currentOrg?.id || availableOrgs[0]?.id || '');
       setSelectedEmployeeId(taskToEdit.assigned_employee_id || '');
 
       getTaskReminder(taskToEdit.id).then((rem) => {
@@ -131,9 +138,10 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setDueDate(initialValues?.due_date ? formatInputDate(initialValues.due_date) : '');
       setInitialNote(initialValues?.initialNote || '');
       setSelectedFiles([]);
-      const defaultScope: TaskScope = initialValues?.scope || (currentOrg ? 'workplace' : 'personal');
+      const defaultScope: TaskScope = initialValues?.scope || (isEnterpriseMode ? 'workplace' : 'personal');
       setScope(defaultScope);
-      setSelectedOrgId(initialValues?.org_id || currentOrg?.id || '');
+      const defaultOrg = initialValues?.org_id || (defaultScope === 'workplace' ? (currentOrg?.id || availableOrgs[0]?.id || '') : '');
+      setSelectedOrgId(defaultOrg);
       setSelectedEmployeeId(initialValues?.assigned_employee_id || '');
       setReminder({
         is_enabled: false,
@@ -198,7 +206,16 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const activeOrgId = scope === 'workplace' ? (selectedOrgId || currentOrg?.id || null) : null;
+      const activeOrgId = scope === 'workplace'
+        ? (selectedOrgId || currentOrg?.id || availableOrgs[0]?.id || null)
+        : null;
+
+      if (scope === 'workplace' && !activeOrgId) {
+        showToast('Please choose or create an organization before creating workplace tasks.', 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
       const selectedEmp = employees.find((emp) => emp.id === selectedEmployeeId);
       const effectivePersonName = scope === 'workplace' && selectedEmp
         ? `${selectedEmp.first_name} ${selectedEmp.last_name || ''}`.trim()
@@ -337,6 +354,35 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
             <span>Workplace Scope (Team / Assigned)</span>
           </button>
         </div>
+
+        {/* Organization Selector (When workplace scope is active) */}
+        {scope === 'workplace' && (
+          <div className="p-3 bg-purple-50/70 dark:bg-purple-950/30 rounded-2xl border border-purple-200 dark:border-purple-900/60 space-y-1.5 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wider">
+                Target Organization Workplace <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[10px] text-purple-500 dark:text-purple-400 font-semibold">
+                {availableOrgs.length} available
+              </span>
+            </div>
+            <select
+              value={selectedOrgId || currentOrg?.id || availableOrgs[0]?.id || ''}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setSelectedOrgId(newId);
+                setSelectedEmployeeId('');
+              }}
+              className="w-full rounded-xl border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-purple-950 dark:text-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              {availableOrgs.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.trade_name || org.legal_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Title (Required) */}
         <div>

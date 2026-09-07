@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
   Search,
@@ -47,11 +47,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
     switchOrg,
   } = useEnterprise();
   const { isPlatformAdmin } = useAdmin();
+  const navigate = useNavigate();
 
   const [profileOpen, setProfileOpen] = useState<boolean>(false);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const orgMenuRef = useRef<HTMLDivElement>(null);
+
+  const canAccessWorkplace = hasApprovedOrg || isPlatformAdmin;
 
   // Register with Android hardware back button handler (Priority 30: Menus & Popups)
   useBackButton(profileOpen, () => setProfileOpen(false), 30);
@@ -117,11 +120,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
         {/* Central Workspace Switcher (Mobile & Desktop) */}
         <div className="flex items-center mx-1 sm:mx-2">
-          {hasApprovedOrg ? (
+          {canAccessWorkplace ? (
             <div className="flex items-center p-0.5 sm:p-1 bg-slate-100 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-xs">
               <button
                 type="button"
-                onClick={() => setEnterpriseMode(false)}
+                onClick={() => {
+                  setEnterpriseMode(false);
+                  navigate('/');
+                }}
                 className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 ${
                   !isEnterpriseMode
                     ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
@@ -141,6 +147,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                       setOrgDropdownOpen(!orgDropdownOpen);
                     } else {
                       setEnterpriseMode(true);
+                      navigate('/org/tasks');
                     }
                   }}
                   className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 max-w-[110px] sm:max-w-[180px] truncate ${
@@ -171,6 +178,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                           switchOrg(org.id);
                           setEnterpriseMode(true);
                           setOrgDropdownOpen(false);
+                          navigate('/org/tasks');
                         }}
                         className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
                           currentOrg?.id === org.id
@@ -258,7 +266,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           {/* Quick + Add Task Button */}
           <button
             type="button"
-            onClick={() => openCreateModal()}
+            onClick={() =>
+              openCreateModal({
+                scope: isEnterpriseMode ? 'workplace' : 'personal',
+                org_id: isEnterpriseMode ? currentOrg?.id : undefined,
+              })
+            }
             className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all min-h-[38px]"
           >
             <Plus className="w-4 h-4" />

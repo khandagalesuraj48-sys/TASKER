@@ -51,3 +51,20 @@ export interface AdminDashboardMetrics {
   recent_activity: AdminAuditLog[];
 }
 
+export interface AppUserAdminView {
+  id: string;
+  email: string;
+  display_name: string;
+  created_at: string;
+  last_sign_in_at?: string;
+  is_platform_admin: boolean;
+  organizations: {
+    membership_id: string;
+    org_id: string;
+    org_name: string;
+    trade_name?: string;
+    role: string;
+    created_at: string;
+  }[];
+}
+

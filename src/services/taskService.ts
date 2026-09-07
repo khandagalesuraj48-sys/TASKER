@@ -5,6 +5,7 @@ import {
   Task,
   TaskAssignment,
   TaskFilterOptions,
+  TaskScope,
   TaskStats,
   TaskStatus,
   UniversalSearchResult,
@@ -205,6 +206,10 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
     assigned_employee_id: input.assigned_employee_id || null,
   };
 
+  if (insertPayload.scope === 'workplace' && !insertPayload.org_id) {
+    throw new Error('An organization must be selected for workplace tasks.');
+  }
+
   const { data, error } = await supabase
     .from('tasks')
     .insert(insertPayload as any)
@@ -213,7 +218,7 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
 
   if (error || !data) {
     console.error('Error creating task:', error);
-    throw new Error('Unable to save task. Please try again.');
+    throw new Error(error?.message || 'Unable to save task. Please try again.');
   }
 
   const createdTask = data as Task;
@@ -267,7 +272,7 @@ export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Ta
 
   if (error || !data) {
     console.error('Error updating task:', error);
-    throw new Error('Unable to update task. Please try again.');
+    throw new Error(error?.message || 'Unable to update task. Please try again.');
   }
 
   return data as Task;
@@ -486,7 +491,11 @@ export const getTaskStats = async (scope?: 'personal' | 'workplace'): Promise<Ta
   };
 };
 
-export const universalSearchTasks = async (query: string): Promise<UniversalSearchResult[]> => {
+export const universalSearchTasks = async (
+  query: string,
+  filterScope?: TaskScope,
+  filterOrgId?: string
+): Promise<UniversalSearchResult[]> => {
   const cleanQ = query.trim().toLowerCase();
   if (!cleanQ) return [];
 
@@ -498,7 +507,7 @@ export const universalSearchTasks = async (query: string): Promise<UniversalSear
 
     if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0) {
       const taskIds = rpcRows.map((r: any) => r.task_id);
-      const { data: tasksData } = await supabase
+      let rpcTasksQuery = supabase
         .from('tasks')
         .select(`
           *,
@@ -507,6 +516,15 @@ export const universalSearchTasks = async (query: string): Promise<UniversalSear
         `)
         .in('id', taskIds)
         .eq('is_deleted', false);
+
+      if (filterScope) {
+        rpcTasksQuery = rpcTasksQuery.eq('scope', filterScope);
+      }
+      if (filterScope === 'workplace' && filterOrgId) {
+        rpcTasksQuery = rpcTasksQuery.eq('org_id', filterOrgId);
+      }
+
+      const { data: tasksData } = await rpcTasksQuery;
 
       if (tasksData && tasksData.length > 0) {
         const taskMap = new Map<string, Task>();
@@ -538,8 +556,7 @@ export const universalSearchTasks = async (query: string): Promise<UniversalSear
   }
 
   // 2. Comprehensive client-side multi-table search across all task fields
-  // Fetch active tasks
-  const { data: rawTasks } = await supabase
+  let clientQuery = supabase
     .from('tasks')
     .select(`
       *,
@@ -548,6 +565,15 @@ export const universalSearchTasks = async (query: string): Promise<UniversalSear
     `)
     .eq('is_deleted', false)
     .order('created_at', { ascending: false });
+
+  if (filterScope) {
+    clientQuery = clientQuery.eq('scope', filterScope);
+  }
+  if (filterScope === 'workplace' && filterOrgId) {
+    clientQuery = clientQuery.eq('org_id', filterOrgId);
+  }
+
+  const { data: rawTasks } = await clientQuery;
 
   if (!rawTasks || rawTasks.length === 0) return [];
 
