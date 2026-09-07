@@ -22,6 +22,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import {
   schedulePendingTasksNotification,
   initNotificationChannels,
+  startNativeBackgroundSync,
 } from '../../services/notificationService';
 import {
   subscribeToNotifications,
@@ -82,10 +83,13 @@ export const AppLayout: React.FC = () => {
       // 1. Ensure high-importance notification channels exist
       initNotificationChannels().catch(() => {});
 
-      // 2. Initial sync of unread notifications
+      // 2. Start Native Background Service (works 24/7 even if app is closed or phone locked)
+      startNativeBackgroundSync(user.id).catch(() => {});
+
+      // 3. Initial sync of unread notifications
       syncUnreadNotificationsToLocal(user.id).catch(() => {});
 
-      // 3. Realtime subscription for immediate push
+      // 4. Realtime subscription for immediate push
       unsubscribe = subscribeToNotifications(user.id, (notif) => {
         console.log('Realtime notification received in AppLayout:', notif.title);
       });

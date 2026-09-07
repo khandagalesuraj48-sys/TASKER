@@ -261,5 +261,23 @@ public class MainActivity extends BridgeActivity {
         pendingChannel.enableLights(true);
 
         manager.createNotificationChannel(pendingChannel);
+
+        // ========================================================
+        // 3. BACKGROUND SYNC (Ongoing Low Priority)
+        // ========================================================
+
+        NotificationChannel syncChannel =
+                new NotificationChannel(
+                        "tasker_background_sync",
+                        "TASKER पार्श्वभूमी सिंक (Background Sync)",
+                        NotificationManager.IMPORTANCE_LOW
+                );
+
+        syncChannel.setDescription(
+                "ॲप बंद असतानाही नोटिफिकेशन्स थेट स्क्रीनवर येण्यासाठी पार्श्वभूमी सेवा."
+        );
+        syncChannel.setShowBadge(false);
+
+        manager.createNotificationChannel(syncChannel);
     }
 }

@@ -4,8 +4,20 @@ import { Task, TaskReminder } from '../types/task';
 
 export interface NotificationHelperPluginInterface {
   openNotificationSettings(): Promise<void>;
-  checkSystemStatus(): Promise<{ areNotificationsEnabled: boolean; canScheduleExactAlarms: boolean }>;
+  checkSystemStatus(): Promise<{
+    areNotificationsEnabled: boolean;
+    canScheduleExactAlarms: boolean;
+    isIgnoringBatteryOptimizations: boolean;
+  }>;
   openExactAlarmSettings(): Promise<void>;
+  requestBatteryOptimization(): Promise<{ promptShown?: boolean; alreadyIgnoring?: boolean }>;
+  openAutostartSettings(): Promise<void>;
+  startBackgroundSync(options: {
+    userId: string;
+    supabaseUrl?: string;
+    supabaseAnonKey?: string;
+  }): Promise<{ success: boolean }>;
+  stopBackgroundSync(): Promise<{ success: boolean }>;
 }
 
 export const NotificationHelper = registerPlugin<NotificationHelperPluginInterface>('NotificationHelper');
@@ -49,6 +61,7 @@ export interface SystemPermissionStatus {
   granted: boolean;
   areNotificationsEnabled: boolean;
   canScheduleExactAlarms: boolean;
+  isIgnoringBatteryOptimizations: boolean;
   displayState: 'granted' | 'denied' | 'prompt' | 'blocked';
 }
 
@@ -77,6 +90,7 @@ export const checkNotificationPermissions = async (): Promise<SystemPermissionSt
       granted: isGranted,
       areNotificationsEnabled: isGranted,
       canScheduleExactAlarms: true,
+      isIgnoringBatteryOptimizations: true,
       displayState: isGranted ? 'granted' : (typeof Notification !== 'undefined' ? (Notification.permission as any) : 'prompt'),
     };
   }
@@ -89,7 +103,7 @@ export const checkNotificationPermissions = async (): Promise<SystemPermissionSt
       console.warn('LocalNotifications.checkPermissions failed:', e);
     }
 
-    let systemStatus = { areNotificationsEnabled: true, canScheduleExactAlarms: true };
+    let systemStatus = { areNotificationsEnabled: true, canScheduleExactAlarms: true, isIgnoringBatteryOptimizations: true };
     try {
       systemStatus = await NotificationHelper.checkSystemStatus();
     } catch (e) {
@@ -111,6 +125,7 @@ export const checkNotificationPermissions = async (): Promise<SystemPermissionSt
       granted,
       areNotificationsEnabled: systemStatus.areNotificationsEnabled,
       canScheduleExactAlarms: systemStatus.canScheduleExactAlarms,
+      isIgnoringBatteryOptimizations: Boolean(systemStatus.isIgnoringBatteryOptimizations),
       displayState,
     };
   } catch (err) {
@@ -119,8 +134,66 @@ export const checkNotificationPermissions = async (): Promise<SystemPermissionSt
       granted: false,
       areNotificationsEnabled: false,
       canScheduleExactAlarms: true,
+      isIgnoringBatteryOptimizations: true,
       displayState: 'prompt',
     };
+  }
+};
+
+/**
+ * Request system battery optimization exemption (Unrestricted Battery).
+ */
+export const requestBatteryOptimizationExemption = async (): Promise<boolean> => {
+  if (!Capacitor.isNativePlatform()) return true;
+  try {
+    const res = await NotificationHelper.requestBatteryOptimization();
+    return Boolean(res?.alreadyIgnoring);
+  } catch (e) {
+    console.warn('Failed to request battery optimization:', e);
+    return false;
+  }
+};
+
+/**
+ * Open OEM-specific Autostart settings (Xiaomi, Vivo, Oppo, OnePlus, Samsung).
+ */
+export const openAutostartSettings = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await NotificationHelper.openAutostartSettings();
+  } catch (e) {
+    console.warn('Failed to open autostart settings:', e);
+  }
+};
+
+/**
+ * Starts the 24/7 native Android background sync service for the active user.
+ */
+export const startNativeBackgroundSync = async (userId: string): Promise<void> => {
+  if (!Capacitor.isNativePlatform() || !userId) return;
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+    await NotificationHelper.startBackgroundSync({
+      userId,
+      supabaseUrl,
+      supabaseAnonKey,
+    });
+    console.log('Native background sync service started for user:', userId);
+  } catch (e) {
+    console.warn('Could not start native background sync:', e);
+  }
+};
+
+/**
+ * Stops native background sync when user logs out.
+ */
+export const stopNativeBackgroundSync = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await NotificationHelper.stopBackgroundSync();
+  } catch (e) {
+    console.warn('Could not stop native background sync:', e);
   }
 };
 
