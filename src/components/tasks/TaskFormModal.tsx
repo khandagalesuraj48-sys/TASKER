@@ -138,9 +138,9 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setDueDate(initialValues?.due_date ? formatInputDate(initialValues.due_date) : '');
       setInitialNote(initialValues?.initialNote || '');
       setSelectedFiles([]);
-      const defaultScope: TaskScope = initialValues?.scope || (isEnterpriseMode ? 'workplace' : 'personal');
+      const defaultScope: TaskScope = isEnterpriseMode ? 'workplace' : 'personal';
       setScope(defaultScope);
-      const defaultOrg = initialValues?.org_id || (defaultScope === 'workplace' ? (currentOrg?.id || availableOrgs[0]?.id || '') : '');
+      const defaultOrg = defaultScope === 'workplace' ? (initialValues?.org_id || currentOrg?.id || availableOrgs[0]?.id || '') : '';
       setSelectedOrgId(defaultOrg);
       setSelectedEmployeeId(initialValues?.assigned_employee_id || '');
       setReminder({
@@ -327,33 +327,42 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Scope Selector: Personal vs Workplace */}
-        <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl">
-          <button
-            type="button"
-            onClick={() => setScope('personal')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-              scope === 'personal'
-                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Personal Scope (Private to Me)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setScope('workplace')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-              scope === 'workplace'
-                ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Workplace Scope (Team / Assigned)</span>
-          </button>
-        </div>
+        {/* Strictly Isolated Space Indicator */}
+        {scope === 'workplace' ? (
+          <div className="flex items-center justify-between p-3 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-900/60">
+            <div className="flex items-center gap-2.5">
+              <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
+                  Workplace Task
+                </p>
+                <p className="text-[10px] text-indigo-700/80 dark:text-indigo-400">
+                  Organization task collaboration & team assignment
+                </p>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-400/30 uppercase tracking-wider">
+              Workplace Only
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-3 bg-blue-50/80 dark:bg-blue-950/40 rounded-2xl border border-blue-200 dark:border-blue-900/60">
+            <div className="flex items-center gap-2.5">
+              <User className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-blue-950 dark:text-blue-200">
+                  Personal Task
+                </p>
+                <p className="text-[10px] text-blue-700/80 dark:text-blue-400">
+                  Private task visible strictly to you
+                </p>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-400/30 uppercase tracking-wider">
+              Personal Only
+            </span>
+          </div>
+        )}
 
         {/* Organization Selector (When workplace scope is active) */}
         {scope === 'workplace' && (

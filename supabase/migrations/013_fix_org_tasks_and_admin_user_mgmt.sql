@@ -7,7 +7,20 @@
 --   3. Central Super-Admin User Management: View all App Users with Names,
 --      Move or Add Users between Organizations
 --   4. Fix erp_employees columns in approve_join_request
+--   5. Ensure custom_fields column exists on tasks table and reload schema
 -- ==============================================================================
+
+-- ------------------------------------------------------------------------------
+-- 0. Ensure tasks table schema columns
+-- ------------------------------------------------------------------------------
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS custom_fields JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS assigned_employee_id UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS assigned_to UUID;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS scope TEXT DEFAULT 'personal';
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS org_id UUID;
+
+-- Notify PostgREST to reload schema cache immediately
+NOTIFY pgrst, 'reload schema';
 
 -- ------------------------------------------------------------------------------
 -- 1. Enhanced Helper Functions: is_org_member & is_org_admin

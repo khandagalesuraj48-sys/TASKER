@@ -5,6 +5,8 @@ import { Header } from './Header';
 import { MobileNav } from './MobileNav';
 import { useTask } from '../../context/TaskContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { TaskFormModal } from '../tasks/TaskFormModal';
 import { UniversalSearchModal } from '../search/UniversalSearchModal';
 import { AIAssistantDrawer } from '../ai/AIAssistantDrawer';
@@ -24,6 +26,7 @@ import {
 export const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const { isEnterpriseMode, setEnterpriseMode } = useEnterprise();
 
   // Sync mode with route if navigating directly
@@ -99,12 +102,39 @@ export const AppLayout: React.FC = () => {
     };
   }, [navigate]);
 
-  // Keep pending tasks notification schedule updated based on current pending count
+  // Keep pending tasks notification schedule updated (Personal + Assigned Workplace tasks)
   useEffect(() => {
-    schedulePendingTasksNotification(stats.pending).catch((e) => {
-      console.warn('Error updating pending notification schedule:', e);
-    });
-  }, [stats.pending]);
+    const updateNotificationSchedule = async () => {
+      try {
+        let totalPending = stats.pending + stats.inProgress + stats.partial;
+        let isWorkplaceAssigned = false;
+
+        if (user?.id) {
+          // Check workplace tasks assigned to this user that are not completed
+          const { count, error } = await supabase
+            .from('tasks')
+            .select('id', { count: 'exact', head: true })
+            .eq('scope', 'workplace')
+            .eq('assigned_to', user.id)
+            .neq('status', 'completed')
+            .eq('is_deleted', false);
+
+          if (!error && typeof count === 'number' && count > 0) {
+            totalPending += count;
+            isWorkplaceAssigned = true;
+          }
+        }
+
+        await schedulePendingTasksNotification(totalPending, 1, {
+          isWorkplaceAssigned: isEnterpriseMode || isWorkplaceAssigned,
+        });
+      } catch (e) {
+        console.warn('Error updating pending notification schedule:', e);
+      }
+    };
+
+    updateNotificationSchedule();
+  }, [stats.pending, stats.inProgress, stats.partial, user?.id, isEnterpriseMode]);
 
   return (
     <div className="flex h-screen min-h-[100dvh] bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors">

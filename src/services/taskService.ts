@@ -193,7 +193,7 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
     parent_task_id: input.parent_task_id || null,
     is_pinned: input.is_pinned ?? false,
     tags: input.tags || [],
-    custom_fields: input.custom_fields || {},
+    ...(input.custom_fields && Object.keys(input.custom_fields).length > 0 ? { custom_fields: input.custom_fields } : {}),
     estimated_minutes: input.estimated_minutes || null,
     recurrence_rule: input.recurrence_rule || null,
     entity_type: input.entity_type || null,
@@ -210,11 +210,23 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
     throw new Error('An organization must be selected for workplace tasks.');
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('tasks')
     .insert(insertPayload as any)
     .select()
     .single();
+
+  // Gracefully fallback if the schema cache does not have custom_fields
+  if (error && (error.message?.includes('custom_fields') || (error as any).details?.includes('custom_fields'))) {
+    delete (insertPayload as any).custom_fields;
+    const retry = await supabase
+      .from('tasks')
+      .insert(insertPayload as any)
+      .select()
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error || !data) {
     console.error('Error creating task:', error);
@@ -250,7 +262,9 @@ export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Ta
   if (input.parent_task_id !== undefined) updatePayload.parent_task_id = input.parent_task_id;
   if (input.is_pinned !== undefined) updatePayload.is_pinned = input.is_pinned;
   if (input.tags !== undefined) updatePayload.tags = input.tags;
-  if (input.custom_fields !== undefined) updatePayload.custom_fields = input.custom_fields;
+  if (input.custom_fields !== undefined && Object.keys(input.custom_fields).length > 0) {
+    updatePayload.custom_fields = input.custom_fields;
+  }
   if (input.estimated_minutes !== undefined) updatePayload.estimated_minutes = input.estimated_minutes;
   if (input.actual_minutes !== undefined) updatePayload.actual_minutes = input.actual_minutes;
   if (input.recurrence_rule !== undefined) updatePayload.recurrence_rule = input.recurrence_rule;
@@ -263,12 +277,24 @@ export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Ta
   if (input.assigned_to !== undefined) updatePayload.assigned_to = input.assigned_to;
   if (input.assigned_employee_id !== undefined) updatePayload.assigned_employee_id = input.assigned_employee_id;
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('tasks')
     .update(updatePayload as any)
     .eq('id', id)
     .select()
     .single();
+
+  if (error && (error.message?.includes('custom_fields') || (error as any).details?.includes('custom_fields'))) {
+    delete updatePayload.custom_fields;
+    const retry = await supabase
+      .from('tasks')
+      .update(updatePayload as any)
+      .eq('id', id)
+      .select()
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error || !data) {
     console.error('Error updating task:', error);

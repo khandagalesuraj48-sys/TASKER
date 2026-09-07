@@ -24,7 +24,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: TaskerNotificationSettings = {
   masterEnabled: true,
   taskRemindersEnabled: true,
   pendingRemindersEnabled: true,
-  pendingReminderIntervalHours: 2,
+  pendingReminderIntervalHours: 1,
 };
 
 export const getNotificationSettings = (): TaskerNotificationSettings => {
@@ -268,10 +268,11 @@ export const cancelNativeTaskReminder = async (taskId: string): Promise<void> =>
  */
 export const schedulePendingTasksNotification = async (
   pendingCount: number,
-  customIntervalHours?: number
+  customIntervalHours?: number,
+  options?: { isWorkplaceAssigned?: boolean }
 ): Promise<void> => {
   const settings = getNotificationSettings();
-  const intervalHours = customIntervalHours || settings.pendingReminderIntervalHours || 2;
+  const intervalHours = customIntervalHours || settings.pendingReminderIntervalHours || 1;
 
   if (!Capacitor.isNativePlatform()) return;
 
@@ -286,8 +287,12 @@ export const schedulePendingTasksNotification = async (
     }
 
     const triggerDate = new Date(Date.now() + intervalHours * 60 * 60 * 1000);
-    const title = 'Pending Tasks Waiting';
-    const body = `You have ${pendingCount} pending task${pendingCount > 1 ? 's' : ''} in TASKER. Tap to review.`;
+    const title = options?.isWorkplaceAssigned
+      ? '⏰ Action Required: Pending Assigned Tasks'
+      : '⏰ Please Complete Pending Tasks';
+    const body = options?.isWorkplaceAssigned
+      ? `You have ${pendingCount} workplace task${pendingCount > 1 ? 's' : ''} assigned to you that are pending completion. Please complete them.`
+      : `You have ${pendingCount} pending task${pendingCount > 1 ? 's' : ''} in TASKER waiting to be completed. Please complete your tasks.`;
 
     await LocalNotifications.schedule({
       notifications: [
@@ -297,13 +302,14 @@ export const schedulePendingTasksNotification = async (
           body,
           schedule: {
             at: triggerDate,
+            every: 'hour', // Hourly repeat reminder!
             allowWhileIdle: true,
           },
           channelId: 'tasker_pending',
           autoCancel: true,
           extra: {
             type: 'pending_tasks',
-            path: '/pending',
+            path: options?.isWorkplaceAssigned ? '/org/assigned-to-me' : '/pending',
           },
         },
       ],
