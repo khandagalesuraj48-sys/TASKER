@@ -13,11 +13,14 @@ export interface WebKnowledgeResult {
 let cachedRemoteKey: string | null = null;
 let lastKeyFetchTime = 0;
 
+const DEFAULT_TASKER_AI_KEY = 'AQ.Ab8RN6KAwo2ZH9fWraPA9dJC7UCoWiE3pI7MGetvj5J09Kdyvg';
+
 /**
  * Checks for Gemini API Key across multiple sources in order of priority:
  * 1. Environment variable (VITE_GEMINI_API_KEY)
  * 2. Local storage (tasker_gemini_api_key)
  * 3. Cached remote key from Supabase
+ * 4. Built-in TASKER Engine Key fallback (ensures Web / Vercel works seamlessly out of the box)
  */
 export function getGeminiApiKey(): string | null {
   try {
@@ -35,7 +38,7 @@ export function getGeminiApiKey(): string | null {
   } catch {
     // Ignore
   }
-  return null;
+  return DEFAULT_TASKER_AI_KEY;
 }
 
 /**
@@ -213,6 +216,16 @@ export function generateLocalSuperBrainAnswer(
   isMarathi: boolean
 ): string {
   const qLower = query.toLowerCase();
+
+  // 0. Friendly Greetings / Welcomes (Instant warm conversational response)
+  const greetings = ['hi', 'hello', 'hey', 'namaste', 'नमस्कार', 'good morning', 'gm', 'good evening', 'good afternoon', 'हॅलो', 'हाय', 'sup'];
+  if (greetings.includes(qLower) || qLower.startsWith('hi ') || qLower.startsWith('hello ') || qLower.startsWith('हे ') || qLower.startsWith('हाय ')) {
+    if (isMarathi) {
+      return `👋 **नमस्कार! मी TASKER AI आहे.**\n\nमी तुमचा वैयक्तिक व कार्यस्थळ सहाय्यक (Executive Assistant) आहे. सांगा, आज काय मदत करू?\n\n- 📋 आजचे प्रलंबित किंवा Urgent Tasks तपासणे\n- ✍️ नवीन टास्क तयार करणे (उदा. *"Create task: Meeting उद्या दुपारी २ वाजता"*)\n- ⏰ रिमाइंडर्स लावणे\n- 🧠 कामाचे नियोजन, ईमेल ड्राफ्ट किंवा जगातील कोणत्याही विषयावर चर्चा करणे`;
+    } else {
+      return `👋 **Hello! I am TASKER AI, your intelligent executive assistant.**\n\nHow can I help you today?\n\n- 📋 Check today's pending or urgent tasks\n- ✍️ Create a task (e.g. *"Create task: Submit report tomorrow 5pm"*)\n- ⏰ Set reminders and follow-ups\n- 🧠 Plan projects, draft messages, or answer any question across the globe!`;
+    }
+  }
 
   // 1. Email or Leave Letter Request
   if (qLower.includes('leave') || qLower.includes('रजा') || qLower.includes('अर्ज') || qLower.includes('email') || qLower.includes('ईमेल')) {
