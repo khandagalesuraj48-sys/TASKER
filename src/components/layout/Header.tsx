@@ -87,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
   return (
     <header className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors pt-safe shadow-xs">
-      <div className="flex items-center justify-between h-14 sm:h-16 px-2.5 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full overflow-hidden">
+      <div className="flex items-center justify-between h-14 sm:h-16 px-2.5 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full overflow-visible">
         {/* Mobile Left Bar: Menu trigger & Unified Brand */}
         <div className="flex items-center gap-1.5 lg:hidden shrink-0">
           <button

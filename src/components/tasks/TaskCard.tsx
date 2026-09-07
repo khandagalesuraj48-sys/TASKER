@@ -194,9 +194,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             {task.title}
           </h3>
-          {task.reassigned_by ? (
+          {task.status !== 'completed' && task.reassigned_by ? (
             <div className="mt-1 text-[11px] text-blue-700 dark:text-blue-300 bg-blue-50/70 dark:bg-blue-950/40 px-2 py-1 rounded-lg border border-blue-100 dark:border-blue-900/40 line-clamp-2">
-              🎯 <strong>Next:</strong> {task.reassigned_by}
+              🎯 <strong>Next Action:</strong> {task.reassigned_by}
             </div>
           ) : task.description ? (
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
@@ -205,13 +205,37 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           ) : null}
         </div>
 
-        {/* Person / Pending With */}
-        {task.person_name && (
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-            <User className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-            <span>
-              Pending with: <strong className="text-slate-800 dark:text-slate-200">{task.person_name}</strong>
-            </span>
+        {/* Clear Ownership & Status Banner */}
+        {task.status === 'completed' ? (
+          <div className="mt-3 p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 space-y-1 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1 font-bold text-emerald-800 dark:text-emerald-300 text-[11px]">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>पूर्ण केले: {task.completed_by || task.person_name || 'Team Member'}</span>
+              </span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                (By: {task.created_by})
+              </span>
+            </div>
+            {task.reassigned_by && (
+              <p className="text-[11px] text-emerald-900 dark:text-emerald-200 font-medium bg-white/70 dark:bg-slate-900/50 p-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/40 line-clamp-2">
+                📝 <strong>शेरा:</strong> "{task.reassigned_by}"
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <User className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+              <span className="truncate">
+                Pending with: <strong className="text-slate-800 dark:text-slate-200">{task.person_name || 'Unassigned'}</strong>
+              </span>
+            </div>
+            {task.created_by && (
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
+                (By: {task.created_by})
+              </span>
+            )}
           </div>
         )}
 

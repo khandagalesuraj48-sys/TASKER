@@ -280,99 +280,164 @@ export const TaskDetailPage: React.FC = () => {
           )}
         </div>
 
-        {/* Handover & Action Banner for Current Assignee */}
-        <div className="rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 dark:from-blue-950/40 dark:via-slate-900/40 dark:to-slate-900 p-4 sm:p-5 space-y-3 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-blue-100 dark:border-blue-900/40 pb-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm font-bold">
-                <UserCheck className="w-5 h-5" />
-              </span>
-              <div>
-                <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600 dark:text-blue-400 block">
-                  Pending With / Current Assignee
+        {/* Handover & Action Banner or Completed Submission Banner */}
+        {task.status === 'completed' ? (
+          <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/60 bg-gradient-to-r from-emerald-50/80 via-teal-50/40 to-slate-50 dark:from-emerald-950/40 dark:via-slate-900/40 dark:to-slate-900 p-4 sm:p-5 space-y-3 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-100 dark:border-emerald-900/40 pb-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm font-bold">
+                  <CheckCircle2 className="w-5 h-5" />
                 </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    {task.person_name || 'Unassigned'}
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                    Task Completed & Submitted (काम यशस्वीरीत्या पूर्ण झाले)
                   </span>
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
-                    task.status === 'completed'
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-                      : 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300'
-                  }`}>
-                    {task.status === 'completed' ? '✓ Completed' : '⚡ Action Required'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-bold text-slate-900 dark:text-slate-100">
+                      पूर्ण केले: {task.completed_by || task.person_name || 'Team Member'}
+                    </span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+                      ✓ Completed
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setStatusModalOpen(true)}
+                  leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                >
+                  Change Status / Re-open
+                </Button>
+              </div>
             </div>
 
-            {/* Quick Handover / Status Action Buttons */}
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                onClick={() => setStatusModalOpen(true)}
-                leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
-              >
-                Submit / Change Status
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAssignModalOpen(true)}
-                leftIcon={<UserPlus className="w-3.5 h-3.5" />}
-              >
-                Handover / Reassign
-              </Button>
+            {/* Work Done Remarks */}
+            <div>
+              <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>केलेल्या कामाचा शेरा / निकाल (Work Done Remarks):</span>
+              </span>
+              <div className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-emerald-200 dark:border-emerald-900/50 text-xs font-semibold text-slate-800 dark:text-slate-100 leading-relaxed shadow-2xs">
+                "{task.reassigned_by || (assignments.length > 0 && assignments[0].remark) || 'काम पूर्ण झाले असून अहवाल सादर करण्यात आला आहे.'}"
+              </div>
             </div>
-          </div>
 
-          {/* Current Specific Action Instruction */}
-          <div>
-            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Immediate Action Item / Instructions for {task.person_name || 'Assignee'}:</span>
-            </span>
-            {task.reassigned_by || (assignments.length > 0 && assignments[0].remark) ? (
-              <div className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-blue-100 dark:border-blue-900/50 text-xs font-medium text-slate-800 dark:text-slate-200 leading-relaxed shadow-2xs">
-                "{task.reassigned_by || assignments[0].remark}"
-              </div>
-            ) : (
-              <div className="text-xs text-slate-500 dark:text-slate-400 italic">
-                Follow main task description below. Click "Handover / Reassign" above to add specific instructions for team members.
-              </div>
-            )}
-          </div>
-
-          {/* Visual Handover Stepper Journey (A ➔ B ➔ C) */}
-          {assignments.length > 0 && (
-            <div className="pt-2 border-t border-blue-100/60 dark:border-blue-900/40">
+            {/* Handover Trail Journey */}
+            <div className="pt-2 border-t border-emerald-100 dark:border-emerald-900/40">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1.5">
-                Handover Trail (A ➔ B ➔ C)
+                संपूर्ण प्रवास (Handover Trail):
               </span>
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
                 <div className="flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px]">
                   <span className="text-slate-600 dark:text-slate-300 font-medium">{task.created_by}</span>
                   <span className="text-[10px] text-slate-400">(Created)</span>
                 </div>
-                {assignments.slice().reverse().map((asgn, idx) => (
-                  <React.Fragment key={asgn.id || idx}>
-                    <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
-                    <div className={`flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-lg border text-[11px] ${
-                      idx === assignments.length - 1
-                        ? 'bg-blue-600 text-white border-blue-600 font-semibold shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}>
-                      <span>{asgn.assigned_to_name || 'Member'}</span>
-                      <span className={`text-[10px] ${idx === assignments.length - 1 ? 'text-blue-100' : 'text-slate-400'}`}>
-                        ({asgn.status})
-                      </span>
-                    </div>
-                  </React.Fragment>
-                ))}
+                <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
+                <div className="flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px]">
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">{task.person_name || 'Assignee'}</span>
+                  <span className="text-[10px] text-slate-400">(Assigned)</span>
+                </div>
+                <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
+                <div className="flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[11px] shadow-xs">
+                  <span>✓ {task.completed_by || task.person_name || 'Completed'}</span>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 dark:from-blue-950/40 dark:via-slate-900/40 dark:to-slate-900 p-4 sm:p-5 space-y-3 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-blue-100 dark:border-blue-900/40 pb-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm font-bold">
+                  <UserCheck className="w-5 h-5" />
+                </span>
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600 dark:text-blue-400 block">
+                    Pending With / Current Assignee
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-bold text-slate-900 dark:text-slate-100">
+                      {task.person_name || 'Unassigned'}
+                    </span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
+                      ⚡ Action Required
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Handover / Status Action Buttons */}
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => setStatusModalOpen(true)}
+                  leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                >
+                  Submit / Change Status
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAssignModalOpen(true)}
+                  leftIcon={<UserPlus className="w-3.5 h-3.5" />}
+                >
+                  Handover / Reassign
+                </Button>
+              </div>
+            </div>
+
+            {/* Current Specific Action Instruction */}
+            <div>
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span>Immediate Action Item / Instructions for {task.person_name || 'Assignee'}:</span>
+              </span>
+              {task.reassigned_by || (assignments.length > 0 && assignments[0].remark) ? (
+                <div className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-blue-100 dark:border-blue-900/50 text-xs font-medium text-slate-800 dark:text-slate-200 leading-relaxed shadow-2xs">
+                  "{task.reassigned_by || assignments[0].remark}"
+                </div>
+              ) : (
+                <div className="text-xs text-slate-500 dark:text-slate-400 italic">
+                  Follow main task description below. Click "Handover / Reassign" above to add specific instructions for team members.
+                </div>
+              )}
+            </div>
+
+            {/* Visual Handover Stepper Journey (A ➔ B ➔ C) */}
+            {assignments.length > 0 && (
+              <div className="pt-2 border-t border-blue-100/60 dark:border-blue-900/40">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1.5">
+                  Handover Trail (A ➔ B ➔ C)
+                </span>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                  <div className="flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px]">
+                    <span className="text-slate-600 dark:text-slate-300 font-medium">{task.created_by}</span>
+                    <span className="text-[10px] text-slate-400">(Created)</span>
+                  </div>
+                  {assignments.slice().reverse().map((asgn, idx) => (
+                    <React.Fragment key={asgn.id || idx}>
+                      <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
+                      <div className={`flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-lg border text-[11px] ${
+                        idx === assignments.length - 1
+                          ? 'bg-blue-600 text-white border-blue-600 font-semibold shadow-xs'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                      }`}>
+                        <span>{asgn.assigned_to_name || 'Member'}</span>
+                        <span className={`text-[10px] ${idx === assignments.length - 1 ? 'text-blue-100' : 'text-slate-400'}`}>
+                          ({asgn.status})
+                        </span>
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">

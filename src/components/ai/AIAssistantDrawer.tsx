@@ -17,25 +17,63 @@ import { getGeminiApiKey, setGeminiApiKey } from '../../services/aiWebKnowledgeS
 import { AIMessage } from '../../types/task';
 import { useBackButton } from '../../hooks/useBackButton';
 import { useTask } from '../../context/TaskContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const INITIAL_SUGGESTIONS = [
-  'आज कोणते tasks करायचे आहेत?',
-  'माझे urgent pending tasks कोणते?',
-  'Add task: Call Rahul tomorrow at 5pm',
-  'Complete task Call Rahul',
-  'कंपनीतील कर्मचाऱ्यांची यादी दाखवा',
-  'रजेसाठी मराठीत एक अर्ज लिहून दे',
-  '15% of 8500 किती?',
-  'कामाचे उत्कृष्ट नियोजन कसे करावे?',
-];
+const SUGGESTIONS_MAP = {
+  mr: [
+    'आज कोणते tasks करायचे आहेत?',
+    'माझे urgent pending tasks कोणते?',
+    'Add task: राहुलला उद्या ५ वाजता कॉल करा',
+    'Complete task Call Rahul',
+    'कंपनीतील कर्मचाऱ्यांची यादी दाखवा',
+    'रजेसाठी मराठीत एक अर्ज लिहून दे',
+    '15% of 8500 किती?',
+    'कामाचे उत्कृष्ट नियोजन कसे करावे?',
+  ],
+  hi: [
+    'आज कौन से tasks करने हैं?',
+    'मेरे urgent pending tasks कौन से हैं?',
+    'Add task: कल शाम ५ बजे मीटिंग',
+    'Complete task मीटिंग',
+    'कंपनी के कर्मचारियों की सूची दिखाएं',
+    'छुट्टी के लिए एक आवेदन पत्र लिखें',
+    '15% of 8500 कितना होगा?',
+    'काम का बेहतरीन नियोजन कैसे करें?',
+  ],
+  en: [
+    'What tasks are due today?',
+    'Show my urgent pending tasks',
+    'Add task: Call Rahul tomorrow at 5pm',
+    'Complete task Call Rahul',
+    'Show employee directory',
+    'Draft a professional leave application',
+    'Calculate 15% of 8500',
+    'How to prioritize daily work effectively?',
+  ],
+};
+
+const getWelcomeMessage = (lang: 'mr' | 'hi' | 'en'): string => {
+  if (lang === 'hi') {
+    return 'नमस्ते! मैं **TASKER AI** हूँ — आपका स्मार्ट ऐप असिस्टेंट।\n\nमैं ऐप के सभी **Tasks, कर्मचारियों की जानकारी, अंतिम तिथियाँ और आंकड़े** जानता हूँ। इसके अलावा आप मुझसे काम की योजना, हिसाब-किताब, पत्र/ईमेल लेखन या किसी भी विषय पर प्रश्न पूछ सकते हैं!\n\nनीचे दिए गए विकल्प चुनें या अपना प्रश्न टाइप करें:';
+  }
+  if (lang === 'en') {
+    return 'Hello! I am **TASKER AI** — your smart executive assistant.\n\nI have complete visibility into all your **Tasks, team directory, deadlines, and metrics**. You can also ask me about project planning, calculations, emails, or any topic worldwide!\n\nSelect a suggestion below or type your question:';
+  }
+  return 'नमस्कार! मी **TASKER AI** आहे — तुमचा स्मार्ट ॲप असिस्टंट.\n\nमी ॲपमधील सर्व **Tasks, कर्मचाऱ्यांची माहिती, मुदती आणि आकडेवारी** जाणतो. तसेच तुम्ही मला कामाचे नियोजन, गणिते, पत्र/ईमेल लेखन किंवा जगातील कोणत्याही विषयावर प्रश्न विचारू शकता!\n\nखालीलपैकी पर्याय निवडा किंवा तुमचा प्रश्न टाईप करा:';
+};
 
 export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userId = user?.id || 'guest';
+  const storageKeyChat = `tasker_ai_chat_${userId}`;
+  const storageKeyLang = `tasker_ai_lang_${userId}`;
+
   const { triggerRefresh, reloadStats } = useTask();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,21 +81,54 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
   // Register with Android hardware back button handler (Priority 40: Drawers)
   useBackButton(isOpen, onClose, 40);
 
+  const [selectedLang, setSelectedLang] = useState<'mr' | 'hi' | 'en'>('mr');
   const [inputQuery, setInputQuery] = useState<string>('');
-  const [messages, setMessages] = useState<AIMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content:
-        'नमस्कार! मी **TASKER AI** आहे — तुमचा स्मार्ट ॲप असिस्टंट.\n\nमी ॲपमधील सर्व **Tasks, कर्मचाऱ्यांची माहिती, मुदती आणि आकडेवारी** जाणतो. तसेच तुम्ही मला कामाचे नियोजन, गणिते, पत्र/ईमेल लेखन किंवा जगातील कोणत्याही विषयावर प्रश्न विचारू शकता!\n\nखालीलपैकी पर्याय निवडा किंवा तुमचा प्रश्न टाईप करा:',
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+  const [messages, setMessages] = useState<AIMessage[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
   const [customKeyInput, setCustomKeyInput] = useState<string>('');
   const [hasKeyConfigured, setHasKeyConfigured] = useState<boolean>(false);
   const [keySavedMessage, setKeySavedMessage] = useState<string>('');
+
+  // Load saved language and conversation history per user
+  useEffect(() => {
+    const savedLang = (localStorage.getItem(storageKeyLang) as 'mr' | 'hi' | 'en') || 'mr';
+    setSelectedLang(savedLang);
+
+    try {
+      const savedChat = localStorage.getItem(storageKeyChat);
+      if (savedChat) {
+        const parsed = JSON.parse(savedChat);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Error loading saved chat history:', e);
+    }
+
+    // Default initial greeting if no previous chat
+    setMessages([
+      {
+        id: 'welcome_' + Date.now(),
+        role: 'assistant',
+        content: getWelcomeMessage(savedLang),
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+  }, [userId, storageKeyLang, storageKeyChat]);
+
+  // Persist messages whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      try {
+        localStorage.setItem(storageKeyChat, JSON.stringify(messages.slice(-40)));
+      } catch (e) {
+        console.warn('Error saving chat history:', e);
+      }
+    }
+  }, [messages, storageKeyChat]);
 
   useEffect(() => {
     const key = getGeminiApiKey();
@@ -66,6 +137,23 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
       setCustomKeyInput(key);
     }
   }, [isOpen]);
+
+  // Language switch handler
+  const handleLanguageChange = (newLang: 'mr' | 'hi' | 'en') => {
+    setSelectedLang(newLang);
+    localStorage.setItem(storageKeyLang, newLang);
+    // If chat has only initial greeting, update it to the new language
+    if (messages.length <= 1 && messages[0]?.role === 'assistant') {
+      setMessages([
+        {
+          id: 'welcome_' + Date.now(),
+          role: 'assistant',
+          content: getWelcomeMessage(newLang),
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    }
+  };
 
   // Close on Escape key
   useEffect(() => {
@@ -102,12 +190,19 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const newHistory = [...messages, userMsg];
+    setMessages(newHistory);
     setInputQuery('');
     setIsSearching(true);
 
     try {
-      const response = await askTaskerAI(q);
+      const response = await askTaskerAI(q, {
+        language: selectedLang,
+        history: newHistory.map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
+      });
 
       if (response.actionTaken) {
         triggerRefresh();
@@ -124,12 +219,18 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
 
       setMessages((prev) => [...prev, assistantMsg]);
     } catch {
+      let errText = 'माफ करा, उत्तर तयार करताना अडचण आली. कृपया तुमचा प्रश्न पुन्हा विचारा.';
+      if (selectedLang === 'hi') {
+        errText = 'क्षमा करें, उत्तर तैयार करने में समस्या आई। कृपया अपना प्रश्न पुनः पूछें।';
+      } else if (selectedLang === 'en') {
+        errText = 'Sorry, an error occurred while preparing the response. Please ask again.';
+      }
       setMessages((prev) => [
         ...prev,
         {
           id: 'err_' + Date.now(),
           role: 'assistant',
-          content: 'माफ करा, उत्तर तयार करताना अडचण आली. कृपया तुमचा प्रश्न पुन्हा विचारा.',
+          content: errText,
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -151,11 +252,14 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
   };
 
   const handleClearHistory = () => {
+    try {
+      localStorage.removeItem(storageKeyChat);
+    } catch {}
     setMessages([
       {
-        id: 'welcome_reset',
+        id: 'welcome_' + Date.now(),
         role: 'assistant',
-        content: 'चॅट साफ केली आहे. तुम्ही तुमच्या टास्कविषयी, कर्मचाऱ्यांविषयी किंवा जगातील कोणत्याही विषयावर प्रश्न विचारू शकता.',
+        content: getWelcomeMessage(selectedLang),
         timestamp: new Date().toISOString(),
       },
     ]);
@@ -214,7 +318,13 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
 
             <button
               onClick={handleClearHistory}
-              title="चॅट साफ करा"
+              title={
+                selectedLang === 'hi'
+                  ? 'चैट साफ़ करें'
+                  : selectedLang === 'en'
+                  ? 'Clear Chat'
+                  : 'चॅट साफ करा'
+              }
               className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 min-w-[38px] min-h-[38px] flex items-center justify-center transition-colors"
               aria-label="Clear chat"
             >
@@ -234,15 +344,52 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
           </div>
         </div>
 
-        {/* Realtime database status badge */}
+        {/* Realtime database status badge & Language Switcher */}
         <div className="px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-b border-blue-100 dark:border-blue-900/40 flex items-center justify-between gap-2 text-[11px] text-blue-900 dark:text-blue-200 shrink-0">
           <div className="flex items-center gap-1.5 truncate">
             <Zap className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span className="truncate font-medium">TASKER AI सक्रिय आहे • लाइव्ह डेटाबेस व ज्ञानकोश</span>
+            <span className="truncate font-medium">
+              {selectedLang === 'hi'
+                ? 'TASKER AI सक्रिय है • लाइव'
+                : selectedLang === 'en'
+                ? 'TASKER AI Active • Live'
+                : 'TASKER AI सक्रिय आहे • लाइव्ह'}
+            </span>
           </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-200/70 dark:bg-blue-900 text-blue-800 dark:text-blue-300 shrink-0">
-            {hasKeyConfigured ? 'AI Online' : 'AI Active'}
-          </span>
+
+          {/* Trilingual Toggle Buttons */}
+          <div className="flex items-center bg-white/90 dark:bg-slate-800 p-0.5 rounded-xl border border-blue-200/70 dark:border-slate-700 shadow-xs shrink-0">
+            <button
+              onClick={() => handleLanguageChange('mr')}
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                selectedLang === 'mr'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+              }`}
+            >
+              मराठी
+            </button>
+            <button
+              onClick={() => handleLanguageChange('hi')}
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                selectedLang === 'hi'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+              }`}
+            >
+              हिंदी
+            </button>
+            <button
+              onClick={() => handleLanguageChange('en')}
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                selectedLang === 'en'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+              }`}
+            >
+              EN
+            </button>
+          </div>
         </div>
 
         {/* Chat Messages Scrolling Area */}
@@ -266,7 +413,11 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
               {msg.referencedTasks && msg.referencedTasks.length > 0 && (
                 <div className="mt-2.5 w-full max-w-[90%] space-y-1.5">
                   <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider pl-1">
-                    संबंधित कार्ये (Related Tasks):
+                    {selectedLang === 'hi'
+                      ? 'संबंधित कार्य (Related Tasks):'
+                      : selectedLang === 'en'
+                      ? 'Related Tasks:'
+                      : 'संबंधित कार्ये (Related Tasks):'}
                   </p>
                   {msg.referencedTasks.map((refTask) => (
                     <div
@@ -293,7 +444,13 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
           {isSearching && (
             <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 w-fit text-xs text-slate-600 dark:text-slate-300">
               <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
-              <span>TASKER AI विचार करत आहे...</span>
+              <span>
+                {selectedLang === 'hi'
+                  ? 'TASKER AI विचार कर रहा है...'
+                  : selectedLang === 'en'
+                  ? 'TASKER AI is thinking...'
+                  : 'TASKER AI विचार करत आहे...'}
+              </span>
             </div>
           )}
 
@@ -303,7 +460,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
         {/* Quick Suggestion Pills */}
         <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            {INITIAL_SUGGESTIONS.map((s, idx) => (
+            {SUGGESTIONS_MAP[selectedLang].map((s, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(s)}
@@ -325,7 +482,13 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ isOpen, on
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="काहीही विचारा, किंवा सांगा 'Add task: ...', 'Complete task ...'"
+              placeholder={
+                selectedLang === 'hi'
+                  ? "कुछ भी पूछें, या कहें 'Add task: ...', 'Complete task ...'"
+                  : selectedLang === 'en'
+                  ? "Ask anything, or say 'Add task: ...', 'Complete task ...'"
+                  : "काहीही विचारा, किंवा सांगा 'Add task: ...', 'Complete task ...'"
+              }
               disabled={isSearching}
               className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             />

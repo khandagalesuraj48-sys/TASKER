@@ -181,8 +181,8 @@ export const AppLayout: React.FC = () => {
       <MobileNav />
 
       {/* Floating AI Assistant Action Button */}
-      {/* Positioned safely above MobileNav on small screens (bottom-20), bottom-right on desktop */}
-      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-30 pointer-events-none">
+      {/* Positioned safely above MobileNav on small screens (bottom-24), bottom-right on desktop */}
+      <div className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-30 pointer-events-none">
         <button
           onClick={openAIDrawer}
           className="pointer-events-auto flex items-center gap-2 px-4 py-2.5 sm:px-4.5 sm:py-3 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:via-indigo-700 hover:to-violet-700 text-white font-bold text-xs sm:text-sm shadow-xl hover:shadow-2xl border border-white/25 dark:border-indigo-400/30 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-400/40 dark:focus:ring-indigo-500/40 transform hover:-translate-y-0.5 active:scale-95 group"

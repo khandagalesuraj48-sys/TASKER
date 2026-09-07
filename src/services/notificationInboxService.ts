@@ -78,6 +78,36 @@ export const markAllNotificationsAsRead = async (): Promise<void> => {
   }
 };
 
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
+
+export const createInAppNotification = async (payload: {
+  recipient_user_id: string;
+  organization_id?: string | null;
+  type: 'task_assigned' | 'task_reassigned' | 'task_completed' | 'task_comment' | 'system';
+  title: string;
+  message: string;
+  entity_type?: string;
+  entity_id?: string | null;
+}): Promise<void> => {
+  if (!payload.recipient_user_id) return;
+  try {
+    await supabase.from('notifications').insert({
+      recipient_user_id: payload.recipient_user_id,
+      organization_id: payload.organization_id || null,
+      type: payload.type,
+      title: payload.title,
+      message: payload.message,
+      entity_type: payload.entity_type || 'task',
+      entity_id: payload.entity_id || null,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('Failed to insert in-app notification:', err);
+  }
+};
+
 export const subscribeToNotifications = (
   userId: string,
   onNewNotification: (notification: InAppNotification) => void
@@ -92,9 +122,29 @@ export const subscribeToNotifications = (
         table: 'notifications',
         filter: `recipient_user_id=eq.${userId}`,
       },
-      (payload) => {
+      async (payload) => {
         if (payload.new) {
-          onNewNotification(payload.new as InAppNotification);
+          const newNotif = payload.new as InAppNotification;
+          onNewNotification(newNotif);
+
+          // If on Android / Native platform, push directly to system status bar
+          if (Capacitor.isNativePlatform()) {
+            try {
+              await LocalNotifications.schedule({
+                notifications: [
+                  {
+                    id: Math.floor(Math.random() * 899999) + 1,
+                    title: newNotif.title,
+                    body: newNotif.message,
+                    smallIcon: 'ic_launcher_foreground',
+                    iconColor: '#2563eb',
+                  },
+                ],
+              });
+            } catch (e) {
+              console.warn('Error scheduling local notification on arrival:', e);
+            }
+          }
         }
       }
     )

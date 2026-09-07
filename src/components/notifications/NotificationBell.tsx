@@ -110,9 +110,9 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="fixed sm:absolute right-2 sm:right-0 top-14 sm:top-full mt-2 w-[calc(100vw-1rem)] max-w-sm sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 overflow-hidden text-xs">
+        <div className="fixed sm:absolute right-2 sm:right-0 top-14 sm:top-full mt-2 w-[calc(100vw-1rem)] max-w-sm sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                 Notifications
@@ -128,7 +128,7 @@ export const NotificationBell: React.FC = () => {
               <button
                 type="button"
                 onClick={handleMarkAllRead}
-                className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <CheckCheck className="w-3.5 h-3.5" />
                 <span>Mark all read</span>

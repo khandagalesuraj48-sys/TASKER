@@ -161,9 +161,12 @@ async function gatherAppBrainContext() {
 }
 
 /**
- * Builds the Master System Instruction for Google Gemini AI with App Brain Context.
+ * Builds the Master System Instruction for Google Gemini AI with App Brain Context and Language Preference.
  */
-function buildGeminiSystemInstruction(context: Awaited<ReturnType<typeof gatherAppBrainContext>>): string {
+function buildGeminiSystemInstruction(
+  context: Awaited<ReturnType<typeof gatherAppBrainContext>>,
+  language: 'mr' | 'hi' | 'en' = 'mr'
+): string {
   const { currentUser, organizationName, currentDateTimeIST, rawTasks, employees, stats } = context;
 
   // Format top tasks
@@ -181,6 +184,18 @@ function buildGeminiSystemInstruction(context: Awaited<ReturnType<typeof gatherA
     ? employees.map((e) => `- ${e.full_name} (${e.designation || 'Staff'}, Dept: ${e.department || 'General'}${e.phone ? `, Phone: ${e.phone}` : ''})`).join('\n')
     : 'None explicitly listed.';
 
+  let langDirective = '';
+  if (language === 'hi') {
+    langDirective = `4. STRICT LANGUAGE PREFERENCE (HINDI - हिंदी):
+   The user explicitly selected HINDI. Respond primarily in polite, professional, natural HINDI (हिंदी - Devanagari script). Keep task names and IDs easily recognizable.`;
+  } else if (language === 'mr') {
+    langDirective = `4. STRICT LANGUAGE PREFERENCE (MARATHI - मराठी):
+   The user explicitly selected MARATHI. Respond primarily in polite, courteous, fluent MARATHI (मराठी - Devanagari script). Keep task names and IDs easily recognizable.`;
+  } else {
+    langDirective = `4. STRICT LANGUAGE PREFERENCE (ENGLISH):
+   The user explicitly selected ENGLISH. Respond in crisp, structured, professional ENGLISH.`;
+  }
+
   return `You are TASKER AI, the intelligent, proprietary enterprise AI core of TASKER (an advanced task and workforce management platform developed by Suraj Khandagale / One Click Solution). Always identify yourself strictly as TASKER AI. Never mention third-party AI models or platforms.
 
 CRITICAL DIRECTIVES:
@@ -193,10 +208,9 @@ CRITICAL DIRECTIVES:
    When asked about anything outside the app — business planning, construction estimation, accounting, GST, drafting professional emails/letters, math, science, programming, history, or daily life — answer authoritatively, thoroughly, and intelligently.
 
 3. NEVER SAY "I DON'T KNOW":
-   NEVER say "मला माहिती नाही" or "I don't know". If information is broad or conceptual, provide practical, well-reasoned, actionable advice.
+   NEVER say "मला माहिती नाही", "मुझे नहीं पता", or "I don't know". If information is broad or conceptual, provide practical, well-reasoned, actionable advice.
 
-4. MULTILINGUAL EXCELLENCE (MARATHI & ENGLISH):
-   Seamlessly communicate in natural, fluent, courteous Marathi (मराठी) when addressed in Marathi or Romanized Marathi (Hinglish/Marathish). Use clear Marathi Devanagari script. Support English and Hindi equally well.
+${langDirective}
 
 5. CLEAN MARKDOWN FORMATTING:
    Use structured Markdown headings, bullet points, and bold text for readability.
@@ -221,11 +235,12 @@ ${topTasksStr || 'No active tasks currently recorded.'}
  */
 function processLocalGroundedQuery(
   question: string,
-  context: Awaited<ReturnType<typeof gatherAppBrainContext>>
+  context: Awaited<ReturnType<typeof gatherAppBrainContext>>,
+  language: 'mr' | 'hi' | 'en' = 'mr'
 ): AIResponse {
   const { rawTasks, stats, currentDateTimeIST } = context;
   const qLower = question.toLowerCase().trim();
-  const isMarathi = /[\u0900-\u097F]/.test(question) ||
+  const isMarathi = language === 'mr' || /[\u0900-\u097F]/.test(question) ||
     qLower.includes('aahe') || qLower.includes('ahet') || qLower.includes('kadh') ||
     qLower.includes('dakhva') || qLower.includes('maze') || qLower.includes('konte');
 
@@ -362,18 +377,36 @@ function processLocalGroundedQuery(
   return { answer: defaultAns, referencedTasks: [], providerUsed: 'TASKER AI (Local Grounding)' };
 }
 
+export interface TaskerAIOptions {
+  language?: 'mr' | 'hi' | 'en';
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}
+
 /**
  * Public Entrypoint for TASKER AI Assistant.
  * Seamlessly integrates:
  * 1. Natural Language Task Action Engine (Instant Task CRUD)
- * 2. Google Gemini AI Super-Brain with Deep App Context
- * 3. High-Intelligence Local Grounding Fallback (Zero "I don't know" responses)
+ * 2. Google Gemini AI Super-Brain with Deep App Context & Multi-turn Conversation Memory
+ * 3. User Language Selection (मराठी, हिंदी, English)
+ * 4. High-Intelligence Local Grounding Fallback (Zero "I don't know" responses)
  */
-export const askTaskerAI = async (question: string): Promise<AIResponse> => {
+export const askTaskerAI = async (
+  question: string,
+  options?: TaskerAIOptions
+): Promise<AIResponse> => {
+  const language = options?.language || 'mr';
+  const history = options?.history || [];
   const trimmed = question.trim();
+
   if (!trimmed) {
+    let emptyGreeting = 'नमस्कार! मी TASKER AI आहे. कृपया तुमचा प्रश्न विचारा किंवा नवीन टास्क तयार करा (उदा. "Add task: Meeting उद्या दुपारी ४ वाजता").';
+    if (language === 'hi') {
+      emptyGreeting = 'नमस्ते! मैं TASKER AI हूँ। कृपया अपना प्रश्न पूछें या नया टास्क बनाएँ (उदा. "Add task: मीटिंग कल दोपहर ४ बजे")।';
+    } else if (language === 'en') {
+      emptyGreeting = 'Hello! I am TASKER AI. Please ask any question or create a task (e.g. "Add task: Meeting tomorrow 4pm").';
+    }
     return {
-      answer: 'नमस्कार! मी TASKER AI आहे. कृपया तुमचा प्रश्न विचारा किंवा नवीन टास्क तयार करा (उदा. "Add task: Meeting tomorrow 4pm").',
+      answer: emptyGreeting,
       referencedTasks: [],
       providerUsed: 'TASKER AI',
     };
@@ -398,10 +431,10 @@ export const askTaskerAI = async (question: string): Promise<AIResponse> => {
     console.warn('Action command execution error:', actionErr);
   }
 
-  // 3. SECOND PRIORITY: Google Gemini AI Super-Brain with live database context
+  // 3. SECOND PRIORITY: Google Gemini AI Super-Brain with live database context & chat history
   try {
-    const systemInstruction = buildGeminiSystemInstruction(appBrainContext);
-    const result = await queryUniversalKnowledge(trimmed, systemInstruction);
+    const systemInstruction = buildGeminiSystemInstruction(appBrainContext, language);
+    const result = await queryUniversalKnowledge(trimmed, systemInstruction, history, language);
 
     if (result && result.answer) {
       // Cross-match referenced tasks from the AI answer with live database
@@ -438,5 +471,5 @@ export const askTaskerAI = async (question: string): Promise<AIResponse> => {
 
   // 4. THIRD PRIORITY: Intelligent Local Task-Grounded Brain
   // Never fails, never returns Wikipedia, never says "I don't know"
-  return processLocalGroundedQuery(trimmed, appBrainContext);
+  return processLocalGroundedQuery(trimmed, appBrainContext, language);
 };

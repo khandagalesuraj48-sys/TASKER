@@ -8,7 +8,7 @@ import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 
 export const EmployeeDirectoryPage: React.FC = () => {
-  const { currentOrg } = useEnterprise();
+  const { currentOrg, isAdmin } = useEnterprise();
   const { showToast } = useToast();
 
   const [employees, setEmployees] = useState<ErpEmployee[]>([]);
@@ -43,6 +43,10 @@ export const EmployeeDirectoryPage: React.FC = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      showToast('Only organization administrators can add employees to the directory.', 'error');
+      return;
+    }
     if (!currentOrg?.id || !firstName.trim() || !designation.trim()) {
       showToast('Name and designation are required.', 'error');
       return;
@@ -94,12 +98,19 @@ export const EmployeeDirectoryPage: React.FC = () => {
           </p>
         </div>
 
-        <Button
-          onClick={() => setAddModalOpen(true)}
-          leftIcon={<Plus className="w-4 h-4" />}
-        >
-          + Add New Employee
-        </Button>
+        {isAdmin ? (
+          <Button
+            onClick={() => setAddModalOpen(true)}
+            leftIcon={<Plus className="w-4 h-4" />}
+          >
+            + Add New Employee
+          </Button>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+            <ShieldCheck className="w-4 h-4 text-indigo-500" />
+            <span>Directory (Admin Managed)</span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs max-w-md">
@@ -124,7 +135,9 @@ export const EmployeeDirectoryPage: React.FC = () => {
           <Users className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Employees Found</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Click &quot;+ Add New Employee&quot; to add a team member to the directory.
+            {isAdmin
+              ? 'Click "+ Add New Employee" to add a team member to the directory.'
+              : 'No employees have been added to the directory by the administrator yet.'}
           </p>
         </div>
       ) : (

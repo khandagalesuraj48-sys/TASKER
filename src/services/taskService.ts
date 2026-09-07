@@ -372,6 +372,9 @@ export const updateTaskStatus = async (
   if (newStatus === 'completed') {
     updatePayload.completed_at = nowIso;
     updatePayload.completed_by = actor;
+    if (remarks && remarks.trim()) {
+      updatePayload.reassigned_by = remarks.trim();
+    }
     // Automatically stop future reminders when task becomes completed
     try {
       await stopTaskReminder(id);
@@ -399,6 +402,24 @@ export const updateTaskStatus = async (
     await recordStatusChange(id, oldStatus, newStatus, actor, remarks);
   } catch (histError) {
     console.warn('Status history recording fallback error:', histError);
+  }
+
+  // Send targeted in-app & mobile notification to task creator
+  if (newStatus === 'completed' && current.user_id) {
+    try {
+      const { createInAppNotification } = await import('./notificationInboxService');
+      await createInAppNotification({
+        recipient_user_id: current.user_id,
+        organization_id: current.org_id,
+        type: 'task_completed',
+        title: 'टास्क पूर्ण झाले (Task Completed)',
+        message: `${actor} ने "${current.title}" हा टास्क पूर्ण केला.${remarks ? ` शेरा: "${remarks.trim()}"` : ''}`,
+        entity_type: 'task',
+        entity_id: id,
+      });
+    } catch (notifErr) {
+      console.warn('Could not send completion notification:', notifErr);
+    }
   }
 
   return await getTaskById(id);
@@ -841,9 +862,24 @@ export const assignTask = async (
     }
   }
 
-  // Send notification to new assignee
+  // Send targeted notification to new assignee
   try {
     const task = await getTaskById(taskId);
+    if (params.assignedTo) {
+      const { createInAppNotification } = await import('./notificationInboxService');
+      const { data: authData } = await supabase.auth.getUser();
+      const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || 'व्यवस्थापक (Admin)';
+      await createInAppNotification({
+        recipient_user_id: params.assignedTo,
+        organization_id: params.orgId,
+        type: 'task_assigned',
+        title: 'नवीन टास्क नियुक्त केला (New Task Assigned)',
+        message: `${assignerName} ने तुम्हाला "${task ? task.title : 'Task'}" हा टास्क सोपवला आहे.${params.remark ? ` सूचना: "${params.remark.trim()}"` : ''}`,
+        entity_type: 'task',
+        entity_id: taskId,
+      });
+    }
+
     if (task && task.assigned_to) {
       const assignedTarget = task.assigned_to;
       await import('./notificationService').then(async (mod) => {
