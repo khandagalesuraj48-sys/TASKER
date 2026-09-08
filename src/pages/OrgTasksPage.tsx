@@ -167,28 +167,28 @@ export const OrgTasksPage: React.FC = () => {
   // Neutral onboarding view when user does not have approved membership in any organization
   if (!isMember || !currentOrg) {
     return (
-      <div className="max-w-xl mx-auto my-12 p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-5">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center">
+      <div className="max-w-xl mx-auto my-12 p-8 bg-card rounded-2xl border border-border shadow-lg text-center space-y-5">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center">
           <Building2 className="w-8 h-8" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+          <h2 className="text-xl font-bold text-foreground">
             {currentOrg?.legal_name || 'कार्यस्थळ कार्यक्षेत्र (Workplace Space)'}
           </h2>
-          <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold uppercase tracking-wider mt-1">
+          <p className="text-xs text-primary font-semibold uppercase tracking-wider mt-1">
             Enterprise & Multi-Site Tasks
           </p>
         </div>
 
-        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-md mx-auto">
-          तुमचे वैयक्तिक टास्क स्पेस (Personal Space) नेहमीप्रमाणे सुरक्षित आणि सक्रिय आहे. कंपनी किंवा संस्थेच्या कार्यस्थळावर (उदा. VTR, 18 B साईट्स) काम करण्यासाठी आणि सहकाऱ्यांसोबत जोडले जाण्यासाठी ॲडमिन मंजुरी आवश्यक आहे.
+        <p className="text-xs text-muted-foreground leading-relaxed max-w-md mx-auto">
+          तुमचे वैयक्तिक टास्क स्पेस (Personal Space) नेहमीप्रमाणे सुरक्षित आणि सक्रिय आहे. कंपनी किंवा संस्थेच्या कार्यस्थळावर काम करण्यासाठी आणि सहकाऱ्यांसोबत जोडले जाण्यासाठी ॲडमिन मंजुरी आवश्यक आहे.
         </p>
 
         <div className="pt-2">
           {hasRequestedJoin ? (
-            <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl text-xs text-amber-800 dark:text-amber-300 font-semibold space-y-1">
+            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-300 font-semibold space-y-1">
               <p>⏳ कार्यस्थळ प्रवेश विनंती पाठवली आहे.</p>
-              <p className="text-[11px] font-normal text-amber-700 dark:text-amber-400">
+              <p className="text-[11px] font-normal text-amber-600 dark:text-amber-400">
                 ॲडमिनने मंजुरी देऊन तुम्हाला संस्थेत आणि संबंधित साईटवर समाविष्ट केल्यावर तुम्हाला सर्व कामे दिसतील.
               </p>
             </div>
@@ -208,16 +208,16 @@ export const OrgTasksPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white shadow-lg">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-xl bg-card border border-border/80 shadow-2xs">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-indigo-300" />
-            <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Workplace Collaboration</span>
+            <Building2 className="w-4 h-4 text-primary" />
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">Workplace Collaboration</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black">{currentOrg?.legal_name || 'Organization Tasks'}</h1>
-          <p className="text-xs text-indigo-200/80">
+          <h1 className="text-xl sm:text-2xl font-black text-foreground">{currentOrg?.legal_name || 'Organization Tasks'}</h1>
+          <p className="text-xs text-muted-foreground">
             Assigned tasks, delegated work, and real-time multi-site team collaboration.
           </p>
         </div>
@@ -234,37 +234,37 @@ export const OrgTasksPage: React.FC = () => {
       </div>
 
       {/* Workplace Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-border/60 pb-2">
         <button
-          className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs flex items-center gap-2"
+          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground shadow-xs flex items-center gap-2"
         >
-          <Building2 className="w-4 h-4" />
+          <Building2 className="w-3.5 h-3.5" />
           <span>All Tasks</span>
         </button>
         <button
           onClick={() => navigate('/org/pending')}
-          className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-2 transition-all cursor-pointer"
+          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 flex items-center gap-2 transition-all cursor-pointer"
         >
-          <Clock className="w-4 h-4 text-amber-500" />
+          <Clock className="w-3.5 h-3.5 text-amber-500" />
           <span>Pending by Site</span>
         </button>
       </div>
 
       {/* Multi-Site Switcher Bar */}
-      <div className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full sm:w-auto">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 mr-1">
-            <MapPin className="w-4 h-4 text-indigo-500" />
+      <div className="p-3 bg-card rounded-xl border border-border/80 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full sm:w-auto">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground shrink-0 mr-1">
+            <MapPin className="w-3.5 h-3.5 text-primary" />
             <span>Sites:</span>
           </div>
 
           {(isAdmin || isOwner || isPlatformAdmin || sites.length > 1) && (
             <button
               onClick={() => selectSite('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
                 !selectedSite
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
               }`}
             >
               All Sites
@@ -277,18 +277,18 @@ export const OrgTasksPage: React.FC = () => {
               <button
                 key={s.id}
                 onClick={() => selectSite(s.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
                   isSelected
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    ? 'bg-primary text-primary-foreground shadow-xs'
+                    : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
                 }`}
               >
                 <span>{s.name}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${
                     isSelected
-                      ? 'bg-indigo-700 text-indigo-100'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                      ? 'bg-primary-foreground/20 text-primary-foreground'
+                      : 'bg-background/80 text-muted-foreground'
                   }`}
                 >
                   {s.code}
@@ -298,7 +298,7 @@ export const OrgTasksPage: React.FC = () => {
           })}
 
           {!isAdmin && !isOwner && !isPlatformAdmin && sites.length === 0 && (
-            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900/50">
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-2.5 py-1 bg-amber-500/10 rounded-lg border border-amber-500/20">
               ⚠️ No sites assigned to your account.
             </span>
           )}
@@ -307,7 +307,7 @@ export const OrgTasksPage: React.FC = () => {
         {(isAdmin || isOwner) && (
           <button
             onClick={() => setIsAddSiteOpen(true)}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/60 transition-colors shrink-0 flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors shrink-0 flex items-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Site</span>
@@ -316,15 +316,15 @@ export const OrgTasksPage: React.FC = () => {
       </div>
 
       {/* Filters Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-card p-3.5 rounded-xl border border-border/80 shadow-2xs">
         <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search workplace tasks or assignee..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full pl-9 pr-4 py-1.5 text-xs rounded-lg border border-input/80 bg-background text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           />
         </div>
 
@@ -332,7 +332,7 @@ export const OrgTasksPage: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+            className="text-xs py-1.5 px-2.5 rounded-lg border border-input/80 bg-background text-foreground font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
@@ -343,7 +343,7 @@ export const OrgTasksPage: React.FC = () => {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="text-xs py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+            className="text-xs py-1.5 px-2.5 rounded-lg border border-input/80 bg-background text-foreground font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <option value="all">All Priorities</option>
             <option value="low">Low</option>
@@ -353,14 +353,14 @@ export const OrgTasksPage: React.FC = () => {
           </select>
 
           {/* View Mode Toggle */}
-          <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-0.5 ml-auto">
+          <div className="flex items-center rounded-lg border border-input/80 bg-muted/40 p-0.5 ml-auto">
             <button
               type="button"
               onClick={() => setViewMode('card')}
-              className={`p-1.5 rounded-lg transition-colors ${
+              className={`p-1.5 rounded-md transition-colors ${
                 viewMode === 'card'
-                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white font-bold'
-                  : 'text-slate-400 hover:text-slate-600'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Card view"
             >
@@ -369,10 +369,10 @@ export const OrgTasksPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('gantt')}
-              className={`p-1.5 rounded-lg transition-colors ${
+              className={`p-1.5 rounded-md transition-colors ${
                 viewMode === 'gantt'
-                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white font-bold'
-                  : 'text-slate-400 hover:text-slate-600'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Gantt Timeline view"
             >
@@ -386,14 +386,14 @@ export const OrgTasksPage: React.FC = () => {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
           {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="h-40 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+            <div key={n} className="h-40 bg-muted rounded-xl"></div>
           ))}
         </div>
       ) : filteredTasks.length === 0 ? (
-        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 space-y-3">
-          <Building2 className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Workplace Tasks Found</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+        <div className="text-center py-16 bg-card rounded-2xl border border-border/80 p-8 space-y-3">
+          <Building2 className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+          <h3 className="text-sm font-bold text-foreground">No Workplace Tasks Found</h3>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
             {searchQuery || statusFilter !== 'all' || selectedSite
               ? 'No tasks match your current filters.'
               : 'Create a workplace task and assign it to a team member to begin collaborating.'}
@@ -421,7 +421,7 @@ export const OrgTasksPage: React.FC = () => {
               <div
                 key={t.id}
                 onClick={() => navigate(`/org/tasks/${t.id}`)}
-                className="group cursor-pointer p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all shadow-xs hover:shadow-md flex flex-col justify-between space-y-3"
+                className="group cursor-pointer p-4 rounded-xl border border-border/80 bg-card hover:border-primary/50 transition-all shadow-2xs hover:shadow-xs flex flex-col justify-between space-y-3"
               >
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-1.5">
@@ -431,7 +431,7 @@ export const OrgTasksPage: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-1.5">
                       {taskSite && (
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                           📍 {taskSite.name}
                         </span>
                       )}
@@ -440,33 +440,33 @@ export const OrgTasksPage: React.FC = () => {
                           type="button"
                           onClick={(e) => handleDeleteTask(e, t)}
                           title="टास्क हटवा (Delete Task)"
-                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                          className="p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <h3 className="text-sm font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                     {t.title}
                   </h3>
                   {t.description && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{t.description}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                <div className="pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
                   <div className="flex items-center gap-1.5 truncate">
-                    <User className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                    <span className="truncate font-semibold text-slate-700 dark:text-slate-300">
+                    <User className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span className="truncate font-semibold text-foreground/90">
                       {t.person_name || 'Unassigned'}
                     </span>
                   </div>
 
                   {t.due_date && (
                     <div className="flex items-center gap-1 shrink-0">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span className={overdue ? 'text-rose-600 font-bold' : ''}>
+                      <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className={overdue ? 'text-destructive font-bold' : ''}>
                         {formatDateOnly(t.due_date)}
                       </span>
                     </div>
@@ -480,18 +480,18 @@ export const OrgTasksPage: React.FC = () => {
 
       {/* Add New Site Modal */}
       {isAddSiteOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-card rounded-2xl border border-border p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <MapPin className="w-5 h-5 text-primary" />
+                <h3 className="text-base font-bold text-foreground">
                   नवीन साईट तयार करा
                 </h3>
               </div>
               <button
                 onClick={() => setIsAddSiteOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -499,8 +499,8 @@ export const OrgTasksPage: React.FC = () => {
 
             <form onSubmit={handleCreateSite} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  साईटचे नाव (Site Name) <span className="text-rose-500">*</span>
+                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
+                  साईटचे नाव (Site Name) <span className="text-destructive">*</span>
                 </label>
                 <input
                   type="text"
@@ -508,12 +508,12 @@ export const OrgTasksPage: React.FC = () => {
                   placeholder="उदा. VTR Site किंवा 18 B Site"
                   value={newSiteName}
                   onChange={(e) => setNewSiteName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full px-3 py-2 rounded-lg border border-input/80 bg-background text-foreground text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
                   साईट कोड (Site Code)
                 </label>
                 <input
@@ -521,12 +521,12 @@ export const OrgTasksPage: React.FC = () => {
                   placeholder="उदा. VTR किंवा 18_B"
                   value={newSiteCode}
                   onChange={(e) => setNewSiteCode(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                  className="w-full px-3 py-2 rounded-lg border border-input/80 bg-background text-foreground text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
                   पत्ता / लोकेशन (Address / Location)
                 </label>
                 <input
@@ -534,14 +534,14 @@ export const OrgTasksPage: React.FC = () => {
                   placeholder="साईटचा पत्ता किंवा स्थान"
                   value={newSiteAddress}
                   onChange={(e) => setNewSiteAddress(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full px-3 py-2 rounded-lg border border-input/80 bg-background text-foreground text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => setIsAddSiteOpen(false)}
                 >
