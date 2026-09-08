@@ -9,14 +9,15 @@ import { EmptyState } from '../components/common/EmptyState';
 import { CardSkeleton, TableSkeleton } from '../components/common/LoadingSkeleton';
 import { Button } from '../components/common/Button';
 import { useTask } from '../context/TaskContext';
-import { CheckSquare2, LayoutGrid, List, Plus } from 'lucide-react';
+import { CheckSquare2, LayoutGrid, List, Plus, CalendarRange } from 'lucide-react';
+import { TaskGanttView } from '../components/tasks/TaskGanttView';
 
 export const AllTasksPage: React.FC = () => {
   const { refreshKey, openCreateModal, globalSearch } = useTask();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [viewMode, setViewMode] = useState<'card' | 'table' | 'gantt'>('card');
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
   const [filters, setFilters] = useState<TaskFilterOptions>({
@@ -93,6 +94,15 @@ export const AllTasksPage: React.FC = () => {
             >
               <List className="w-4 h-4" />
             </button>
+            <button
+              onClick={() => setViewMode('gantt')}
+              className={`p-1.5 rounded-sm transition-colors ${
+                viewMode === 'gantt' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title="Interactive Gantt Timeline view"
+            >
+              <CalendarRange className="w-4 h-4" />
+            </button>
           </div>
 
           <Button onClick={() => openCreateModal()} leftIcon={<Plus className="w-4 h-4" />} className="shadow-2xs">
@@ -164,11 +174,16 @@ export const AllTasksPage: React.FC = () => {
             />
           ))}
         </div>
-      ) : (
+      ) : viewMode === 'table' ? (
         <TaskTable
           tasks={tasks}
           onEdit={(t: Task) => setTaskToEdit(t)}
           onRefresh={loadAllTasks}
+        />
+      ) : (
+        <TaskGanttView
+          tasks={tasks}
+          onTaskClick={(t: Task) => setTaskToEdit(t)}
         />
       )}
 

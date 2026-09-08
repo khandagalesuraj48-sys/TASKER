@@ -12,7 +12,10 @@ import {
   Loader2,
   Trash2,
   Clock,
+  LayoutGrid,
+  CalendarRange,
 } from 'lucide-react';
+import { TaskGanttView } from '../components/tasks/TaskGanttView';
 import { useTask } from '../context/TaskContext';
 import { useEnterprise } from '../context/EnterpriseContext';
 import { useAuth } from '../context/AuthContext';
@@ -52,6 +55,7 @@ export const OrgTasksPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'card' | 'gantt'>('card');
 
   // New Site Modal State
   const [isAddSiteOpen, setIsAddSiteOpen] = useState<boolean>(false);
@@ -347,6 +351,34 @@ export const OrgTasksPage: React.FC = () => {
             <option value="high">High</option>
             <option value="urgent">Urgent</option>
           </select>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-0.5 ml-auto">
+            <button
+              type="button"
+              onClick={() => setViewMode('card')}
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === 'card'
+                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white font-bold'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+              title="Card view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('gantt')}
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === 'gantt'
+                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white font-bold'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+              title="Gantt Timeline view"
+            >
+              <CalendarRange className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -375,6 +407,11 @@ export const OrgTasksPage: React.FC = () => {
             Create Task
           </Button>
         </div>
+      ) : viewMode === 'gantt' ? (
+        <TaskGanttView
+          tasks={filteredTasks}
+          onTaskClick={(t) => navigate(`/org/tasks/${t.id}`)}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTasks.map((t) => {

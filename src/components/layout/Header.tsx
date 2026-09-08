@@ -11,6 +11,7 @@ import {
   User,
   LogOut,
   ChevronRight,
+  Mic,
 } from 'lucide-react';
 import { useTask } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +20,7 @@ import { useEnterprise } from '../../context/EnterpriseContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useBackButton } from '../../hooks/useBackButton';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { VoiceTaskModal } from '../tasks/VoiceTaskModal';
 import { cn } from '@/lib/utils';
 
 interface HeaderProps {
@@ -48,6 +50,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
   const [profileOpen, setProfileOpen] = useState<boolean>(false);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState<boolean>(false);
+  const [voiceModalOpen, setVoiceModalOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const orgMenuRef = useRef<HTMLDivElement>(null);
 
@@ -271,6 +274,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             </div>
           )}
 
+          {/* AI Voice-to-Task Quick Dictation */}
+          <button
+            type="button"
+            onClick={() => setVoiceModalOpen(true)}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1 text-xs"
+            title="AI Voice-to-Task (मराठी / हिंदी / English)"
+          >
+            <Mic className="w-4 h-4 text-primary animate-pulse" />
+            <span className="hidden md:inline text-[11px] font-semibold text-foreground">Voice</span>
+          </button>
+
           {/* Notification Bell with In-App Drawer Hook */}
           <NotificationBell />
 
@@ -365,6 +379,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </div>
         </div>
       </div>
+
+      {voiceModalOpen && (
+        <VoiceTaskModal
+          isOpen={voiceModalOpen}
+          onClose={() => setVoiceModalOpen(false)}
+        />
+      )}
     </header>
   );
 };

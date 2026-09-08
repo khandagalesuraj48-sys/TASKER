@@ -52,7 +52,15 @@ import {
   Sparkles,
   UserCheck,
   Copy,
+  MessageCircle,
+  FileText,
 } from 'lucide-react';
+import { shareTaskViaWhatsApp } from '../services/whatsappService';
+import { exportTaskToPdf } from '../services/pdfExportService';
+import { TaskTimeTracker } from '../components/tasks/TaskTimeTracker';
+import { TaskDiscussion } from '../components/tasks/TaskDiscussion';
+import { getSubtasks, DelegatedSubtask } from '../services/subtaskService';
+import { getTotalTaskDurationSeconds } from '../services/timeTrackingService';
 
 export const TaskDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -84,6 +92,9 @@ export const TaskDetailPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [quickCompleteOpen, setQuickCompleteOpen] = useState<boolean>(false);
 
+  const [subtasks, setSubtasks] = useState<DelegatedSubtask[]>([]);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+
   const loadTaskData = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
@@ -91,12 +102,13 @@ export const TaskDetailPage: React.FC = () => {
       const taskData = await getTaskById(id);
       setTask(taskData);
 
-      const [histData, notesData, attachData, remData, assignData] = await Promise.all([
+      const [histData, notesData, attachData, remData, assignData, subData] = await Promise.all([
         getStatusHistory(id),
         getNotes(id),
         getAttachments(id),
         getTaskReminder(id),
         getTaskAssignments(id),
+        getSubtasks(id),
       ]);
 
       setHistory(histData);
@@ -104,12 +116,41 @@ export const TaskDetailPage: React.FC = () => {
       setAttachments(attachData);
       setReminder(remData);
       setAssignments(assignData);
+      setSubtasks(subData || []);
     } catch (err: any) {
       showToast(err.message || 'Unable to load task details.', 'error');
     } finally {
       setIsLoading(false);
     }
   }, [id, showToast]);
+
+  const handleExportPdf = () => {
+    if (!task) return;
+    setIsExportingPdf(true);
+    try {
+      const totalDuration = getTotalTaskDurationSeconds(task.id);
+      exportTaskToPdf({
+        task,
+        subtasks,
+        notes,
+        assignments,
+        history,
+        totalDurationSeconds: totalDuration,
+        companyName: 'TASKER Enterprise',
+      });
+      showToast('Work order PDF exported successfully.', 'success');
+    } catch (err: any) {
+      showToast('Failed to export PDF: ' + err.message, 'error');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!task) return;
+    shareTaskViaWhatsApp(task, subtasks);
+    showToast('WhatsApp work order prepared.', 'success');
+  };
 
   useEffect(() => {
     loadTaskData();
@@ -285,6 +326,27 @@ export const TaskDetailPage: React.FC = () => {
           >
             <Edit2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
             Edit
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleWhatsAppShare}
+            className="h-8 text-xs font-medium text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400"
+            title="Share Work Order on WhatsApp"
+          >
+            <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
+            WhatsApp
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            className="h-8 text-xs font-medium text-primary border-primary/30 hover:bg-primary/10"
+            title="Download Official Branded PDF Work Order & Audit Report"
+          >
+            <FileText className="w-3.5 h-3.5 mr-1.5" />
+            {isExportingPdf ? 'Exporting...' : 'PDF Work-Order'}
           </Button>
 
           {task.status !== 'completed' && (
@@ -749,6 +811,19 @@ export const TaskDetailPage: React.FC = () => {
 
         {/* Right 1 Col */}
         <div className="space-y-6">
+          {/* Live Time Tracker & Billable Hours */}
+          <TaskTimeTracker taskId={task.id} taskTitle={task.title} />
+
+          {/* Task-Specific Live Discussion & @Mentions */}
+          <TaskDiscussion
+            taskId={task.id}
+            teamMembers={assignments.map((a) => ({
+              id: a.assigned_to,
+              full_name: a.assigned_to_name || 'Member',
+              email: a.assigned_to_name || 'Member',
+            }))}
+          />
+
           {/* Assignment History */}
           <Card className="rounded-xl border border-border bg-card shadow-xs">
             <CardContent className="p-5 space-y-4">

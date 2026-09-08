@@ -17,6 +17,7 @@ import { adminService } from '../../services/adminService';
 import { AdminDashboardMetrics } from '../../types/admin';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
+import { TeamWorkloadPlanner } from '../../components/admin/TeamWorkloadPlanner';
 
 export const AdminDashboardPage: React.FC = () => {
   const { metrics, refreshMetrics } = useAdmin();
@@ -200,6 +201,9 @@ export const AdminDashboardPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Workload Balancer & Capacity Planner */}
+      <TeamWorkloadPlanner />
 
       {/* Recent Activity Audit Feed */}
       <Card className="rounded-xl border border-border bg-card shadow-xs">
