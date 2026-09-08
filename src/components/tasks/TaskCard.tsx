@@ -91,7 +91,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const handleWhatsAppShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     shareTaskOnWhatsApp(task, siteName);
-    showToast('व्हॉट्सॲपवर मेसेज तयार केला!', 'success');
+    showToast('WhatsApp message generated!', 'success');
   };
 
   const handleSoftDelete = async () => {
@@ -255,21 +255,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           ) : null}
         </div>
 
-        {/* Clear Ownership & Status Banner */}
+        {/* Ownership & Status */}
         {task.status === 'completed' ? (
           <div className="mt-3 p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 space-y-1 text-xs">
             <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1 font-bold text-emerald-800 dark:text-emerald-300 text-[11px]">
+              <span className="inline-flex items-center gap-1 font-bold text-emerald-800 dark:text-emerald-300 text-xs">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>पूर्ण केले: {task.completed_by || task.person_name || 'Team Member'}</span>
-              </span>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                (By: {task.created_by})
+                <span>Completed by {task.completed_by || task.person_name || 'Team Member'}</span>
               </span>
             </div>
             {task.reassigned_by && (
-              <p className="text-[11px] text-emerald-900 dark:text-emerald-200 font-medium bg-white/70 dark:bg-slate-900/50 p-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/40 line-clamp-2">
-                📝 <strong>शेरा:</strong> "{task.reassigned_by}"
+              <p className="text-xs text-emerald-900 dark:text-emerald-200 font-medium bg-white/70 dark:bg-slate-900/50 p-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/40 line-clamp-2">
+                Remark: "{task.reassigned_by}"
               </p>
             )}
           </div>
@@ -281,11 +278,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 Pending with: <strong className="text-slate-800 dark:text-slate-200">{task.person_name || 'Unassigned'}</strong>
               </span>
             </div>
-            {task.created_by && (
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
-                (By: {task.created_by})
-              </span>
-            )}
           </div>
         )}
 
@@ -348,7 +340,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </div>
         )}
 
-        {/* 🚀 Tactile High-Impact Action Bar */}
+        {/* Tactile High-Impact Action Bar */}
         {!isBin && (
           <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 no-card-click">
             {/* Left: Communication & Audio Tools */}
@@ -358,13 +350,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 type="button"
                 onClick={handleWhatsAppShare}
                 className="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 text-xs font-bold flex items-center gap-1.5 transition-all transform active:scale-95 shadow-xs"
-                title="व्हॉट्सॲपवर पाठवा (1-Click Share)"
+                title="Share via WhatsApp"
               >
                 <Share2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>WhatsApp</span>
               </button>
 
-              {/* Marathi Audio Reader Button */}
+              {/* Audio Reader Button */}
               <button
                 type="button"
                 onClick={handleToggleSpeak}
@@ -373,17 +365,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                     ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700 animate-pulse'
                     : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700'
                 }`}
-                title="टास्क ऐका (Speak Marathi Audio)"
+                title="Listen to task details"
               >
                 {isSpeaking ? (
                   <>
                     <VolumeX className="w-3.5 h-3.5 text-amber-600" />
-                    <span>थांबवा</span>
+                    <span>Stop</span>
                   </>
                 ) : (
                   <>
                     <Volume2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                    <span>ऐका</span>
+                    <span>Listen</span>
                   </>
                 )}
               </button>
@@ -398,11 +390,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                     e.stopPropagation();
                     setQuickDoneOpen(true);
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm hover:shadow transition-all transform active:scale-95"
-                  title="काम पूर्ण झाले (Done with live photo proof)"
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all transform active:scale-95"
+                  title="Mark task completed with photo proof"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>✓ पूर्ण झाले</span>
+                  <span>Done</span>
                 </button>
               ) : (
                 <button
@@ -412,10 +404,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                     setStatusModalOpen(true);
                   }}
                   className="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-xs font-semibold flex items-center gap-1 transition-all transform active:scale-95"
-                  title="स्थिती बदला"
+                  title="Change Status"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>पूर्ण ✅</span>
+                  <span>Completed</span>
                 </button>
               )}
 
@@ -427,7 +419,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                     onEdit(task);
                   }}
                   className="p-1.5 rounded-xl text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 transition-all transform active:scale-95"
-                  title="बदल करा (Edit Task)"
+                  title="Edit Task"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                 </button>

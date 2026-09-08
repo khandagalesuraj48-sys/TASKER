@@ -202,14 +202,14 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const handleVoiceInput = async (spokenText: string) => {
     setIsAiParsing(true);
     try {
-      showToast(`🎙️ "${spokenText}" - AI समजून घेत आहे...`, 'info');
+      showToast(`Processing voice input...`, 'info');
       const result = await extractTaskFromSpokenText(spokenText);
 
       if (result.title) setTitle(result.title);
       if (result.description) {
         let fullDesc = result.description;
         if (result.subtasks && result.subtasks.length > 0) {
-          fullDesc += '\n\nकामाचे टप्पे:\n' + result.subtasks.map((s, i) => `${i + 1}. ${s}`).join('\n');
+          fullDesc += '\n\nAction Steps:\n' + result.subtasks.map((s, i) => `${i + 1}. ${s}`).join('\n');
         }
         setDescription(fullDesc);
       }
@@ -230,12 +230,12 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         }
       }
 
-      showToast('✨ AI ने बोललेले ऐकून टास्क फॉर्म भरला!', 'success');
+      showToast('Task details filled from voice input!', 'success');
     } catch (err: any) {
       console.error('Voice parsing error:', err);
       if (!title) setTitle(spokenText.slice(0, 50));
       if (!description) setDescription(spokenText);
-      showToast('बोललेला मजकूर जोडला गेला.', 'info');
+      showToast('Voice input added to task.', 'info');
     } finally {
       setIsAiParsing(false);
     }
@@ -553,12 +553,12 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 {isAiParsing ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>AI विश्लेषण करत आहे...</span>
+                    <span>Analyzing document...</span>
                   </>
                 ) : (
                   <>
                     <FileUp className="w-3.5 h-3.5" />
-                    <span>📄 PDF Import करा</span>
+                    <span>Import PDF</span>
                   </>
                 )}
               </button>
@@ -637,10 +637,10 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
           <div className="space-y-1.5 p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
-                कामाची साईट / लोकेशन (Site)
+                Work Site / Location
               </label>
               <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">
-                {sites.length} {sites.length === 1 ? 'साईट नियुक्त' : 'साईट्स उपलब्ध'}
+                {sites.length} {sites.length === 1 ? 'Site Assigned' : 'Sites Available'}
               </span>
             </div>
             <select
@@ -649,9 +649,9 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               className="w-full rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-indigo-950 dark:text-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {(isPlatformAdmin || isAdmin || isOwner) ? (
-                <option value="">सर्व साईट्स / सामान्य (All Sites / General)</option>
+                <option value="">All Sites / General</option>
               ) : sites.length === 0 ? (
-                <option value="">कोणतीही साईट नियुक्त नाही (No site assigned)</option>
+                <option value="">No site assigned</option>
               ) : null}
               {sites.map((s) => (
                 <option key={s.id} value={s.id}>

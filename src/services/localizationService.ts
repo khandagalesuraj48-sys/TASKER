@@ -316,12 +316,12 @@ const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
 };
 
 export const getAppLanguage = (): SupportedLanguage => {
-  return (localStorage.getItem(LOCALE_STORAGE_KEY) as SupportedLanguage) || 'en';
+  return 'en';
 };
 
-export const setAppLanguage = (lang: SupportedLanguage): void => {
-  localStorage.setItem(LOCALE_STORAGE_KEY, lang);
-  window.dispatchEvent(new CustomEvent('language-changed', { detail: { language: lang } }));
+export const setAppLanguage = (_lang: SupportedLanguage): void => {
+  localStorage.setItem(LOCALE_STORAGE_KEY, 'en');
+  window.dispatchEvent(new CustomEvent('language-changed', { detail: { language: 'en' } }));
 };
 
 export const t = (key: string, lang?: SupportedLanguage): string => {

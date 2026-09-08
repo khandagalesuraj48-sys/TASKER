@@ -28,7 +28,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
   const { displayName, userEmail } = useAuth();
   const currentUserName = displayName || userEmail || DEFAULT_USER_NAME;
 
-  const [remarks, setRemarks] = useState<string>('✓ जागेवर काम तपासून ओके');
+  const [remarks, setRemarks] = useState<string>('✓ Completed & Verified on Site');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -38,11 +38,11 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
   const { triggerRefresh } = useTask();
 
   const presetRemarks = [
-    '✓ काम पूर्ण झाले',
-    '✓ जागेवर काम तपासून ओके',
-    '✓ मटेरियल व फिटिंग पूर्ण',
-    '✓ फिनिशिंग व स्वच्छता पूर्ण',
-    '✓ क्लायंट तपासणी पूर्ण',
+    '✓ Completed & Verified on Site',
+    '✓ Work Inspected & Approved',
+    '✓ Installation & Setup Complete',
+    '✓ Maintenance & Cleaning Done',
+    '✓ Client Handover Finished',
   ];
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,7 +66,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!remarks.trim()) {
-      showToast('कृपया कामाचा थोडक्यात शेरा (Remarks) लिहा.', 'error');
+      showToast('Please provide completion remarks.', 'error');
       return;
     }
 
@@ -74,7 +74,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
     try {
       // 1. If photo attached, upload it
       if (photo) {
-        showToast('📸 जागेवरील फोटो अपलोड होत आहे...', 'info');
+        showToast('Uploading site photo proof...', 'info');
         await uploadAttachment(task.id, photo, currentUserName);
       }
 
@@ -86,13 +86,13 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
         currentUserName
       );
 
-      showToast('🎉 अभिनंदन! काम पूर्ण झाले आणि नोंद सेव्ह झाली.', 'success');
+      showToast('Task completed successfully!', 'success');
       triggerRefresh();
       onCompleted?.();
       onClose();
     } catch (err: any) {
       console.error('Complete error:', err);
-      showToast(err.message || 'काम पूर्ण करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.', 'error');
+      showToast(err.message || 'Failed to complete task. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -102,8 +102,8 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="काम पूर्ण करा (Done with Photo)"
-      subtitle={siteName ? `साईटकडील काम: ${siteName}` : 'काम पूर्ण झाल्याची नोंद व पुरावा'}
+      title="Complete Task with Photo Proof"
+      subtitle={siteName ? `Site Location: ${siteName}` : 'Attach proof and verify work completion'}
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -117,7 +117,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
               </h4>
               {task.person_name && (
                 <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400 mt-0.5">
-                  जबाबदार व्यक्ती: <strong>{task.person_name}</strong>
+                  Assigned to: <strong>{task.person_name}</strong>
                 </p>
               )}
             </div>
@@ -129,9 +129,9 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
           <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <Camera className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>जागेवरील फोटो पुरावा (Photo Proof)</span>
+              <span>Site Photo Proof</span>
             </span>
-            <span className="text-[10px] font-normal text-slate-500">ऐच्छिक (Optional)</span>
+            <span className="text-[10px] font-normal text-slate-500">Optional</span>
           </label>
 
           <input
@@ -154,7 +154,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
                 type="button"
                 onClick={removePhoto}
                 className="absolute top-2 right-2 p-1.5 rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-700 transition-colors"
-                title="फोटो काढा"
+                title="Remove photo"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -173,10 +173,10 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
               </div>
               <div className="text-center">
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  कॅमेऱ्याने थेट फोटो काढा किंवा गॅलरीतून निवडा
+                  Take photo with camera or choose from gallery
                 </p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  मोबाईलवरून थेट कॅमेरा सुरू होईल
+                  Mobile camera will open directly
                 </p>
               </div>
             </div>
@@ -187,7 +187,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
         <div>
           <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>१-क्लिक शेरा निवडा:</span>
+            <span>Quick Presets:</span>
           </label>
           <div className="flex flex-wrap gap-1.5">
             {presetRemarks.map((pr) => (
@@ -210,14 +210,14 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
         {/* Remarks Textarea */}
         <div>
           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            कामाचा तपशील / शेरा:
+            Completion Remarks:
           </label>
           <textarea
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             rows={2}
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-            placeholder="काम पूर्ण झाल्याचा शेरा लिहा..."
+            placeholder="Describe work completed..."
             required
           />
         </div>
@@ -231,7 +231,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
             onClick={onClose}
             disabled={isLoading}
           >
-            रद्द करा
+            Cancel
           </Button>
           <button
             type="submit"
@@ -241,12 +241,12 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>नोंद होत आहे...</span>
+                <span>Saving...</span>
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4" />
-                <span>✓ काम पूर्ण झाले म्हणून सेव्ह करा</span>
+                <span>Mark Complete</span>
               </>
             )}
           </button>

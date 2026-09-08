@@ -38,8 +38,8 @@ export const useAppUpdate = (): AppUpdateState => {
   const isAndroid = Capacitor.getPlatform() === 'android';
 
   const [installedVersion, setInstalledVersion] = useState<{ versionName: string; versionCode: number }>({
-    versionName: '1.0.17',
-    versionCode: 20,
+    versionName: '1.0.18',
+    versionCode: 21,
   });
   const [latestRelease, setLatestRelease] = useState<AppRelease | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);

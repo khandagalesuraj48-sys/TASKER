@@ -117,7 +117,7 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
       console.warn('App.getInfo failed, using fallback version:', e);
     }
   }
-  return { versionName: '1.0.17', versionCode: 20 };
+  return { versionName: '1.0.18', versionCode: 21 };
 }
 
 /**

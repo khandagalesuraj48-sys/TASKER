@@ -100,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     },
     {
       to: '/org/pending',
-      label: 'Site Pending (प्रलंबित कामे)',
+      label: 'Pending by Site',
       icon: <Clock className="w-4 h-4 text-amber-500" />,
     },
     {
@@ -394,7 +394,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 shadow-2xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
-              TASKER v1.0.17
+              TASKER v1.0.18
             </span>
           </div>
           <p className="text-[9.5px] font-medium text-slate-400 dark:text-slate-500 tracking-tight leading-tight">
