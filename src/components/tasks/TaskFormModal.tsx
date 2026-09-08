@@ -25,10 +25,10 @@ import { DEFAULT_USER_NAME } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { useAdmin } from '../../context/AdminContext';
-import { extractTaskFromDocument } from '../../services/aiTaskService';
+import { extractTaskFromDocument, extractTaskFromSpokenText } from '../../services/aiTaskService';
 import { FileUploadZone } from './FileUploadZone';
 import { ReminderControls } from '../reminders/ReminderControls';
-import { Paperclip, X, User, Building2, UserPlus, Sparkles, FileUp, Loader2 } from 'lucide-react';
+import { Paperclip, X, User, Building2, UserPlus, Sparkles, FileUp, Loader2, Mic, MicOff } from 'lucide-react';
 
 interface TaskFormModalProps {
   isOpen: boolean;
@@ -134,6 +134,110 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
     } finally {
       setIsAiParsing(false);
       if (aiFileInputRef.current) aiFileInputRef.current.value = '';
+    }
+  };
+
+  // Marathi Voice-to-Task State & Handlers
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const recognitionRef = useRef<any>(null);
+
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showToast('तुमच्या ब्राउझर किंवा डिव्हाइसवर व्हॉईस इनपुट सपोर्ट उपलब्ध नाही.', 'warning');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'mr-IN'; // Default to Marathi
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        showToast('🎙️ ऐकत आहे... कृपया मराठीत बोला...', 'info');
+      };
+
+      recognition.onresult = async (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (transcript) {
+          setIsListening(false);
+          await handleVoiceInput(transcript);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Speech recognition error:', event);
+        setIsListening(false);
+        if (event.error !== 'no-speech') {
+          showToast(`माईक त्रुटी: ${event.error}`, 'error');
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err: any) {
+      console.error('Speech recognition start failed:', err);
+      setIsListening(false);
+      showToast('माईक सुरू करता आला नाही: ' + (err.message || 'Error'), 'error');
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // ignore
+      }
+    }
+    setIsListening(false);
+  };
+
+  const handleVoiceInput = async (spokenText: string) => {
+    setIsAiParsing(true);
+    try {
+      showToast(`🎙️ "${spokenText}" - AI समजून घेत आहे...`, 'info');
+      const result = await extractTaskFromSpokenText(spokenText);
+
+      if (result.title) setTitle(result.title);
+      if (result.description) {
+        let fullDesc = result.description;
+        if (result.subtasks && result.subtasks.length > 0) {
+          fullDesc += '\n\nकामाचे टप्पे:\n' + result.subtasks.map((s, i) => `${i + 1}. ${s}`).join('\n');
+        }
+        setDescription(fullDesc);
+      }
+      if (result.priority) setPriority(result.priority);
+      if (result.dueDate) setDueDate(result.dueDate);
+
+      if (result.suggestedSite && sites.length > 0) {
+        const query = result.suggestedSite.toLowerCase();
+        const matched = sites.find(
+          (s) =>
+            s.name.toLowerCase().includes(query) ||
+            s.code.toLowerCase().includes(query) ||
+            query.includes(s.name.toLowerCase()) ||
+            query.includes(s.code.toLowerCase())
+        );
+        if (matched) {
+          setSelectedSiteId(matched.id);
+        }
+      }
+
+      showToast('✨ AI ने बोललेले ऐकून टास्क फॉर्म भरला!', 'success');
+    } catch (err: any) {
+      console.error('Voice parsing error:', err);
+      if (!title) setTitle(spokenText.slice(0, 50));
+      if (!description) setDescription(spokenText);
+      showToast('बोललेला मजकूर जोडला गेला.', 'info');
+    } finally {
+      setIsAiParsing(false);
     }
   };
 
@@ -382,53 +486,82 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* ✨ AI PDF / Document Import Card */}
-        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-violet-600/10 via-indigo-600/10 to-purple-600/10 border border-violet-200 dark:border-violet-900/60 flex flex-wrap items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-              <Sparkles className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black text-slate-900 dark:text-slate-100">
-                  ✨ AI PDF Task Import
-                </span>
-                <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 uppercase">
-                  Gemini AI
-                </span>
+        {/* ✨ AI Super-Powers: Voice-to-Task & PDF Document Import Card */}
+        <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-violet-600/10 via-purple-600/10 to-indigo-600/10 border border-violet-200 dark:border-violet-900/60 shadow-xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Sparkles className="w-4 h-4 animate-pulse" />
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                वर्क ऑर्डर किंवा प्रोजेक्ट PDF निवडा, AI सर्व तपशील वाचून फॉर्म भरेल
-              </p>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black text-slate-900 dark:text-slate-100">
+                    ✨ AI स्मार्ट असिस्टंट
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 uppercase tracking-wider">
+                    Gemini AI
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  टाईप न करता मराठीत बोलून किंवा PDF फाईल अपलोड करून सेकंदात टास्क भरा
+                </p>
+              </div>
             </div>
           </div>
 
-          <div>
-            <input
-              type="file"
-              ref={aiFileInputRef}
-              onChange={handleAiFileUpload}
-              accept=".pdf,application/pdf,image/*"
-              className="hidden"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            {/* 🎙️ Voice-to-Task Button */}
             <button
               type="button"
               disabled={isAiParsing}
-              onClick={() => aiFileInputRef.current?.click()}
-              className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+              onClick={isListening ? stopListening : startListening}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all transform active:scale-95 shadow-xs ${
+                isListening
+                  ? 'bg-rose-600 text-white animate-pulse ring-4 ring-rose-300 dark:ring-rose-950'
+                  : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-violet-950/50'
+              } disabled:opacity-50`}
             >
-              {isAiParsing ? (
+              {isListening ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>AI वाचत आहे...</span>
+                  <MicOff className="w-4 h-4 text-white" />
+                  <span>🎙️ ऐकत आहे... (थांबवण्यासाठी क्लिक करा)</span>
                 </>
               ) : (
                 <>
-                  <FileUp className="w-3.5 h-3.5" />
-                  <span>PDF Import करा</span>
+                  <Mic className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                  <span>🎙️ बोलून टास्क भरा (मराठी)</span>
                 </>
               )}
             </button>
+
+            {/* 📄 PDF Import Button */}
+            <div>
+              <input
+                type="file"
+                ref={aiFileInputRef}
+                onChange={handleAiFileUpload}
+                accept=".pdf,application/pdf,image/*"
+                className="hidden"
+              />
+              <button
+                type="button"
+                disabled={isAiParsing || isListening}
+                onClick={() => aiFileInputRef.current?.click()}
+                className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 active:scale-95 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+              >
+                {isAiParsing ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>AI विश्लेषण करत आहे...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileUp className="w-3.5 h-3.5" />
+                    <span>📄 PDF Import करा</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 

@@ -5,8 +5,10 @@ import { StatusBadge } from '../common/StatusBadge';
 import { PriorityBadge } from '../common/PriorityBadge';
 import { formatDateTime, formatDateOnly, formatRelativePending, isTaskOverdue } from '../../lib/dateUtils';
 import { ChangeStatusModal } from './ChangeStatusModal';
+import { QuickCompleteModal } from './QuickCompleteModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { softDeleteTask, restoreTask, permanentDeleteTask, canUserDeleteTask } from '../../services/taskService';
+import { shareTaskOnWhatsApp, speakTaskDetails, stopSpeaking } from '../../utils/taskSharingUtils';
 import { useToast } from '../../context/ToastContext';
 import { useTask } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
@@ -24,6 +26,10 @@ import {
   RotateCcw,
   CheckCircle2,
   ExternalLink,
+  Share2,
+  Volume2,
+  VolumeX,
+  Building2,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -44,15 +50,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const { triggerRefresh } = useTask();
   const { user } = useAuth();
   const { isPlatformAdmin } = useAdmin();
-  const { isAdmin: isOrgAdmin, isOwner: isOrgOwner } = useEnterprise();
+  const { isAdmin: isOrgAdmin, isOwner: isOrgOwner, sites } = useEnterprise();
 
   const canDelete = canUserDeleteTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner);
 
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [statusModalOpen, setStatusModalOpen] = useState<boolean>(false);
+  const [quickDoneOpen, setQuickDoneOpen] = useState<boolean>(false);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
   const [permDeleteConfirmOpen, setPermDeleteConfirmOpen] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+
+  // Resolve site name if assigned
+  const taskSite = sites?.find((s) => s.id === task.site_id);
+  const siteName = taskSite ? taskSite.name : undefined;
 
   const overdue = isTaskOverdue(task.due_date, task.status);
 
@@ -62,6 +74,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     if (!isBin) {
       navigate(`/tasks/${task.id}`);
     }
+  };
+
+  const handleToggleSpeak = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isSpeaking) {
+      stopSpeaking();
+      setIsSpeaking(false);
+    } else {
+      speakTaskDetails(task.title, task.description || undefined, siteName);
+      setIsSpeaking(true);
+      setTimeout(() => setIsSpeaking(false), 12000);
+    }
+  };
+
+  const handleWhatsAppShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    shareTaskOnWhatsApp(task, siteName);
+    showToast('व्हॉट्सॲपवर मेसेज तयार केला!', 'success');
   };
 
   const handleSoftDelete = async () => {
@@ -121,6 +151,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={task.status} isOverdue={overdue} size="sm" />
             <PriorityBadge priority={task.priority} size="sm" />
+            {siteName && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/90 dark:bg-indigo-950/60 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-900/50">
+                <Building2 className="w-3 h-3 text-indigo-500 shrink-0" />
+                <span>{siteName}</span>
+              </span>
+            )}
           </div>
 
           {/* Action Menu Button */}
@@ -275,7 +311,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 title={`Pending since ${formatDateTime(task.pending_since)}`}
               >
                 <Clock className="w-3 h-3 text-amber-500" />
-                <span>Pending since: {formatRelativePending(task.pending_since)}</span>
+                <span>Pending: {formatRelativePending(task.pending_since)}</span>
               </span>
             )}
           </div>
@@ -311,7 +347,109 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <span>By: <strong>{task.completed_by || 'User'}</strong></span>
           </div>
         )}
+
+        {/* 🚀 Tactile High-Impact Action Bar */}
+        {!isBin && (
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 no-card-click">
+            {/* Left: Communication & Audio Tools */}
+            <div className="flex items-center gap-1.5">
+              {/* WhatsApp Share Button */}
+              <button
+                type="button"
+                onClick={handleWhatsAppShare}
+                className="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 text-xs font-bold flex items-center gap-1.5 transition-all transform active:scale-95 shadow-xs"
+                title="व्हॉट्सॲपवर पाठवा (1-Click Share)"
+              >
+                <Share2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>WhatsApp</span>
+              </button>
+
+              {/* Marathi Audio Reader Button */}
+              <button
+                type="button"
+                onClick={handleToggleSpeak}
+                className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all transform active:scale-95 shadow-xs ${
+                  isSpeaking
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700 animate-pulse'
+                    : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700'
+                }`}
+                title="टास्क ऐका (Speak Marathi Audio)"
+              >
+                {isSpeaking ? (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5 text-amber-600" />
+                    <span>थांबवा</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>ऐका</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Right: Primary Progress Action */}
+            <div className="flex items-center gap-1.5">
+              {task.status !== 'completed' ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setQuickDoneOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm hover:shadow transition-all transform active:scale-95"
+                  title="काम पूर्ण झाले (Done with live photo proof)"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>✓ पूर्ण झाले</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStatusModalOpen(true);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-xs font-semibold flex items-center gap-1 transition-all transform active:scale-95"
+                  title="स्थिती बदला"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>पूर्ण ✅</span>
+                </button>
+              )}
+
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(task);
+                  }}
+                  className="p-1.5 rounded-xl text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 transition-all transform active:scale-95"
+                  title="बदल करा (Edit Task)"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Quick Done With Photo Proof Modal */}
+      {quickDoneOpen && (
+        <QuickCompleteModal
+          task={task}
+          siteName={siteName}
+          isOpen={quickDoneOpen}
+          onClose={() => setQuickDoneOpen(false)}
+          onCompleted={() => {
+            onRefresh?.();
+            triggerRefresh();
+          }}
+        />
+      )}
 
       {/* Change Status Modal */}
       {statusModalOpen && (
@@ -349,4 +487,3 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     </>
   );
 };
-

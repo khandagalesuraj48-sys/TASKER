@@ -147,3 +147,122 @@ Rules:
 
   throw lastError || new Error('Failed to extract task from document using AI.');
 };
+
+/**
+ * Extract structured task from spoken Marathi / Hindi / English speech transcript using Gemini AI
+ */
+export const extractTaskFromSpokenText = async (spokenText: string): Promise<AiExtractedTask> => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || FALLBACK_KEY;
+
+  if (!apiKey) {
+    throw new Error('Gemini API key is not configured.');
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const prompt = `You are an expert AI task planner for the construction and project management app TASKER.
+A site supervisor or user just spoke a task instruction in Marathi (or mixed Marathi/Hindi/English).
+Here is the user's spoken audio transcript:
+"${spokenText}"
+
+Today's date is: ${today}.
+
+Analyze the spoken transcript. Understand:
+1. What work needs to be done (Title & Description)
+2. Is there any site mentioned? (e.g. Rachana, Site A, Site B, VTR, 18 B, etc.)
+3. Is there any urgency or priority? (e.g. तातडीने, urgent = urgent; महत्वाचे = high; सामान्य = normal/medium)
+4. Is there any due date mentioned? (e.g. आज, उद्या, परवा, २ दिवसांत, तारखेनुसार). Calculate the target date relative to today (${today}).
+5. Action steps if any.
+
+Generate valid JSON output with EXACTLY these fields:
+{
+  "title": "Clear, concise Marathi or English title summarizing the core work",
+  "description": "Clean, well-structured description of the spoken task instructions in Marathi or English",
+  "priority": "urgent" | "high" | "medium" | "low",
+  "dueDate": "YYYY-MM-DD format or null",
+  "suggestedSite": "Extracted site name or null",
+  "subtasks": ["Step 1", "Step 2"]
+}
+
+Output ONLY valid JSON. Do not include markdown codeblocks or explanation.`;
+
+  let lastError: Error | null = null;
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`Gemini model ${model} responded with ${response.status}:`, errorText);
+        lastError = new Error(`AI model returned error status ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!rawText) {
+        continue;
+      }
+
+      const cleanedText = rawText
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+      const parsed = JSON.parse(cleanedText);
+
+      let priority: TaskPriority = 'medium';
+      if (['low', 'medium', 'high', 'urgent'].includes(parsed.priority?.toLowerCase())) {
+        priority = parsed.priority.toLowerCase() as TaskPriority;
+      }
+
+      let formattedDueDate: string | undefined = undefined;
+      if (parsed.dueDate && typeof parsed.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.dueDate.trim())) {
+        formattedDueDate = parsed.dueDate.trim();
+      }
+
+      return {
+        title: parsed.title || spokenText.slice(0, 50),
+        description: parsed.description || spokenText,
+        priority,
+        dueDate: formattedDueDate,
+        suggestedSite: parsed.suggestedSite || undefined,
+        subtasks: Array.isArray(parsed.subtasks) ? parsed.subtasks.filter(Boolean) : [],
+        rawSummary: parsed.description || spokenText,
+      };
+    } catch (err: any) {
+      console.warn(`Spoken text attempt with ${model} failed:`, err);
+      lastError = err;
+    }
+  }
+
+  if (lastError) {
+    console.warn('AI speech parsing fell back to transcript due to:', lastError);
+  }
+
+  // Fallback if AI call failed
+  return {
+    title: spokenText.length > 40 ? spokenText.substring(0, 40) + '...' : spokenText,
+    description: spokenText,
+    priority: 'medium',
+  };
+};
+
