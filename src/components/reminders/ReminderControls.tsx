@@ -77,16 +77,16 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-4 space-y-3">
+    <div className="rounded-xl border border-border/80 bg-muted/30 p-4 space-y-3">
       {/* Header & Toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {value.is_enabled ? (
-            <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <Bell className="w-4 h-4 text-primary" />
           ) : (
-            <BellOff className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+            <BellOff className="w-4 h-4 text-muted-foreground" />
           )}
-          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Smart Reminder</span>
+          <span className="text-sm font-semibold text-foreground">Smart Reminder</span>
         </div>
 
         <label className="relative inline-flex items-center cursor-pointer">
@@ -96,17 +96,17 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
             onChange={(e) => handleToggle(e.target.checked)}
             className="sr-only peer"
           />
-          <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 dark:after:border-slate-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+          <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
         </label>
       </div>
 
       {value.is_enabled && (
-        <div className="space-y-3.5 pt-2 border-t border-slate-200/60 dark:border-slate-800/80 animate-in fade-in">
+        <div className="space-y-3.5 pt-2 border-t border-border/60 animate-in fade-in">
           {/* Quick Schedule Presets */}
           <div>
             <div className="flex items-center gap-1 mb-1.5">
               <Sparkles className="w-3 h-3 text-amber-500" />
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-foreground/80">
                 Quick Schedule (from now)
               </label>
             </div>
@@ -123,7 +123,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                   key={preset.mins}
                   type="button"
                   onClick={() => handleQuickPreset(preset.mins)}
-                  className="py-1 px-1.5 rounded-md border text-center font-medium bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-700 transition-colors shadow-xs"
+                  className="py-1 px-1.5 rounded-lg border text-center font-medium bg-card text-foreground border-border/80 hover:bg-muted hover:text-primary transition-colors shadow-2xs"
                 >
                   {preset.label}
                 </button>
@@ -133,23 +133,23 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
 
           {/* Reminder Trigger Time */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
               Exact Reminder Date & Time
             </label>
             <div className="relative">
-              <Clock className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-2.5 pointer-events-none" />
+              <Clock className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5 pointer-events-none" />
               <input
                 type="datetime-local"
                 value={value.remind_at ? formatInputDateTime(value.remind_at) : ''}
                 onChange={handleDateChange}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none"
+                className="w-full rounded-lg border border-input/80 bg-background pl-9 pr-3 py-1.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               />
             </div>
           </div>
 
           {/* Recurrence Selector */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
               Repeat Recurrence
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-xs">
@@ -166,10 +166,10 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                   key={opt.key}
                   type="button"
                   onClick={() => handleRecurrenceChange(opt.key)}
-                  className={`py-1.5 px-2 rounded-md border text-center font-medium transition-colors ${
+                  className={`py-1.5 px-2 rounded-lg border text-center font-medium transition-colors ${
                     value.recurrence_type === opt.key
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60'
+                      ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                      : 'bg-card text-foreground border-border/80 hover:bg-muted'
                   }`}
                 >
                   {opt.label}
@@ -182,16 +182,16 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
           {value.recurrence_type === 'custom' && (
             <div className="space-y-2 pt-1">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">Repeat every:</label>
+                <label className="text-xs text-muted-foreground whitespace-nowrap">Repeat every:</label>
                 <input
                   type="number"
                   min="1"
                   max="1440"
                   value={value.custom_interval_minutes || 60}
                   onChange={(e) => handleCustomIntervalChange(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-20 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-800 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none"
+                  className="w-20 rounded-lg border border-input/80 bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 />
-                <span className="text-xs text-slate-500 dark:text-slate-400">minutes</span>
+                <span className="text-xs text-muted-foreground">minutes</span>
               </div>
 
               {/* Quick Preset Chips for Custom Interval */}
@@ -208,10 +208,10 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                     key={chip.val}
                     type="button"
                     onClick={() => handleCustomIntervalChange(chip.val)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-colors ${
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors ${
                       value.custom_interval_minutes === chip.val
-                        ? 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-700'
-                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        ? 'bg-primary/10 text-primary border-primary/30'
+                        : 'bg-card text-muted-foreground border-border/80 hover:bg-muted'
                     }`}
                   >
                     {chip.label}
@@ -221,7 +221,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
             </div>
           )}
 
-          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="text-[11px] text-muted-foreground">
             ℹ When the task is completed or deleted, all future reminders automatically stop.
           </p>
         </div>
