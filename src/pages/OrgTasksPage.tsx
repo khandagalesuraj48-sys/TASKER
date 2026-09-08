@@ -36,6 +36,7 @@ export const OrgTasksPage: React.FC = () => {
     sites,
     selectedSite,
     selectSite,
+    userAssignedSiteIds,
     isAdmin,
     isOwner,
     refreshSites,
@@ -97,6 +98,12 @@ export const OrgTasksPage: React.FC = () => {
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
       if (t.is_deleted) return false;
+
+      // Site Assignment Restriction: regular users only see tasks for their assigned sites
+      if (!isAdmin && !isOwner && !isPlatformAdmin && userAssignedSiteIds.length > 0) {
+        if (t.site_id && !userAssignedSiteIds.includes(t.site_id)) return false;
+      }
+
       if (statusFilter !== 'all' && t.status !== statusFilter) return false;
       if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
       if (selectedSite && t.site_id !== selectedSite.id) return false;
@@ -109,7 +116,7 @@ export const OrgTasksPage: React.FC = () => {
       }
       return true;
     });
-  }, [tasks, statusFilter, priorityFilter, selectedSite, searchQuery]);
+  }, [tasks, statusFilter, priorityFilter, selectedSite, searchQuery, userAssignedSiteIds, isAdmin, isOwner, isPlatformAdmin]);
 
   const handleSendJoinRequest = async () => {
     try {
@@ -237,10 +244,16 @@ export const OrgTasksPage: React.FC = () => {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            सर्व साईट्स (All Sites)
+            {(!isAdmin && !isOwner && !isPlatformAdmin && userAssignedSiteIds.length > 0)
+              ? 'माझ्या साईट्स (My Sites)'
+              : 'सर्व साईट्स (All Sites)'}
           </button>
 
-          {sites.map((s) => {
+          {(
+            (isAdmin || isOwner || isPlatformAdmin || userAssignedSiteIds.length === 0)
+              ? sites
+              : sites.filter((s) => userAssignedSiteIds.includes(s.id))
+          ).map((s) => {
             const isSelected = selectedSite?.id === s.id;
             return (
               <button
