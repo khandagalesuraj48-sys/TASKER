@@ -174,7 +174,7 @@ export const AppLayout: React.FC = () => {
   }, [stats.pending, stats.inProgress, stats.partial, user?.id, isEnterpriseMode]);
 
   return (
-    <div className="flex h-screen min-h-[100dvh] w-full max-w-full bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors">
+    <div className="flex h-screen min-h-[100dvh] w-full max-w-full bg-background text-foreground overflow-hidden relative transition-colors">
       {/* Desktop & Mobile Drawer Sidebar */}
       <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 

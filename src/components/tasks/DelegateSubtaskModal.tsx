@@ -136,13 +136,13 @@ export const DelegateSubtaskModal: React.FC<DelegateSubtaskModalProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Context info banner */}
-        <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-xl text-xs flex items-center justify-between text-blue-900 dark:text-blue-200">
+        <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-xs flex items-center justify-between text-foreground">
           <div className="flex items-center gap-2">
-            <GitFork className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span>Parent Task: <strong>{parentTask.title}</strong></span>
+            <GitFork className="w-4 h-4 text-primary shrink-0" />
+            <span>Parent Task: <strong className="text-foreground">{parentTask.title}</strong></span>
           </div>
           {parentTask.person_name && (
-            <span className="text-[11px] text-blue-700 dark:text-blue-300">
+            <span className="text-[11px] text-muted-foreground">
               Assigned: {parentTask.person_name}
             </span>
           )}
@@ -150,7 +150,7 @@ export const DelegateSubtaskModal: React.FC<DelegateSubtaskModalProps> = ({
 
         {/* Quick Action Suggestion Chips */}
         <div>
-          <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">
             Quick Requirement
           </label>
           <div className="flex flex-wrap gap-1.5">
@@ -159,10 +159,10 @@ export const DelegateSubtaskModal: React.FC<DelegateSubtaskModalProps> = ({
                 key={chip}
                 type="button"
                 onClick={() => setTitle(chip)}
-                className={`px-2.5 py-1 text-xs rounded-lg border transition-all text-left font-medium ${
+                className={`px-2.5 py-1 text-xs rounded-md border transition-all text-left font-medium ${
                   title === chip
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                    : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                    : 'bg-muted/40 border-border text-foreground hover:bg-muted'
                 }`}
               >
                 {chip}
@@ -173,7 +173,7 @@ export const DelegateSubtaskModal: React.FC<DelegateSubtaskModalProps> = ({
 
         {/* Subtask Title Input */}
         <div>
-          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+          <label className="text-xs font-semibold text-foreground block mb-1">
             Subtask Requirement / Action Item *
           </label>
           <input
@@ -182,36 +182,36 @@ export const DelegateSubtaskModal: React.FC<DelegateSubtaskModalProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Attach log book signed by site supervisor"
-            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-card text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
           />
         </div>
 
         {/* Assignee Selection */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <label className="text-xs font-semibold text-foreground">
               Delegate To (Assignee)
             </label>
             {employees.length > 5 && (
               <div className="relative w-36">
-                <Search className="w-3 h-3 absolute left-2 top-2 text-slate-400" />
+                <Search className="w-3 h-3 absolute left-2 top-2 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Filter..."
+                  placeholder="Filter team..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-6 pr-2 py-1 text-[11px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  className="w-full pl-6 pr-2 py-1 text-[11px] rounded-md border border-border bg-card text-foreground"
                 />
               </div>
             )}
           </div>
 
           {isLoadingEmps ? (
-            <div className="h-20 flex items-center justify-center text-xs text-slate-400">
+            <div className="h-20 flex items-center justify-center text-xs text-muted-foreground">
               Loading team directory...
             </div>
           ) : employees.length === 0 ? (
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 text-center">
+            <div className="p-3 rounded-lg bg-muted/40 text-xs text-muted-foreground text-center">
               No organization team members found. You can still create an unassigned subtask.
             </div>
           ) : (
@@ -224,23 +224,23 @@ export const DelegateSubtaskModal: React.FC<DelegateSubtaskModalProps> = ({
                     key={emp.id}
                     type="button"
                     onClick={() => setSelectedEmployeeId(isSelected ? '' : emp.id)}
-                    className={`flex items-center gap-2 p-2 rounded-xl text-left border transition-all text-xs ${
+                    className={`flex items-center gap-2 p-2 rounded-lg text-left border transition-all text-xs ${
                       isSelected
-                        ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-900 dark:text-blue-100 font-semibold'
-                        : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        ? 'bg-primary/10 border-primary text-foreground font-semibold'
+                        : 'bg-card border-border text-foreground hover:bg-muted/40'
                     }`}
                   >
-                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-300 shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                       {fullName.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-xs">{fullName}</div>
-                      <div className="truncate text-[10px] text-slate-400 font-normal">
+                      <div className="truncate text-[10px] text-muted-foreground font-normal">
                         {emp.designation || 'Team Member'}
                       </div>
                     </div>
                     {isSelected && (
-                      <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
                     )}
                   </button>
                 );
@@ -252,25 +252,25 @@ export const DelegateSubtaskModal: React.FC<DelegateSubtaskModalProps> = ({
         {/* Due Date & Priority */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+            <label className="text-xs font-semibold text-foreground block mb-1">
               Due Date
             </label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-card text-foreground"
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+            <label className="text-xs font-semibold text-foreground block mb-1">
               Priority
             </label>
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-card text-foreground"
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -282,7 +282,7 @@ export const DelegateSubtaskModal: React.FC<DelegateSubtaskModalProps> = ({
 
         {/* Additional Instructions */}
         <div>
-          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+          <label className="text-xs font-semibold text-foreground block mb-1">
             Instructions / Deliverable Notes (Optional)
           </label>
           <textarea
@@ -290,12 +290,12 @@ export const DelegateSubtaskModal: React.FC<DelegateSubtaskModalProps> = ({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add any specific guidelines for log book format, site photos, or client signature..."
-            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-card text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary resize-none"
           />
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
           <Button variant="outline" size="sm" type="button" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>

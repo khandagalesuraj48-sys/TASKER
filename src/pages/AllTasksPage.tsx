@@ -59,26 +59,26 @@ export const AllTasksPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <CheckSquare2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            <span>All Tasks</span>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+            <CheckSquare2 className="w-5 h-5 text-primary" />
+            <span>All Tasks Register</span>
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Complete list of all active work items across all status states
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Complete database of work items across all status states and scopes
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1">
+          <div className="flex items-center rounded-md border border-border bg-card p-0.5">
             <button
               onClick={() => setViewMode('card')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'card' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`p-1.5 rounded-sm transition-colors ${
+                viewMode === 'card' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Card view"
             >
@@ -86,8 +86,8 @@ export const AllTasksPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'table' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`p-1.5 rounded-sm transition-colors ${
+                viewMode === 'table' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Table view"
             >
@@ -95,43 +95,43 @@ export const AllTasksPage: React.FC = () => {
             </button>
           </div>
 
-          <Button onClick={() => openCreateModal()} leftIcon={<Plus className="w-4 h-4" />}>
+          <Button onClick={() => openCreateModal()} leftIcon={<Plus className="w-4 h-4" />} className="shadow-2xs">
             + Add Task
           </Button>
         </div>
       </div>
 
       {/* Scope Segmented Control */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl max-w-md">
+      <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-md border border-border max-w-md">
         <button
           onClick={() => setFilters((prev) => ({ ...prev, scope: undefined }))}
-          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex-1 py-1 px-3 rounded-sm text-xs font-medium transition-colors ${
             !filters.scope
-              ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-background text-foreground font-semibold shadow-2xs'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           All Scopes
         </button>
         <button
           onClick={() => setFilters((prev) => ({ ...prev, scope: 'personal' }))}
-          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex-1 py-1 px-3 rounded-sm text-xs font-medium transition-colors ${
             filters.scope === 'personal'
-              ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-background text-primary font-semibold shadow-2xs'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          👤 Personal
+          Personal
         </button>
         <button
           onClick={() => setFilters((prev) => ({ ...prev, scope: 'workplace' }))}
-          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex-1 py-1 px-3 rounded-sm text-xs font-medium transition-colors ${
             filters.scope === 'workplace'
-              ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-background text-workplace font-semibold shadow-2xs'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          🏢 Workplace
+          Workplace
         </button>
       </div>
 

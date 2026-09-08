@@ -102,13 +102,11 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
 
     setIsLoading(true);
     try {
-      // 1. If file/log book attached, upload it
       if (selectedFile) {
         showToast('Uploading attachment proof...', 'info');
         await uploadAttachment(task.id, selectedFile, currentUserName);
       }
 
-      // 2. Mark task as completed
       await updateTaskStatus(
         task.id,
         'completed',
@@ -135,7 +133,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isSubtask ? 'Complete Subtask with Proof' : 'Complete Task with Photo Proof'}
+      title={isSubtask ? 'Complete Subtask with Proof' : 'Complete Task with Verification Proof'}
       subtitle={
         isSubtask && parentTitle
           ? `Under parent task: "${parentTitle}"`
@@ -147,7 +145,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Task Title Banner */}
-        <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60">
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <div className="flex items-start gap-2.5">
             {isSubtask ? (
               <GitFork className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
@@ -156,16 +154,16 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
             )}
             <div>
               {isSubtask && (
-                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block mb-0.5">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-0.5">
                   Delegated Action Item
                 </span>
               )}
-              <h4 className="text-xs sm:text-sm font-bold text-emerald-950 dark:text-emerald-200 leading-snug">
+              <h4 className="text-xs sm:text-sm font-bold text-foreground leading-snug">
                 {task.title}
               </h4>
               {task.person_name && (
-                <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400 mt-0.5">
-                  Assigned to: <strong>{task.person_name}</strong>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Assigned to: <strong className="text-foreground">{task.person_name}</strong>
                 </p>
               )}
             </div>
@@ -174,15 +172,14 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
 
         {/* Attachment / Log Book Upload Section */}
         <div>
-          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
+          <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <FileUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>{isSubtask ? 'Log Book / Proof Document / Photo' : 'Site Photo or Document Proof'}</span>
             </span>
-            <span className="text-[10px] font-normal text-slate-500">Optional</span>
+            <span className="text-[10px] font-normal text-muted-foreground">Optional</span>
           </label>
 
-          {/* Hidden inputs for camera and documents */}
           <input
             type="file"
             ref={cameraInputRef}
@@ -200,29 +197,29 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
           />
 
           {selectedFile ? (
-            <div className="relative rounded-2xl overflow-hidden border border-emerald-300 dark:border-emerald-800 bg-slate-50 dark:bg-slate-900 p-3">
+            <div className="relative rounded-xl overflow-hidden border border-emerald-500/30 bg-card p-3">
               {filePreview ? (
                 <div className="space-y-2">
                   <img
                     src={filePreview}
                     alt="Proof Preview"
-                    className="w-full h-44 object-cover rounded-xl"
+                    className="w-full h-44 object-cover rounded-lg"
                   />
-                  <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-                    <span className="truncate font-medium">{selectedFile.name}</span>
-                    <span className="shrink-0 text-[11px] text-slate-400">{formatFileSize(selectedFile.size)}</span>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="truncate font-medium text-foreground">{selectedFile.name}</span>
+                    <span className="shrink-0 text-[11px] font-mono">{formatFileSize(selectedFile.size)}</span>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 py-2">
-                  <div className="p-3 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-xl shrink-0">
+                  <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
                     <FileText className="w-6 h-6" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                    <p className="text-xs font-semibold text-foreground truncate">
                       {selectedFile.name}
                     </p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[11px] text-muted-foreground font-mono">
                       {formatFileSize(selectedFile.size)} • Document Attached
                     </p>
                   </div>
@@ -232,10 +229,10 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
               <button
                 type="button"
                 onClick={removeFile}
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-700 transition-colors"
+                className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground shadow-sm hover:opacity-90 transition-opacity"
                 title="Remove attachment"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
@@ -243,15 +240,15 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-emerald-500 bg-slate-50/60 dark:bg-slate-900/40 hover:bg-emerald-50/30 transition-all text-center group active:scale-98"
+                className="flex flex-col items-center justify-center gap-1.5 p-4 rounded-xl border border-dashed border-border hover:border-emerald-500/50 bg-muted/20 hover:bg-emerald-500/5 transition-all text-center group active:scale-98"
               >
-                <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Camera className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Camera className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                <span className="text-xs font-semibold text-foreground">
                   Take Live Photo
                 </span>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-muted-foreground">
                   Camera proof
                 </span>
               </button>
@@ -259,15 +256,15 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
               <button
                 type="button"
                 onClick={() => documentInputRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-blue-500 bg-slate-50/60 dark:bg-slate-900/40 hover:bg-blue-50/30 transition-all text-center group active:scale-98"
+                className="flex flex-col items-center justify-center gap-1.5 p-4 rounded-xl border border-dashed border-border hover:border-primary/50 bg-muted/20 hover:bg-primary/5 transition-all text-center group active:scale-98"
               >
-                <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <FileText className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <FileText className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                  Attach Log Book / PDF
+                <span className="text-xs font-semibold text-foreground">
+                  Attach File / PDF
                 </span>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-muted-foreground">
                   Browse file manager
                 </span>
               </button>
@@ -277,7 +274,7 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
 
         {/* Completion Remarks with One-Click ERP Presets */}
         <div>
-          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+          <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>Completion Remarks *</span>
           </label>
@@ -288,10 +285,10 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
                 key={preset}
                 type="button"
                 onClick={() => setRemarks(preset)}
-                className={`px-2.5 py-1 text-xs rounded-xl font-medium transition-all text-left ${
+                className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all text-left ${
                   remarks === preset
                     ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    : 'bg-muted/40 text-foreground hover:bg-muted'
                 }`}
               >
                 {preset}
@@ -305,12 +302,12 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
             rows={2}
             required
             placeholder="Type verification notes or observations..."
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden resize-none"
+            className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-hidden resize-none"
           />
         </div>
 
         {/* Modal Actions */}
-        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border">
           <Button
             type="button"
             variant="outline"
@@ -324,16 +321,16 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
             type="submit"
             size="sm"
             disabled={isLoading || !remarks.trim()}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Completing...</span>
               </span>
             ) : (
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>{isSubtask ? 'Done with Log Book' : 'Done with Proof'}</span>
               </span>
             )}

@@ -4,6 +4,8 @@ import { useEnterprise } from '../context/EnterpriseContext';
 import { getAssignmentHistory } from '../services/enterpriseService';
 import { TaskAssignment } from '../types/task';
 import { formatDateTime } from '../lib/dateUtils';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent } from '../components/ui/card';
 
 export const AssignmentHistoryPage: React.FC = () => {
   const { currentOrg, isMember } = useEnterprise();
@@ -22,60 +24,68 @@ export const AssignmentHistoryPage: React.FC = () => {
   }, [currentOrg?.id, isMember]);
 
   return (
-    <div className="space-y-6">
-      <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-wider">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Header */}
+      <div className="p-5 rounded-xl bg-card border border-border shadow-xs">
+        <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
           <History className="w-4 h-4" />
           <span>Audit Log</span>
         </div>
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight mt-1">
           Task Assignment History
         </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5">
           Immutable audit trail of all task assignments, delegations, and reassignments.
         </p>
       </div>
 
       {isLoading ? (
-        <div className="space-y-3 animate-pulse">
+        <div className="space-y-2.5 animate-pulse">
           {[1, 2, 3, 4, 5].map((n) => (
-            <div key={n} className="h-20 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+            <div key={n} className="h-16 bg-muted rounded-xl"></div>
           ))}
         </div>
       ) : history.length === 0 ? (
-        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 space-y-2">
-          <History className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Assignment Records Yet</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Assignments and reassignments will appear here automatically.
-          </p>
-        </div>
+        <Card className="text-center py-16 border border-border bg-card shadow-xs">
+          <CardContent className="space-y-2">
+            <History className="w-10 h-10 text-muted-foreground mx-auto" />
+            <h3 className="text-sm font-bold text-foreground">No Assignment Records Yet</h3>
+            <p className="text-xs text-muted-foreground">
+              Assignments and reassignments will appear here automatically.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {history.map((record) => (
-            <div
+            <Card
               key={record.id}
-              className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs flex flex-wrap items-center justify-between gap-3"
+              className="rounded-xl border border-border bg-card shadow-xs hover:border-primary/40 transition-colors"
             >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                    {record.assigned_to_name || 'Assigned Member'}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                    {record.status}
-                  </span>
+              <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-semibold text-foreground">
+                      {record.assigned_to_name || 'Assigned Member'}
+                    </span>
+                    <Badge
+                      variant={record.status === 'completed' ? 'success' : 'secondary'}
+                      className="text-[10px] capitalize px-1.5 py-0"
+                    >
+                      {record.status}
+                    </Badge>
+                  </div>
+                  {record.remark && (
+                    <p className="text-xs text-muted-foreground italic">"{record.remark}"</p>
+                  )}
                 </div>
-                {record.remark && (
-                  <p className="text-xs text-slate-600 dark:text-slate-300 italic">&ldquo;{record.remark}&rdquo;</p>
-                )}
-              </div>
 
-              <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                <Clock className="w-3.5 h-3.5" />
-                <span>{formatDateTime(record.assigned_at)}</span>
-              </div>
-            </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{formatDateTime(record.assigned_at)}</span>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

@@ -65,26 +65,26 @@ export const PendingTasksPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <Clock className="w-6 h-6 text-amber-500" />
-            <span>Pending Work</span>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+            <Clock className="w-5 h-5 text-amber-500" />
+            <span>Pending Work Queue</span>
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            All incomplete tasks currently pending, in progress, or partially finished
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Operational backlog: pending, in progress, and partially finished tasks
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1">
+          <div className="flex items-center rounded-md border border-border bg-card p-0.5">
             <button
               onClick={() => setViewMode('card')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'card' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`p-1.5 rounded-sm transition-colors ${
+                viewMode === 'card' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Card view"
             >
@@ -92,8 +92,8 @@ export const PendingTasksPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'table' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`p-1.5 rounded-sm transition-colors ${
+                viewMode === 'table' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Table view"
             >
@@ -101,7 +101,7 @@ export const PendingTasksPage: React.FC = () => {
             </button>
           </div>
 
-          <Button onClick={() => openCreateModal({ status: 'pending' })} leftIcon={<Plus className="w-4 h-4" />}>
+          <Button onClick={() => openCreateModal({ status: 'pending' })} leftIcon={<Plus className="w-4 h-4" />} className="shadow-2xs">
             + Add Task
           </Button>
         </div>

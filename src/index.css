@@ -5,12 +5,71 @@
 @layer base {
   :root {
     color-scheme: light;
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 221.2 83.2% 53.3%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    --workplace: 243.4 75.4% 58.6%;
+    --workplace-foreground: 0 0% 100%;
+    --personal: 217.2 91.2% 59.8%;
+    --personal-foreground: 0 0% 100%;
+    --radius: 0.5rem;
   }
-  :root.dark {
+  :root.dark, .dark {
     color-scheme: dark;
+    --background: 224 35% 8%;
+    --foreground: 210 40% 98%;
+    --card: 222 35% 12%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 35% 12%;
+    --popover-foreground: 210 40% 98%;
+    --muted: 223 30% 16%;
+    --muted-foreground: 215 20% 65%;
+    --border: 220 25% 20%;
+    --input: 220 25% 20%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 223 30% 16%;
+    --secondary-foreground: 210 40% 98%;
+    --accent: 223 30% 16%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 217.2 91.2% 59.8%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    --workplace: 243.4 75.4% 65%;
+    --workplace-foreground: 0 0% 100%;
+    --personal: 217.2 91.2% 59.8%;
+    --personal-foreground: 0 0% 100%;
   }
   body {
-    @apply bg-slate-50 text-slate-900 dark:bg-[#090d16] dark:text-slate-100 font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
     min-height: 100vh;
     min-height: 100dvh;
     width: 100%;

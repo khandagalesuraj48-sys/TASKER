@@ -4,6 +4,7 @@ import { Task } from '../types/task';
 import { StatCard } from '../components/dashboard/StatCard';
 import { PendingTodaySection, PendingTab } from '../components/dashboard/PendingTodaySection';
 import { TaskCard } from '../components/tasks/TaskCard';
+import { TaskTable } from '../components/tasks/TaskTable';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { EmptyState } from '../components/common/EmptyState';
 import { CardSkeleton, StatsSkeleton } from '../components/common/LoadingSkeleton';
@@ -137,22 +138,24 @@ export const DashboardPage: React.FC = () => {
     });
   }, [pendingTasks, activeTab, globalSearch]);
 
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Top Banner & Quick Add */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-            Dashboard
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+            Executive Cockpit
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Real-time pending work, status tracking, and attention priorities
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Operational backlog, critical attention priorities, and real-time execution tracking
           </p>
         </div>
         <Button
           onClick={() => openCreateModal()}
           leftIcon={<Plus className="w-4 h-4" />}
-          className="shadow-sm"
+          className="shadow-2xs"
         >
           + Add Task
         </Button>
@@ -162,35 +165,35 @@ export const DashboardPage: React.FC = () => {
       {isLoading ? (
         <StatsSkeleton />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
           <StatCard
             title="Pending"
             count={stats.pending}
-            icon={<Clock className="w-5 h-5" />}
+            icon={<Clock className="w-4 h-4" />}
             colorScheme="amber"
           />
           <StatCard
             title="In Progress"
             count={stats.inProgress}
-            icon={<PlayCircle className="w-5 h-5" />}
+            icon={<PlayCircle className="w-4 h-4" />}
             colorScheme="blue"
           />
           <StatCard
             title="Partial"
             count={stats.partial}
-            icon={<PieChart className="w-5 h-5" />}
+            icon={<PieChart className="w-4 h-4" />}
             colorScheme="orange"
           />
           <StatCard
             title="Completed"
             count={stats.completed}
-            icon={<CheckCircle2 className="w-5 h-5" />}
+            icon={<CheckCircle2 className="w-4 h-4" />}
             colorScheme="emerald"
           />
           <StatCard
             title="Overdue"
             count={stats.overdue}
-            icon={<AlertCircle className="w-5 h-5" />}
+            icon={<AlertCircle className="w-4 h-4" />}
             colorScheme="rose"
             onClick={() => setActiveTab('overdue')}
             isActive={activeTab === 'overdue'}
@@ -199,41 +202,73 @@ export const DashboardPage: React.FC = () => {
       )}
 
       {/* Daily Pending Work Focus */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span>My Pending Tasks</span>
-              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-                ({displayTasks.length} requiring attention)
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <span>Attention Backlog</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                ({displayTasks.length} requiring action)
               </span>
             </h3>
           </div>
 
-          <PendingTodaySection
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            counts={tabCounts}
-          />
+          <div className="flex items-center gap-2">
+            <PendingTodaySection
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              counts={tabCounts}
+            />
+
+            {/* Desktop View Switcher */}
+            <div className="hidden md:flex items-center rounded-md border border-border bg-card p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode('card')}
+                className={`p-1 rounded-sm text-xs transition-colors ${
+                  viewMode === 'card' ? 'bg-muted text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Card View"
+              >
+                Cards
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`p-1 rounded-sm text-xs transition-colors ${
+                  viewMode === 'table' ? 'bg-muted text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Dense Table View"
+              >
+                Table
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Task Cards List */}
+        {/* Task Cards List or Table */}
         {isLoading ? (
           <CardSkeleton count={4} />
         ) : displayTasks.length === 0 ? (
           <EmptyState
             icon={<Sparkles className="w-10 h-10 text-emerald-500" />}
-            title="🎉 No pending tasks"
+            title="No pending tasks"
             description={
               activeTab !== 'all'
                 ? `There are no pending tasks under "${activeTab.replace('_', ' ')}".`
-                : 'All your work items are completed or cancelled. Enjoy your day!'
+                : 'All your work items are completed or cancelled.'
             }
             actionText="+ Add New Task"
             onAction={() => openCreateModal()}
           />
+        ) : viewMode === 'table' ? (
+          <TaskTable
+            tasks={displayTasks}
+            onEdit={(t: Task) => setTaskToEdit(t)}
+            onRefresh={loadDashboardTasks}
+          />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {displayTasks.map((task: Task) => (
               <TaskCard
                 key={task.id}

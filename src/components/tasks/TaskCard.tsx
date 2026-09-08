@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Task } from '../../types/task';
 import { StatusBadge } from '../common/StatusBadge';
 import { PriorityBadge } from '../common/PriorityBadge';
-import { formatDateTime, formatDateOnly, formatRelativePending, isTaskOverdue } from '../../lib/dateUtils';
+import { formatDateOnly, formatRelativePending, isTaskOverdue, formatDateTime } from '../../lib/dateUtils';
 import { ChangeStatusModal } from './ChangeStatusModal';
 import { QuickCompleteModal } from './QuickCompleteModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -14,6 +14,8 @@ import { useTask } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
+import { cn } from '@/lib/utils';
+import { Badge } from '../ui/badge';
 import {
   Clock,
   Calendar,
@@ -31,6 +33,7 @@ import {
   VolumeX,
   Building2,
   GitFork,
+  ArrowRight,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -70,7 +73,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const overdue = isTaskOverdue(task.due_date, task.status);
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Avoid clicking if clicking action buttons
     if ((e.target as HTMLElement).closest('.no-card-click')) return;
     if (!isBin) {
       navigate(`/tasks/${task.id}`);
@@ -143,29 +145,30 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     <>
       <div
         onClick={handleCardClick}
-        className={`group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 transition-all shadow-sm hover:shadow-md dark:hover:shadow-slate-950/50 hover:border-blue-200 dark:hover:border-blue-900/50 ${
-          isBin ? 'opacity-90 bg-slate-50/70 dark:bg-slate-900/40' : 'cursor-pointer'
-        }`}
+        className={cn(
+          'group relative rounded-md border border-border bg-card text-card-foreground p-3.5 sm:p-4 transition-all shadow-2xs hover:border-primary/40',
+          isBin ? 'opacity-85 bg-muted/30' : 'cursor-pointer'
+        )}
       >
-        {/* Top Meta Header: Status, Overdue, Priority, Menu */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+        {/* Top Header Row: Status, Overdue, Priority, Site, Menu */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <StatusBadge status={task.status} isOverdue={overdue} size="sm" />
             <PriorityBadge priority={task.priority} size="sm" />
             {siteName && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/90 dark:bg-indigo-950/60 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-900/50">
-                <Building2 className="w-3 h-3 text-indigo-500 shrink-0" />
-                <span>{siteName}</span>
-              </span>
+              <Badge variant="workplace" size="sm" className="flex items-center gap-1">
+                <Building2 className="w-3 h-3 shrink-0" />
+                <span className="truncate max-w-[120px]">{siteName}</span>
+              </Badge>
             )}
           </div>
 
-          {/* Action Menu Button */}
+          {/* Action Menu */}
           <div className="relative no-card-click shrink-0">
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1.5 rounded-xl min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors min-w-[28px] min-h-[28px] flex items-center justify-center"
               aria-label="Actions"
             >
               <MoreVertical className="w-4 h-4" />
@@ -173,7 +176,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
             {menuOpen && (
               <div
-                className="absolute right-0 top-9 z-20 w-48 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-1.5 shadow-xl text-xs"
+                className="absolute right-0 top-7 z-20 w-44 rounded-md border border-border bg-card p-1 shadow-lg text-xs"
                 onClick={(e) => {
                   e.stopPropagation();
                   setMenuOpen(false);
@@ -183,33 +186,33 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   <>
                     <button
                       onClick={() => navigate(`/tasks/${task.id}`)}
-                      className="w-full px-3.5 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2"
+                      className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
                     >
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                      <span>Open Details</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>Open Record</span>
                     </button>
                     <button
                       onClick={() => onEdit?.(task)}
-                      className="w-full px-3.5 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2"
+                      className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
                     >
-                      <Edit2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                      <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
                       <span>Edit Task</span>
                     </button>
                     <button
                       onClick={() => setStatusModalOpen(true)}
-                      className="w-full px-3.5 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2"
+                      className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                       <span>Change Status</span>
                     </button>
                     {canDelete && (
                       <>
-                        <div className="my-1 border-t border-slate-100 dark:border-slate-700/60" />
+                        <div className="my-1 border-t border-border" />
                         <button
                           onClick={() => setDeleteConfirmOpen(true)}
-                          className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
+                          className="w-full px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/10 rounded-sm flex items-center gap-2"
                         >
-                          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                          <Trash2 className="w-3.5 h-3.5" />
                           <span>Move to Bin</span>
                         </button>
                       </>
@@ -219,17 +222,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   <>
                     <button
                       onClick={handleRestore}
-                      className="w-full px-3.5 py-2 text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center gap-2"
+                      className="w-full px-2.5 py-1.5 text-left text-emerald-600 hover:bg-emerald-500/10 rounded-sm flex items-center gap-2"
                     >
-                      <RotateCcw className="w-3.5 h-3.5 text-emerald-500" />
+                      <RotateCcw className="w-3.5 h-3.5" />
                       <span>Restore Task</span>
                     </button>
                     {canDelete && (
                       <button
                         onClick={() => setPermDeleteConfirmOpen(true)}
-                        className="w-full px-3.5 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2"
+                        className="w-full px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/10 rounded-sm flex items-center gap-2"
                       >
-                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        <Trash2 className="w-3.5 h-3.5" />
                         <span>Delete Permanently</span>
                       </button>
                     )}
@@ -240,156 +243,141 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </div>
         </div>
 
-        {/* Title and description */}
-        <div className="mt-3">
+        {/* Title and Subtask Hierarchy */}
+        <div className="mt-2.5">
           {(task.parent_task_id || task.custom_fields?.is_subtask) && (
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 mb-1.5 rounded-md text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60">
-              <GitFork className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            <div className="inline-flex items-center gap-1 px-1.5 py-0.2 mb-1 rounded-sm text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
+              <GitFork className="w-3 h-3" />
               <span>Subtask • {task.custom_fields?.parent_task_title || 'Action Item'}</span>
             </div>
           )}
-          <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          <h3 className="text-sm font-semibold text-foreground leading-snug group-hover:text-primary transition-colors">
             {task.title}
           </h3>
           {task.status !== 'completed' && task.reassigned_by ? (
-            <div className="mt-1 text-[11px] text-blue-700 dark:text-blue-300 bg-blue-50/70 dark:bg-blue-950/40 px-2 py-1 rounded-lg border border-blue-100 dark:border-blue-900/40 line-clamp-2">
-              🎯 <strong>Next Action:</strong> {task.reassigned_by}
+            <div className="mt-1 text-[11px] text-primary font-medium bg-primary/5 px-2 py-0.5 rounded-sm border border-primary/15 line-clamp-1">
+              Next Action: {task.reassigned_by}
             </div>
           ) : task.description ? (
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+            <p className="mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
               {task.description}
             </p>
           ) : null}
         </div>
 
-        {/* Ownership & Status */}
+        {/* Ownership / Pending with row */}
         {task.status === 'completed' ? (
-          <div className="mt-3 p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 space-y-1 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1 font-bold text-emerald-800 dark:text-emerald-300 text-xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>Completed by {task.completed_by || task.person_name || 'Team Member'}</span>
-              </span>
-            </div>
+          <div className="mt-2.5 p-2 rounded-sm bg-emerald-500/10 border border-emerald-500/20 text-xs">
+            <span className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 text-[11px]">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Completed by {task.completed_by || task.person_name || 'Team Member'}</span>
+            </span>
             {task.reassigned_by && (
-              <p className="text-xs text-emerald-900 dark:text-emerald-200 font-medium bg-white/70 dark:bg-slate-900/50 p-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/40 line-clamp-2">
-                Remark: "{task.reassigned_by}"
+              <p className="text-[11px] text-foreground/80 mt-1 pl-4 border-l border-emerald-500/30 line-clamp-1">
+                "{task.reassigned_by}"
               </p>
             )}
           </div>
         ) : (
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+          <div className="mt-2.5 flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5 min-w-0">
-              <User className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+              <User className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70" />
               <span className="truncate">
-                Pending with: <strong className="text-slate-800 dark:text-slate-200">{task.person_name || 'Unassigned'}</strong>
+                Pending: <strong className="text-foreground font-medium">{task.person_name || 'Unassigned'}</strong>
               </span>
             </div>
           </div>
         )}
 
-        {/* Date Row: Due Date, Pending Since */}
-        <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-3">
+        {/* Metadata row: Due date, Pending duration, Attachments count */}
+        <div className="mt-2.5 pt-2 border-t border-border flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2.5">
             {task.due_date ? (
               <span
-                className={`flex items-center gap-1 font-medium ${
-                  overdue ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-600 dark:text-slate-400'
-                }`}
+                className={cn(
+                  'flex items-center gap-1 text-[11px] font-medium',
+                  overdue ? 'text-destructive font-semibold' : 'text-muted-foreground'
+                )}
               >
-                <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                <Calendar className="w-3 h-3 shrink-0" />
                 <span>Due: {formatDateOnly(task.due_date)}</span>
               </span>
             ) : (
-              <span className="text-slate-400 dark:text-slate-500 text-[11px]">No due date</span>
+              <span className="text-[11px] text-muted-foreground/60">No due date</span>
             )}
 
             {task.status === 'pending' && task.pending_since && (
               <span
-                className="flex items-center gap-1 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded text-[11px]"
+                className="flex items-center gap-1 text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded-sm text-[10px] font-medium"
                 title={`Pending since ${formatDateTime(task.pending_since)}`}
               >
-                <Clock className="w-3 h-3 text-amber-500" />
-                <span>Pending: {formatRelativePending(task.pending_since)}</span>
+                <Clock className="w-2.5 h-2.5" />
+                <span>{formatRelativePending(task.pending_since)}</span>
               </span>
             )}
           </div>
 
-          {/* Indicators: Attachments & Notes */}
-          <div className="flex items-center gap-2.5 text-[11px] text-slate-400 dark:text-slate-500">
+          {/* Attachments and Notes badges */}
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             {(task.attachments_count ?? 0) > 0 && (
-              <span
-                className="flex items-center gap-1 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md"
-                title={`${task.attachments_count} attachments`}
-              >
-                <Paperclip className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+              <span className="flex items-center gap-1 bg-muted px-1.5 py-0.2 rounded-sm" title={`${task.attachments_count} files`}>
+                <Paperclip className="w-3 h-3" />
                 <span>{task.attachments_count}</span>
               </span>
             )}
 
             {(task.notes_count ?? 0) > 0 && (
-              <span
-                className="flex items-center gap-1 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md"
-                title={`${task.notes_count} notes`}
-              >
-                <MessageSquare className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+              <span className="flex items-center gap-1 bg-muted px-1.5 py-0.2 rounded-sm" title={`${task.notes_count} notes`}>
+                <MessageSquare className="w-3 h-3" />
                 <span>{task.notes_count}</span>
               </span>
             )}
           </div>
         </div>
 
-        {/* Completion Info if Completed */}
-        {task.status === 'completed' && task.completed_at && (
-          <div className="mt-2 text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 px-2.5 py-1 rounded-xl border border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between">
-            <span>Completed on: {formatDateTime(task.completed_at)}</span>
-            <span>By: <strong>{task.completed_by || 'User'}</strong></span>
-          </div>
-        )}
-
-        {/* Tactile High-Impact Action Bar */}
+        {/* Tactile Action Bar */}
         {!isBin && (
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 no-card-click">
-            {/* Left: Communication & Audio Tools */}
-            <div className="flex items-center gap-1.5">
+          <div className="mt-2.5 pt-2 border-t border-border flex items-center justify-between gap-2 no-card-click">
+            <div className="flex items-center gap-1">
               {/* WhatsApp Share Button */}
               <button
                 type="button"
                 onClick={handleWhatsAppShare}
-                className="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 text-xs font-bold flex items-center gap-1.5 transition-all transform active:scale-95 shadow-xs"
+                className="px-2 py-1 rounded-sm bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 text-[11px] font-semibold flex items-center gap-1 transition-colors"
                 title="Share via WhatsApp"
               >
-                <Share2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <Share2 className="w-3 h-3" />
                 <span>WhatsApp</span>
               </button>
 
-              {/* Audio Reader Button */}
+              {/* Audio Listen Button */}
               <button
                 type="button"
                 onClick={handleToggleSpeak}
-                className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all transform active:scale-95 shadow-xs ${
+                className={cn(
+                  'px-2 py-1 rounded-sm border text-[11px] font-medium flex items-center gap-1 transition-colors',
                   isSpeaking
-                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700 animate-pulse'
-                    : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700'
-                }`}
-                title="Listen to task details"
+                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40 animate-pulse'
+                    : 'bg-muted/50 text-muted-foreground hover:text-foreground border-border'
+                )}
+                title="Listen to task"
               >
                 {isSpeaking ? (
                   <>
-                    <VolumeX className="w-3.5 h-3.5 text-amber-600" />
+                    <VolumeX className="w-3 h-3 text-amber-600" />
                     <span>Stop</span>
                   </>
                 ) : (
                   <>
-                    <Volume2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <Volume2 className="w-3 h-3" />
                     <span>Listen</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* Right: Primary Progress Action */}
-            <div className="flex items-center gap-1.5">
+            {/* Quick Complete Action */}
+            <div>
               {task.status !== 'completed' ? (
                 <button
                   type="button"
@@ -397,38 +385,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                     e.stopPropagation();
                     setQuickDoneOpen(true);
                   }}
-                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all transform active:scale-95"
-                  title="Mark task completed with photo proof"
+                  className="px-2.5 py-1 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1 shadow-2xs transition-colors"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Done</span>
                 </button>
               ) : (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setStatusModalOpen(true);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-xs font-semibold flex items-center gap-1 transition-all transform active:scale-95"
-                  title="Change Status"
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                  className="px-2 py-1 rounded-sm text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Completed</span>
-                </button>
-              )}
-
-              {onEdit && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(task);
-                  }}
-                  className="p-1.5 rounded-xl text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 transition-all transform active:scale-95"
-                  title="Edit Task"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>View</span>
+                  <ArrowRight className="w-3 h-3" />
                 </button>
               )}
             </div>
@@ -436,52 +405,55 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         )}
       </div>
 
-      {/* Quick Done With Photo Proof Modal */}
-      {quickDoneOpen && (
-        <QuickCompleteModal
+      {/* Status Modal */}
+      {statusModalOpen && (
+        <ChangeStatusModal
+          isOpen={statusModalOpen}
+          onClose={() => setStatusModalOpen(false)}
           task={task}
-          siteName={siteName}
-          isOpen={quickDoneOpen}
-          onClose={() => setQuickDoneOpen(false)}
-          onCompleted={() => {
-            onRefresh?.();
+          onStatusChanged={() => {
             triggerRefresh();
+            onRefresh?.();
           }}
         />
       )}
 
-      {/* Change Status Modal */}
-      {statusModalOpen && (
-        <ChangeStatusModal
+      {/* Quick Done Modal */}
+      {quickDoneOpen && (
+        <QuickCompleteModal
+          isOpen={quickDoneOpen}
+          onClose={() => setQuickDoneOpen(false)}
           task={task}
-          isOpen={statusModalOpen}
-          onClose={() => setStatusModalOpen(false)}
-          onStatusChanged={() => onRefresh?.()}
+          siteName={siteName}
+          onCompleted={() => {
+            triggerRefresh();
+            onRefresh?.();
+          }}
         />
       )}
 
-      {/* Move to Bin Confirmation */}
+      {/* Soft Delete Confirm Dialog */}
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-        onConfirm={handleSoftDelete}
-        title="Move Task to Bin"
-        message={`Are you sure you want to delete "${task.title}"? It will be moved to the Bin where you can restore it anytime.`}
+        title="Move Task to Bin?"
+        message={`Are you sure you want to move "${task.title}" to the Recycle Bin? You can restore it later.`}
         confirmText="Move to Bin"
-        variant="warning"
-        isLoading={isProcessing}
-      />
-
-      {/* Permanent Delete Confirmation */}
-      <ConfirmDialog
-        isOpen={permDeleteConfirmOpen}
-        onClose={() => setPermDeleteConfirmOpen(false)}
-        onConfirm={handlePermanentDelete}
-        title="Delete Permanently"
-        message="This will permanently delete the task and its attached files. This action cannot be undone."
-        confirmText="Permanently Delete"
         variant="danger"
         isLoading={isProcessing}
+        onConfirm={handleSoftDelete}
+        onClose={() => setDeleteConfirmOpen(false)}
+      />
+
+      {/* Permanent Delete Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={permDeleteConfirmOpen}
+        title="Permanently Delete Task?"
+        message={`This will permanently delete "${task.title}" and all its attachments and notes. This cannot be undone.`}
+        confirmText="Delete Forever"
+        variant="danger"
+        isLoading={isProcessing}
+        onConfirm={handlePermanentDelete}
+        onClose={() => setPermDeleteConfirmOpen(false)}
       />
     </>
   );
