@@ -18,7 +18,7 @@ export const exportUserDataAsJson = async (): Promise<string> => {
   const exportBundle: Record<string, any> = {
     appName: 'TASKER',
     exportDate: new Date().toISOString(),
-    version: '1.0.15',
+    version: '1.0.16',
     data: {},
   };
 
