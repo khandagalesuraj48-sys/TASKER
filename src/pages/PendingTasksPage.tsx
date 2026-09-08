@@ -67,7 +67,7 @@ export const PendingTasksPage: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
             <Clock className="w-5 h-5 text-amber-500" />
@@ -80,11 +80,11 @@ export const PendingTasksPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex items-center rounded-md border border-border bg-card p-0.5">
+          <div className="flex items-center rounded-lg border border-border/80 bg-card p-0.5 shadow-2xs">
             <button
               onClick={() => setViewMode('card')}
-              className={`p-1.5 rounded-sm transition-colors ${
-                viewMode === 'card' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+              className={`p-1.5 rounded-md transition-all active:scale-95 ${
+                viewMode === 'card' ? 'bg-muted text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Card view"
             >
@@ -92,8 +92,8 @@ export const PendingTasksPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-sm transition-colors ${
-                viewMode === 'table' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+              className={`p-1.5 rounded-md transition-all active:scale-95 ${
+                viewMode === 'table' ? 'bg-muted text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Table view"
             >

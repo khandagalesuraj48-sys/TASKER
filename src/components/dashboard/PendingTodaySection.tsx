@@ -49,7 +49,7 @@ export const PendingTodaySection: React.FC<PendingTodaySectionProps> = ({
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-1 p-1 bg-muted/60 rounded-md border border-border">
+    <div className="flex flex-wrap items-center gap-1 p-1 bg-muted/50 rounded-lg border border-border/80">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;
 
@@ -58,16 +58,16 @@ export const PendingTodaySection: React.FC<PendingTodaySectionProps> = ({
             key={tab.key}
             type="button"
             onClick={() => onTabChange(tab.key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all active:scale-95 ${
               isActive
-                ? 'bg-background text-foreground shadow-2xs font-semibold'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                ? 'bg-background text-foreground shadow-2xs font-bold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/70'
             }`}
           >
             {tab.icon}
             <span>{tab.label}</span>
             <span
-              className={`px-1.5 py-0.2 rounded-sm text-[10px] font-mono ${
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono tabular-nums ${
                 tab.badgeColor || (isActive ? 'bg-muted text-foreground' : 'bg-muted/80 text-muted-foreground')
               }`}
             >

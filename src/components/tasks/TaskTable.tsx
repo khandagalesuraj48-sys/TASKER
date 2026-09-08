@@ -103,22 +103,22 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
   return (
     <>
-      <div className="overflow-x-auto rounded-md border border-border bg-card text-card-foreground shadow-2xs">
+      <div className="overflow-x-auto rounded-xl border border-border/80 bg-card text-card-foreground shadow-2xs">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="border-b border-border bg-muted/50 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <th className="py-2.5 px-3">Status</th>
-              <th className="py-2.5 px-3">Priority</th>
-              <th className="py-2.5 px-3 min-w-[220px]">Task Description</th>
-              <th className="py-2.5 px-3 min-w-[120px]">Assignee</th>
-              <th className="py-2.5 px-3">Site</th>
-              <th className="py-2.5 px-3 min-w-[100px]">Due Date</th>
-              <th className="py-2.5 px-3">Pending</th>
-              <th className="py-2.5 px-2 text-center">Files</th>
-              <th className="py-2.5 px-3 text-right">Actions</th>
+            <tr className="border-b border-border/80 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <th className="py-3 px-3.5">Status</th>
+              <th className="py-3 px-3">Priority</th>
+              <th className="py-3 px-3.5 min-w-[220px]">Task Description</th>
+              <th className="py-3 px-3 min-w-[120px]">Assignee</th>
+              <th className="py-3 px-3">Site</th>
+              <th className="py-3 px-3 min-w-[100px]">Due Date</th>
+              <th className="py-3 px-3">Pending</th>
+              <th className="py-3 px-2 text-center">Files</th>
+              <th className="py-3 px-3.5 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border/60">
             {tasks.map((task) => {
               const overdue = isTaskOverdue(task.due_date, task.status);
               const taskSite = sites?.find((s) => s.id === task.site_id);
@@ -130,12 +130,12 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                   key={task.id}
                   onClick={() => !isBin && navigate(`/tasks/${task.id}`)}
                   className={cn(
-                    'hover:bg-muted/40 transition-colors group cursor-pointer',
+                    'hover:bg-muted/30 transition-colors group cursor-pointer',
                     isBin && 'opacity-80 cursor-default'
                   )}
                 >
                   {/* Status */}
-                  <td className="py-2.5 px-3 whitespace-nowrap">
+                  <td className="py-2.5 px-3.5 whitespace-nowrap">
                     <StatusBadge status={task.status} isOverdue={overdue} size="sm" />
                   </td>
 
@@ -145,7 +145,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                   </td>
 
                   {/* Title & Description */}
-                  <td className="py-2.5 px-3">
+                  <td className="py-2.5 px-3.5">
                     <div className="font-semibold text-foreground group-hover:text-primary transition-colors truncate max-w-sm">
                       {task.title}
                     </div>
@@ -200,7 +200,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                   {/* Pending Duration */}
                   <td className="py-2.5 px-3 whitespace-nowrap text-muted-foreground text-[11px]">
                     {task.status === 'pending' && task.pending_since ? (
-                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
                         <Clock className="w-3 h-3" />
                         <span>{formatRelativePending(task.pending_since)}</span>
                       </span>
@@ -228,12 +228,12 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                   </td>
 
                   {/* Actions Dropdown */}
-                  <td className="py-2.5 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                  <td className="py-2.5 px-3.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="relative inline-block text-left">
                       <button
                         type="button"
                         onClick={() => setOpenActionId(isOpen ? null : task.id)}
-                        className="p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors active:scale-95"
                         aria-label="More"
                       >
                         <MoreHorizontal className="w-4 h-4" />
@@ -241,38 +241,38 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
                       {isOpen && (
                         <div
-                          className="absolute right-0 top-7 z-20 w-44 rounded-md border border-border bg-card p-1 shadow-lg text-xs"
+                          className="absolute right-0 top-8 z-20 w-48 rounded-xl border border-border/80 bg-card p-1.5 shadow-lg text-xs animate-in fade-in zoom-in-95 duration-100"
                           onClick={() => setOpenActionId(null)}
                         >
                           {!isBin ? (
                             <>
                               <button
                                 onClick={() => navigate(`/tasks/${task.id}`)}
-                                className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
+                                className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted/70 rounded-lg flex items-center gap-2"
                               >
                                 <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                                 <span>View Details</span>
                               </button>
                               <button
                                 onClick={() => onEdit?.(task)}
-                                className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
+                                className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted/70 rounded-lg flex items-center gap-2"
                               >
                                 <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
                                 <span>Edit Task</span>
                               </button>
                               <button
                                 onClick={() => setActiveTaskForStatus(task)}
-                                className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
+                                className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted/70 rounded-lg flex items-center gap-2"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                                 <span>Change Status</span>
                               </button>
                               {canDelete && (
                                 <>
-                                  <div className="my-1 border-t border-border" />
+                                  <div className="my-1 border-t border-border/80" />
                                   <button
                                     onClick={() => setTaskToDelete(task)}
-                                    className="w-full px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/10 rounded-sm flex items-center gap-2"
+                                    className="w-full px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/10 rounded-lg flex items-center gap-2"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                     <span>Move to Bin</span>

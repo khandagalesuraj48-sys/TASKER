@@ -221,12 +221,14 @@ export const DashboardPage: React.FC = () => {
             />
 
             {/* Desktop View Switcher */}
-            <div className="hidden md:flex items-center rounded-md border border-border bg-card p-0.5">
+            <div className="hidden md:flex items-center rounded-lg border border-border/80 bg-card p-0.5 shadow-2xs">
               <button
                 type="button"
                 onClick={() => setViewMode('card')}
-                className={`p-1 rounded-sm text-xs transition-colors ${
-                  viewMode === 'card' ? 'bg-muted text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  viewMode === 'card'
+                    ? 'bg-muted text-foreground font-bold shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title="Card View"
               >
@@ -235,8 +237,10 @@ export const DashboardPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`p-1 rounded-sm text-xs transition-colors ${
-                  viewMode === 'table' ? 'bg-muted text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-muted text-foreground font-bold shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title="Dense Table View"
               >

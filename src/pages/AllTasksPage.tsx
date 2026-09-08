@@ -62,7 +62,7 @@ export const AllTasksPage: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
             <CheckSquare2 className="w-5 h-5 text-primary" />
@@ -75,11 +75,11 @@ export const AllTasksPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex items-center rounded-md border border-border bg-card p-0.5">
+          <div className="flex items-center rounded-lg border border-border/80 bg-card p-0.5 shadow-2xs">
             <button
               onClick={() => setViewMode('card')}
-              className={`p-1.5 rounded-sm transition-colors ${
-                viewMode === 'card' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+              className={`p-1.5 rounded-md transition-all active:scale-95 ${
+                viewMode === 'card' ? 'bg-muted text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Card view"
             >
@@ -87,8 +87,8 @@ export const AllTasksPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-sm transition-colors ${
-                viewMode === 'table' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+              className={`p-1.5 rounded-md transition-all active:scale-95 ${
+                viewMode === 'table' ? 'bg-muted text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Table view"
             >
@@ -96,8 +96,8 @@ export const AllTasksPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('gantt')}
-              className={`p-1.5 rounded-sm transition-colors ${
-                viewMode === 'gantt' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+              className={`p-1.5 rounded-md transition-all active:scale-95 ${
+                viewMode === 'gantt' ? 'bg-muted text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Interactive Gantt Timeline view"
             >
@@ -112,12 +112,12 @@ export const AllTasksPage: React.FC = () => {
       </div>
 
       {/* Scope Segmented Control */}
-      <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-md border border-border max-w-md">
+      <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg border border-border/80 max-w-md">
         <button
           onClick={() => setFilters((prev) => ({ ...prev, scope: undefined }))}
-          className={`flex-1 py-1 px-3 rounded-sm text-xs font-medium transition-colors ${
+          className={`flex-1 py-1 px-3 rounded-md text-xs font-semibold transition-all active:scale-95 ${
             !filters.scope
-              ? 'bg-background text-foreground font-semibold shadow-2xs'
+              ? 'bg-background text-foreground shadow-2xs font-bold'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
@@ -125,9 +125,9 @@ export const AllTasksPage: React.FC = () => {
         </button>
         <button
           onClick={() => setFilters((prev) => ({ ...prev, scope: 'personal' }))}
-          className={`flex-1 py-1 px-3 rounded-sm text-xs font-medium transition-colors ${
+          className={`flex-1 py-1 px-3 rounded-md text-xs font-semibold transition-all active:scale-95 ${
             filters.scope === 'personal'
-              ? 'bg-background text-primary font-semibold shadow-2xs'
+              ? 'bg-background text-primary shadow-2xs font-bold'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
@@ -135,9 +135,9 @@ export const AllTasksPage: React.FC = () => {
         </button>
         <button
           onClick={() => setFilters((prev) => ({ ...prev, scope: 'workplace' }))}
-          className={`flex-1 py-1 px-3 rounded-sm text-xs font-medium transition-colors ${
+          className={`flex-1 py-1 px-3 rounded-md text-xs font-semibold transition-all active:scale-95 ${
             filters.scope === 'workplace'
-              ? 'bg-background text-workplace font-semibold shadow-2xs'
+              ? 'bg-background text-workplace shadow-2xs font-bold'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >

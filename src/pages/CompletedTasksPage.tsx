@@ -40,26 +40,26 @@ export const CompletedTasksPage: React.FC = () => {
   }, [refreshKey, globalSearch]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             <span>Completed Tasks</span>
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Archived record of all successfully completed work with timestamps and accountability
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1">
+          <div className="flex items-center rounded-lg border border-border/80 bg-card p-0.5 shadow-2xs">
             <button
               onClick={() => setViewMode('card')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'card' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`p-1.5 rounded-md transition-all active:scale-95 ${
+                viewMode === 'card' ? 'bg-muted text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Card view"
             >
@@ -67,8 +67,8 @@ export const CompletedTasksPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'table' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`p-1.5 rounded-md transition-all active:scale-95 ${
+                viewMode === 'table' ? 'bg-muted text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Table view"
             >

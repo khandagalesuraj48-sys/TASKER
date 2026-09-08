@@ -53,21 +53,21 @@ export const StatCard: React.FC<StatCardProps> = ({
     <div
       onClick={onClick}
       className={cn(
-        'rounded-md border border-border bg-card text-card-foreground p-3.5 sm:p-4 transition-all shadow-2xs',
+        'rounded-xl border border-border/80 bg-card text-card-foreground p-3.5 sm:p-4 transition-all shadow-2xs hover:shadow-xs',
         style.indicator,
-        onClick ? 'cursor-pointer hover:border-foreground/20' : '',
-        isActive ? 'ring-1 ring-primary bg-accent/40' : ''
+        onClick ? 'cursor-pointer hover:border-foreground/20 active:scale-[0.99]' : '',
+        isActive ? 'ring-2 ring-primary/40 bg-accent/30' : ''
       )}
     >
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
           {title}
         </span>
-        <div className={cn('p-1.5 rounded-sm', style.iconBg)}>{icon}</div>
+        <div className={cn('p-1.5 sm:p-2 rounded-lg', style.iconBg)}>{icon}</div>
       </div>
 
-      <div className="mt-2 flex items-baseline justify-between">
-        <span className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">
+      <div className="mt-2.5 flex items-baseline justify-between">
+        <span className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums">
           {count}
         </span>
         {onClick && (

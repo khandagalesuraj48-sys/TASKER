@@ -59,15 +59,15 @@ export const BinPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <Trash2 className="w-6 h-6 text-rose-500" />
-            <span>Bin / Trash</span>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+            <Trash2 className="w-5 h-5 text-rose-500" />
+            <span>Recycle Bin</span>
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Deleted tasks and work items. You can restore them to active tasks or permanently delete them.
           </p>
         </div>
@@ -85,11 +85,11 @@ export const BinPage: React.FC = () => {
           )}
 
           {/* View Mode Toggle */}
-          <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1">
+          <div className="flex items-center rounded-lg border border-border/80 bg-card p-0.5 shadow-2xs">
             <button
               onClick={() => setViewMode('card')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'card' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`p-1.5 rounded-md transition-all active:scale-95 ${
+                viewMode === 'card' ? 'bg-muted text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Card view"
             >
@@ -97,8 +97,8 @@ export const BinPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'table' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`p-1.5 rounded-md transition-all active:scale-95 ${
+                viewMode === 'table' ? 'bg-muted text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Table view"
             >
@@ -110,7 +110,7 @@ export const BinPage: React.FC = () => {
 
       {/* Notice Banner */}
       {deletedTasks.length > 0 && (
-        <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-amber-900 dark:text-amber-200 text-xs">
+        <div className="flex items-center gap-2.5 p-3 sm:p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-200 text-xs shadow-2xs">
           <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
           <span>
             Items in the Bin remain fully intact with history, notes, and attachments until you permanently delete them.
