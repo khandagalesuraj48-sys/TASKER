@@ -101,6 +101,7 @@ export const App: React.FC = () => {
 
                         {/* Organization Workplace Routes */}
                         <Route path="org/tasks" element={<OrgTasksPage />} />
+                        <Route path="org/tasks/:id" element={<TaskDetailPage />} />
                         <Route path="org/assigned-to-me" element={<OrgAssignedTasksPage />} />
                         <Route path="org/created-by-me" element={<OrgCreatedTasksPage />} />
                         <Route path="org/employees" element={<EmployeeDirectoryPage />} />

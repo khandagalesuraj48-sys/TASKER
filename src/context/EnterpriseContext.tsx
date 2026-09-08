@@ -136,11 +136,8 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           return loadedSites.find((s) => s.id === prev.id) || null;
         });
 
-        // If user has no approved membership, force personal mode
-        if (!membership && isEnterpriseMode) {
-          setIsEnterpriseMode(false);
-          localStorage.setItem('tasker_mode', 'personal');
-        }
+        // Note: Do NOT automatically reset isEnterpriseMode. The user's choice is persistent
+        // until the user explicitly toggles modes via the UI.
       } else {
         setUserMembership(null);
         setSites([]);
@@ -153,18 +150,13 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         } else {
           setHasRequestedJoin(false);
         }
-
-        if (isEnterpriseMode) {
-          setIsEnterpriseMode(false);
-          localStorage.setItem('tasker_mode', 'personal');
-        }
       }
     } catch (err) {
       console.error('Error loading enterprise context data:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, isEnterpriseMode]);
+  }, [user?.id]);
 
   useEffect(() => {
     loadData();
@@ -213,12 +205,6 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [user?.id, loadData]);
 
   const toggleMode = (enabled: boolean) => {
-    // Cannot enable enterprise mode if user has no approved organization
-    if (enabled && !hasApprovedOrg && !isMember) {
-      setIsEnterpriseMode(false);
-      localStorage.setItem('tasker_mode', 'personal');
-      return;
-    }
     setIsEnterpriseMode(enabled);
     localStorage.setItem('tasker_mode', enabled ? 'enterprise' : 'personal');
     window.dispatchEvent(

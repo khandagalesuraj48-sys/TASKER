@@ -53,7 +53,7 @@ export const NotificationsPage: React.FC = () => {
       setNotifications((prev) => prev.map((item) => (item.id === n.id ? { ...item, is_read: true } : item)));
     }
     if (n.entity_type === 'task' && n.entity_id) {
-      navigate(`/tasks/${n.entity_id}`);
+      navigate(`/org/tasks/${n.entity_id}`);
     }
   };
 

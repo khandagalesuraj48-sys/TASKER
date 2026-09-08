@@ -55,7 +55,7 @@ export const TaskDetailPage: React.FC = () => {
   const { refreshKey, triggerRefresh } = useTask();
   const { user } = useAuth();
   const { isPlatformAdmin } = useAdmin();
-  const { isAdmin: isOrgAdmin, isOwner: isOrgOwner } = useEnterprise();
+  const { isAdmin: isOrgAdmin, isOwner: isOrgOwner, isEnterpriseMode } = useEnterprise();
 
   const [task, setTask] = useState<Task | null>(null);
 
@@ -112,10 +112,15 @@ export const TaskDetailPage: React.FC = () => {
     if (!task) return;
     setIsDeleting(true);
     try {
+      const isWorkplace = task.scope === 'workplace' || isEnterpriseMode;
       await softDeleteTask(task.id);
       showToast(`Task "${task.title}" moved to Bin.`, 'info');
       triggerRefresh();
-      navigate('/tasks');
+      if (isWorkplace) {
+        navigate('/org/tasks');
+      } else {
+        navigate('/tasks');
+      }
     } catch (err: any) {
       showToast(err.message || 'Error moving to Bin', 'error');
     } finally {
@@ -178,16 +183,25 @@ export const TaskDetailPage: React.FC = () => {
     );
   }
 
-  if (!task) {
+  if (!task || task.is_deleted) {
+    const isWorkplace = isEnterpriseMode || task?.scope === 'workplace';
     return (
-      <div className="max-w-md mx-auto my-12 text-center p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
-        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Task Not Found</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          The task you are trying to view does not exist or has been permanently deleted.
+      <div className="max-w-md mx-auto my-12 text-center p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-1" />
+        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+          {task?.is_deleted ? 'टास्क हटवला गेला आहे (Task Deleted)' : 'Task Not Found'}
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {task?.is_deleted
+            ? 'हा टास्क तयार करणाऱ्या युजरने किंवा ॲडमिनने कचरापेटीत (Bin) हलवला आहे.'
+            : 'The task you are trying to view does not exist or has been permanently deleted.'}
         </p>
-        <Button size="sm" className="mt-4" onClick={() => navigate('/tasks')}>
-          Back to Tasks
+        <Button
+          size="sm"
+          className="mt-2"
+          onClick={() => navigate(isWorkplace ? '/org/tasks' : '/tasks')}
+        >
+          {isWorkplace ? 'Back to Workplace Tasks' : 'Back to Tasks'}
         </Button>
       </div>
     );
@@ -200,7 +214,13 @@ export const TaskDetailPage: React.FC = () => {
       {/* Back Navigation Bar */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate(task.scope === 'workplace' || isEnterpriseMode ? '/org/tasks' : '/tasks');
+            }
+          }}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors p-1"
         >
           <ArrowLeft className="w-4 h-4" />

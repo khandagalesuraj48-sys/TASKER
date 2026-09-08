@@ -25,7 +25,7 @@ import { Shield } from 'lucide-react';
 export const MobileNav: React.FC = () => {
   const navigate = useNavigate();
   const { stats } = useTask();
-  const { isEnterpriseMode, setEnterpriseMode, isAdmin, hasApprovedOrg } = useEnterprise();
+  const { isEnterpriseMode, setEnterpriseMode, isAdmin } = useEnterprise();
   const { isPlatformAdmin } = useAdmin();
   const [moreMenuOpen, setMoreMenuOpen] = useState<boolean>(false);
 
@@ -101,13 +101,9 @@ export const MobileNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (hasApprovedOrg || isPlatformAdmin) {
-                    setEnterpriseMode(true);
-                    navigate('/org/tasks');
-                    setMoreMenuOpen(false);
-                  } else {
-                    alert('You are not an approved member of any organization yet.');
-                  }
+                  setEnterpriseMode(true);
+                  navigate('/org/tasks');
+                  setMoreMenuOpen(false);
                 }}
                 className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                   isEnterpriseMode

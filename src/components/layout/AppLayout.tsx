@@ -35,17 +35,11 @@ export const AppLayout: React.FC = () => {
   const { user } = useAuth();
   const { isEnterpriseMode, setEnterpriseMode } = useEnterprise();
 
-  // Sync mode with route if navigating directly
+  // If directly accessing an /org/ workplace URL, ensure enterprise mode is active
   useEffect(() => {
     if (location.pathname.startsWith('/org/')) {
       if (!isEnterpriseMode) {
         setEnterpriseMode(true);
-      }
-    } else if (
-      ['/', '/pending', '/completed', '/today', '/upcoming', '/reminders', '/bin'].includes(location.pathname)
-    ) {
-      if (isEnterpriseMode) {
-        setEnterpriseMode(false);
       }
     }
   }, [location.pathname, isEnterpriseMode, setEnterpriseMode]);

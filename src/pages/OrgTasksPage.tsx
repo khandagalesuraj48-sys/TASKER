@@ -10,11 +10,14 @@ import {
   MapPin,
   X,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
 import { useEnterprise } from '../context/EnterpriseContext';
+import { useAuth } from '../context/AuthContext';
+import { useAdmin } from '../context/AdminContext';
 import { useToast } from '../context/ToastContext';
-import { getTasks } from '../services/taskService';
+import { getTasks, softDeleteTask, canUserDeleteTask } from '../services/taskService';
 import { createOrgSite } from '../services/enterpriseService';
 import { Task } from '../types/task';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -37,7 +40,9 @@ export const OrgTasksPage: React.FC = () => {
     isOwner,
     refreshSites,
   } = useEnterprise();
-  const { openCreateModal, refreshKey } = useTask();
+  const { user } = useAuth();
+  const { isPlatformAdmin } = useAdmin();
+  const { openCreateModal, refreshKey, triggerRefresh } = useTask();
   const { showToast } = useToast();
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -75,8 +80,23 @@ export const OrgTasksPage: React.FC = () => {
     fetchOrgTasks();
   }, [currentOrg?.id, isMember, refreshKey]);
 
+  const handleDeleteTask = async (e: React.MouseEvent, t: Task) => {
+    e.stopPropagation();
+    if (!window.confirm(`खरोखर "${t.title}" हा टास्क हटवायचा आहे का?`)) {
+      return;
+    }
+    try {
+      await softDeleteTask(t.id);
+      showToast(`टास्क "${t.title}" हटवला आहे.`, 'info');
+      triggerRefresh();
+    } catch (err: any) {
+      showToast(err.message || 'टास्क हटवण्यात त्रुटी आली.', 'error');
+    }
+  };
+
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
+      if (t.is_deleted) return false;
       if (statusFilter !== 'all' && t.status !== statusFilter) return false;
       if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
       if (selectedSite && t.site_id !== selectedSite.id) return false;
@@ -330,7 +350,7 @@ export const OrgTasksPage: React.FC = () => {
             return (
               <div
                 key={t.id}
-                onClick={() => navigate(`/tasks/${t.id}`)}
+                onClick={() => navigate(`/org/tasks/${t.id}`)}
                 className="group cursor-pointer p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all shadow-xs hover:shadow-md flex flex-col justify-between space-y-3"
               >
                 <div className="space-y-2">
@@ -339,11 +359,23 @@ export const OrgTasksPage: React.FC = () => {
                       <StatusBadge status={t.status} isOverdue={overdue} size="sm" />
                       <PriorityBadge priority={t.priority} size="sm" />
                     </div>
-                    {taskSite && (
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50">
-                        📍 {taskSite.name}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {taskSite && (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50">
+                          📍 {taskSite.name}
+                        </span>
+                      )}
+                      {canUserDeleteTask(t, user, isPlatformAdmin, isAdmin || isOwner) && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteTask(e, t)}
+                          title="टास्क हटवा (Delete Task)"
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     {t.title}

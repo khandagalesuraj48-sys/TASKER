@@ -135,11 +135,17 @@ export const getTasks = async (options: TaskFilterOptions = {}): Promise<Task[]>
   }));
 
   // Client-side post-filter for attachments if specified
+  let result = tasks;
   if (options.hasAttachments === true) {
-    return tasks.filter((t) => (t.attachments_count ?? 0) > 0);
+    result = result.filter((t) => (t.attachments_count ?? 0) > 0);
   }
 
-  return tasks;
+  // Strong guarantee: Never return deleted tasks unless explicitly requested
+  if (!isDeleted) {
+    result = result.filter((t) => t.is_deleted !== true);
+  }
+
+  return result;
 };
 
 export const getTaskById = async (id: string): Promise<Task> => {
@@ -558,6 +564,23 @@ export const softDeleteTask = async (
   } catch {
     // Ignore
   }
+
+  // Clean up any in-app notifications for this task so assigned users no longer see pending alerts
+  try {
+    await supabase.from('notifications').delete().eq('entity_id', id);
+  } catch (notifErr) {
+    console.warn('Could not clean up notifications on soft delete:', notifErr);
+  }
+
+  // Cancel any active assignment records in task_assignments
+  try {
+    await supabase
+      .from('task_assignments')
+      .update({ status: 'cancelled', remark: 'Task moved to bin by creator/admin' })
+      .eq('task_id', id);
+  } catch (asgnErr) {
+    console.warn('Could not cancel task_assignments on soft delete:', asgnErr);
+  }
 };
 
 export const restoreTask = async (id: string): Promise<void> => {
@@ -597,6 +620,15 @@ export const permanentDeleteTask = async (id: string): Promise<void> => {
   } catch {
     // Ignore
   }
+
+  // Clean up notifications and assignment records for permanently deleted task
+  try {
+    await supabase.from('notifications').delete().eq('entity_id', id);
+  } catch {}
+
+  try {
+    await supabase.from('task_assignments').delete().eq('task_id', id);
+  } catch {}
 
   // 2. Remove all associated files from storage
   try {

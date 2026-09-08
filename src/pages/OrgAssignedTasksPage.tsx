@@ -33,7 +33,7 @@ export const OrgAssignedTasksPage: React.FC = () => {
           orgId: currentOrg.id,
           assignedTo: user.id,
         });
-        setTasks(data);
+        setTasks(data.filter((t) => !t.is_deleted));
       } catch (err) {
         console.error('Error fetching assigned tasks:', err);
       } finally {
@@ -79,7 +79,7 @@ export const OrgAssignedTasksPage: React.FC = () => {
             return (
               <div
                 key={t.id}
-                onClick={() => navigate(`/tasks/${t.id}`)}
+                onClick={() => navigate(`/org/tasks/${t.id}`)}
                 className="cursor-pointer p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all shadow-xs space-y-3"
               >
                 <div className="flex items-center justify-between gap-2">
