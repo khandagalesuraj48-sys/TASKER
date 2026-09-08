@@ -453,19 +453,62 @@ export const updateTaskStatus = async (
     console.warn('Status history recording fallback error:', histError);
   }
 
-  // Send targeted in-app & mobile notification to task creator
-  if (newStatus === 'completed' && current.user_id) {
+  // Send targeted in-app & mobile notification
+  if (newStatus === 'completed') {
     try {
       const { createInAppNotification } = await import('./notificationInboxService');
-      await createInAppNotification({
-        recipient_user_id: current.user_id,
-        organization_id: current.org_id,
-        type: 'task_completed',
-        title: 'टास्क पूर्ण झाले (Task Completed)',
-        message: `${actor} ने "${current.title}" हा टास्क पूर्ण केला.${remarks ? ` शेरा: "${remarks.trim()}"` : ''}`,
-        entity_type: 'task',
-        entity_id: id,
-      });
+
+      // 1. Direct creator notification
+      if (current.user_id) {
+        await createInAppNotification({
+          recipient_user_id: current.user_id,
+          organization_id: current.org_id,
+          type: 'task_completed',
+          title: 'Task Completed',
+          message: `${actor} completed "${current.title}".${remarks ? ` Remark: "${remarks.trim()}"` : ''}`,
+          entity_type: 'task',
+          entity_id: id,
+        });
+      }
+
+      // 2. If this is a subtask, notify parent task creator (A) and assignee (B)
+      if (current.parent_task_id) {
+        const parentCreatorId = current.custom_fields?.parent_task_creator_id;
+        const parentAssigneeId = current.custom_fields?.parent_task_assigned_to;
+        const parentTitle = current.custom_fields?.parent_task_title || 'parent task';
+
+        const notifyRecipients = new Set<string>();
+        if (parentCreatorId) notifyRecipients.add(parentCreatorId);
+        if (parentAssigneeId) notifyRecipients.add(parentAssigneeId);
+
+        // Don't notify the person who just completed it
+        const authUser = (await supabase.auth.getUser()).data?.user;
+        if (authUser?.id) notifyRecipients.delete(authUser.id);
+        if (current.user_id) notifyRecipients.delete(current.user_id); // already notified above
+
+        for (const recipientId of notifyRecipients) {
+          await createInAppNotification({
+            recipient_user_id: recipientId,
+            organization_id: current.org_id,
+            type: 'task_completed',
+            title: 'Subtask Completed',
+            message: `${actor} completed subtask "${current.title}" under "${parentTitle}".${remarks ? ` Remark: "${remarks.trim()}"` : ''}`,
+            entity_type: 'task',
+            entity_id: current.parent_task_id,
+          });
+        }
+
+        // Add audit note to the parent task
+        try {
+          await addNote(
+            current.parent_task_id,
+            `✓ Subtask "${current.title}" completed by ${actor}.${remarks ? ` Remark: "${remarks.trim()}"` : ''}`,
+            actor
+          );
+        } catch (auditErr) {
+          console.warn('Could not record subtask completion note on parent:', auditErr);
+        }
+      }
     } catch (notifErr) {
       console.warn('Could not send completion notification:', notifErr);
     }

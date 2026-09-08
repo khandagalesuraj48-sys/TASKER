@@ -30,6 +30,7 @@ import {
   Volume2,
   VolumeX,
   Building2,
+  GitFork,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -241,6 +242,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
         {/* Title and description */}
         <div className="mt-3">
+          {(task.parent_task_id || task.custom_fields?.is_subtask) && (
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 mb-1.5 rounded-md text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60">
+              <GitFork className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+              <span>Subtask • {task.custom_fields?.parent_task_title || 'Action Item'}</span>
+            </div>
+          )}
           <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             {task.title}
           </h3>

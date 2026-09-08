@@ -8,7 +8,17 @@ import { uploadAttachment } from '../../services/attachmentService';
 import { useToast } from '../../context/ToastContext';
 import { useTask } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
-import { CheckCircle2, Camera, X, Loader2, Sparkles } from 'lucide-react';
+import { 
+  CheckCircle2, 
+  Camera, 
+  FileUp, 
+  FileText, 
+  X, 
+  Loader2, 
+  Sparkles,
+  GitFork 
+} from 'lucide-react';
+import { formatFileSize } from '../../lib/fileUtils';
 
 interface QuickCompleteModalProps {
   task: Task;
@@ -28,39 +38,59 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
   const { displayName, userEmail } = useAuth();
   const currentUserName = displayName || userEmail || DEFAULT_USER_NAME;
 
-  const [remarks, setRemarks] = useState<string>('✓ Completed & Verified on Site');
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const isSubtask = Boolean(task.parent_task_id || task.custom_fields?.is_subtask);
+  const parentTitle = task.custom_fields?.parent_task_title;
+
+  const [remarks, setRemarks] = useState<string>(
+    isSubtask ? '✓ Log book verified & attached' : '✓ Completed & Verified on Site'
+  );
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
 
   const { showToast } = useToast();
   const { triggerRefresh } = useTask();
 
-  const presetRemarks = [
-    '✓ Completed & Verified on Site',
-    '✓ Work Inspected & Approved',
-    '✓ Installation & Setup Complete',
-    '✓ Maintenance & Cleaning Done',
-    '✓ Client Handover Finished',
-  ];
+  const presetRemarks = isSubtask
+    ? [
+        '✓ Log book verified & attached',
+        '✓ Completed & verified on site',
+        '✓ Work inspected & approved',
+        '✓ Client sign-off collected',
+        '✓ Deliverables fulfilled',
+      ]
+    : [
+        '✓ Completed & Verified on Site',
+        '✓ Work Inspected & Approved',
+        '✓ Installation & Setup Complete',
+        '✓ Maintenance & Cleaning Done',
+        '✓ Client Handover Finished',
+      ];
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhoto(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setSelectedFile(file);
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setFilePreview(null);
+      }
     }
   };
 
-  const removePhoto = () => {
-    setPhoto(null);
-    setPhotoPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const removeFile = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (documentInputRef.current) documentInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,10 +102,10 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
 
     setIsLoading(true);
     try {
-      // 1. If photo attached, upload it
-      if (photo) {
-        showToast('Uploading site photo proof...', 'info');
-        await uploadAttachment(task.id, photo, currentUserName);
+      // 1. If file/log book attached, upload it
+      if (selectedFile) {
+        showToast('Uploading attachment proof...', 'info');
+        await uploadAttachment(task.id, selectedFile, currentUserName);
       }
 
       // 2. Mark task as completed
@@ -86,7 +116,10 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
         currentUserName
       );
 
-      showToast('Task completed successfully!', 'success');
+      showToast(
+        isSubtask ? 'Subtask completed with attached proof!' : 'Task completed successfully!',
+        'success'
+      );
       triggerRefresh();
       onCompleted?.();
       onClose();
@@ -102,16 +135,31 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Complete Task with Photo Proof"
-      subtitle={siteName ? `Site Location: ${siteName}` : 'Attach proof and verify work completion'}
+      title={isSubtask ? 'Complete Subtask with Proof' : 'Complete Task with Photo Proof'}
+      subtitle={
+        isSubtask && parentTitle
+          ? `Under parent task: "${parentTitle}"`
+          : siteName
+          ? `Site Location: ${siteName}`
+          : 'Attach proof and verify work completion'
+      }
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Task Title Banner */}
         <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60">
           <div className="flex items-start gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            {isSubtask ? (
+              <GitFork className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            )}
             <div>
+              {isSubtask && (
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block mb-0.5">
+                  Delegated Action Item
+                </span>
+              )}
               <h4 className="text-xs sm:text-sm font-bold text-emerald-950 dark:text-emerald-200 leading-snug">
                 {task.title}
               </h4>
@@ -124,132 +172,172 @@ export const QuickCompleteModal: React.FC<QuickCompleteModalProps> = ({
           </div>
         </div>
 
-        {/* Live Camera / Photo Proof Upload Section */}
+        {/* Attachment / Log Book Upload Section */}
         <div>
           <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
-              <Camera className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Site Photo Proof</span>
+              <FileUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>{isSubtask ? 'Log Book / Proof Document / Photo' : 'Site Photo or Document Proof'}</span>
             </span>
             <span className="text-[10px] font-normal text-slate-500">Optional</span>
           </label>
 
+          {/* Hidden inputs for camera and documents */}
           <input
             type="file"
-            ref={fileInputRef}
-            onChange={handlePhotoSelect}
+            ref={cameraInputRef}
+            onChange={handleFileChange}
             accept="image/*"
             capture="environment"
             className="hidden"
           />
+          <input
+            type="file"
+            ref={documentInputRef}
+            onChange={handleFileChange}
+            accept="*/*"
+            className="hidden"
+          />
 
-          {photoPreview ? (
-            <div className="relative rounded-2xl overflow-hidden border border-emerald-300 dark:border-emerald-800 bg-slate-100 dark:bg-slate-900">
-              <img
-                src={photoPreview}
-                alt="Work Completed Proof"
-                className="w-full h-48 object-cover"
-              />
+          {selectedFile ? (
+            <div className="relative rounded-2xl overflow-hidden border border-emerald-300 dark:border-emerald-800 bg-slate-50 dark:bg-slate-900 p-3">
+              {filePreview ? (
+                <div className="space-y-2">
+                  <img
+                    src={filePreview}
+                    alt="Proof Preview"
+                    className="w-full h-44 object-cover rounded-xl"
+                  />
+                  <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+                    <span className="truncate font-medium">{selectedFile.name}</span>
+                    <span className="shrink-0 text-[11px] text-slate-400">{formatFileSize(selectedFile.size)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 py-2">
+                  <div className="p-3 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-xl shrink-0">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {formatFileSize(selectedFile.size)} • Document Attached
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <button
                 type="button"
-                onClick={removePhoto}
+                onClick={removeFile}
                 className="absolute top-2 right-2 p-1.5 rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-700 transition-colors"
-                title="Remove photo"
+                title="Remove attachment"
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-xs text-white text-[11px] font-medium flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{photo?.name}</span>
-              </div>
             </div>
           ) : (
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="group border-2 border-dashed border-emerald-300 dark:border-emerald-800/80 hover:border-emerald-500 dark:hover:border-emerald-600 rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center gap-2 cursor-pointer bg-emerald-50/30 dark:bg-emerald-950/20 transition-all active:scale-[0.99]"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                <Camera className="w-6 h-6" />
-              </div>
-              <div className="text-center">
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Take photo with camera or choose from gallery
-                </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Mobile camera will open directly
-                </p>
-              </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-emerald-500 bg-slate-50/60 dark:bg-slate-900/40 hover:bg-emerald-50/30 transition-all text-center group active:scale-98"
+              >
+                <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                  Take Live Photo
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Camera proof
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => documentInputRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-blue-500 bg-slate-50/60 dark:bg-slate-900/40 hover:bg-blue-50/30 transition-all text-center group active:scale-98"
+              >
+                <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                  Attach Log Book / PDF
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Browse file manager
+                </span>
+              </button>
             </div>
           )}
         </div>
 
-        {/* Quick Remarks Presets */}
+        {/* Completion Remarks with One-Click ERP Presets */}
         <div>
           <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Quick Presets:</span>
+            <span>Completion Remarks *</span>
           </label>
-          <div className="flex flex-wrap gap-1.5">
-            {presetRemarks.map((pr) => (
+
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {presetRemarks.map((preset) => (
               <button
+                key={preset}
                 type="button"
-                key={pr}
-                onClick={() => setRemarks(pr)}
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-medium transition-all transform active:scale-95 ${
-                  remarks === pr
-                    ? 'bg-emerald-600 text-white shadow-xs font-semibold'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                onClick={() => setRemarks(preset)}
+                className={`px-2.5 py-1 text-xs rounded-xl font-medium transition-all text-left ${
+                  remarks === preset
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
-                {pr}
+                {preset}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Remarks Textarea */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            Completion Remarks:
-          </label>
           <textarea
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             rows={2}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-            placeholder="Describe work completed..."
             required
+            placeholder="Type verification notes or observations..."
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden resize-none"
           />
         </div>
 
-        {/* Action Buttons */}
+        {/* Modal Actions */}
         <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             size="sm"
             onClick={onClose}
             disabled={isLoading}
           >
             Cancel
           </Button>
-          <button
+          <Button
             type="submit"
-            disabled={isLoading}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
+            size="sm"
+            disabled={isLoading || !remarks.trim()}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
           >
             {isLoading ? (
-              <>
+              <span className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Saving...</span>
-              </>
+                <span>Completing...</span>
+              </span>
             ) : (
-              <>
+              <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Mark Complete</span>
-              </>
+                <span>{isSubtask ? 'Done with Log Book' : 'Done with Proof'}</span>
+              </span>
             )}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
