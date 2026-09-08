@@ -38,6 +38,7 @@ import { Logo } from '../common/Logo';
 import { useBackButton } from '../../hooks/useBackButton';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
+import { APP_VERSION } from '../../constants';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -516,9 +517,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </div>
             {!isCollapsed && (
               <div className="min-w-0 truncate">
-                <p className="font-semibold text-foreground truncate leading-tight text-[11px]">
-                  {displayName || 'Operative'}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-semibold text-foreground truncate leading-tight text-[11px]">
+                    {displayName || 'Operative'}
+                  </p>
+                  <span className="text-[9px] font-mono text-muted-foreground px-1 py-0.5 rounded-sm bg-muted border border-border/50">
+                    v{APP_VERSION}
+                  </span>
+                </div>
                 <p className="text-[10px] text-muted-foreground truncate leading-tight">
                   {userEmail}
                 </p>
