@@ -80,17 +80,17 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Status Transition Banner */}
-        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/40 border border-border/80">
           <div className="text-center flex-1">
-            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block uppercase">Current</span>
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <span className="text-[10px] font-semibold text-muted-foreground block uppercase tracking-wider">Current</span>
+            <span className="text-xs font-bold text-foreground">
               {STATUS_CONFIG[task.status].label}
             </span>
           </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0 mx-2" />
+          <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0 mx-2" />
           <div className="text-center flex-1">
-            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block uppercase">New</span>
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+            <span className="text-[10px] font-semibold text-muted-foreground block uppercase tracking-wider">New</span>
+            <span className="text-xs font-bold text-primary">
               {STATUS_CONFIG[selectedStatus].label}
             </span>
           </div>
@@ -98,7 +98,7 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
 
         {/* Status Selector Radio / Buttons */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+          <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-2">
             Select New Status
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -114,21 +114,21 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
                   onClick={() => setSelectedStatus(st)}
                   className={`flex flex-col text-left p-3 rounded-xl border transition-all text-xs ${
                     isSelected
-                      ? 'border-blue-500 dark:border-blue-400 bg-blue-50/60 dark:bg-blue-950/40 ring-2 ring-blue-500/20'
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/20 shadow-xs'
+                      : 'border-border/80 bg-card hover:bg-muted/50 text-foreground'
                   }`}
                 >
                   <div className="flex items-center justify-between font-semibold">
-                    <span className={isSelected ? 'text-blue-900 dark:text-blue-200' : 'text-slate-800 dark:text-slate-200'}>
+                    <span className={isSelected ? 'text-primary font-bold' : 'text-foreground'}>
                       {cfg.label}
                     </span>
                     {isCurrent && (
-                      <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.2 rounded font-normal">
+                      <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md font-medium">
                         Current
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
+                  <span className="text-[11px] text-muted-foreground mt-1 leading-tight">
                     {cfg.description}
                   </span>
                 </button>
@@ -139,9 +139,9 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
 
         {/* Remarks / Reason for status change */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+          <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
               <span>
                 {selectedStatus === 'completed'
                   ? 'केलेल्या कामाचा शेरा / निकाल (Work Done Remarks)'
@@ -151,7 +151,7 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
               </span>
             </span>
             {selectedStatus === 'completed' && (
-              <span className="text-[10px] text-rose-500 font-bold tracking-normal bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-900">
+              <span className="text-[10px] text-destructive font-bold tracking-normal bg-destructive/10 px-2 py-0.5 rounded-full border border-destructive/20">
                 * अनिवार्य (Mandatory)
               </span>
             )}
@@ -167,13 +167,13 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
                 : 'उदा. काम सुरू केले आहे, पुढील माहितीची प्रतीक्षा आहे...'
             }
             rows={3}
-            className={`w-full rounded-xl border bg-white dark:bg-slate-800 p-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 ${
+            className={`w-full rounded-lg border bg-background p-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 resize-y ${
               selectedStatus === 'completed' && !remarks.trim()
-                ? 'border-amber-300 dark:border-amber-700/80 focus:border-blue-500 focus:ring-blue-500'
-                : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'
+                ? 'border-amber-500/50'
+                : 'border-input/80'
             }`}
           />
-          <p className="text-[11px] text-slate-400 mt-1">
+          <p className="text-[11px] text-muted-foreground mt-1.5">
             {selectedStatus === 'completed'
               ? '📢 हा शेरा टास्क तयार करणाऱ्या व्यक्तीला (Task Creator) थेट नोटिफिकेशनद्वारे पाठवला जाईल.'
               : '💡 हा शेरा टाइमलाइनमध्ये सेव्ह होईल आणि पुढील हँडओव्हरसाठी सर्वांना स्पष्ट दिसेल.'}
@@ -182,20 +182,20 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
 
         {/* Changed By Field */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-            <UserCheck className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+            <UserCheck className="w-3.5 h-3.5 text-muted-foreground" />
             <span>Changed By</span>
           </label>
           <input
             type="text"
             value={changedBy}
             onChange={(e) => setChangedBy(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           />
         </div>
 
         {/* Modal Actions */}
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex justify-end gap-3 pt-3 border-t border-border/60">
           <Button variant="outline" size="sm" type="button" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>

@@ -51,7 +51,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150 pt-safe pb-safe">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150 pt-safe pb-safe">
       {/* Backdrop */}
       <div
         className="fixed inset-0"
@@ -61,29 +61,29 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* Modal dialog wrapper */}
       <div
-        className={`relative transform overflow-hidden rounded-2xl bg-white dark:bg-slate-900 text-left shadow-2xl transition-all w-full ${maxWidthClasses[maxWidth]} max-h-[calc(100dvh-2rem)] flex flex-col border border-slate-200 dark:border-slate-800 z-10`}
+        className={`relative transform overflow-hidden rounded-2xl bg-card text-card-foreground text-left shadow-2xl transition-all w-full ${maxWidthClasses[maxWidth]} max-h-[calc(100dvh-2rem)] flex flex-col border border-border/80 z-10`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
         {(title || subtitle) && (
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-5 sm:px-6 py-4 shrink-0 bg-slate-50/50 dark:bg-slate-800/40">
+          <div className="flex items-center justify-between border-b border-border/80 px-5 sm:px-6 py-4 shrink-0 bg-muted/30">
             <div className="min-w-0 pr-4">
               {title && (
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
+                <h3 className="text-base sm:text-lg font-bold text-foreground truncate tracking-tight">
                   {title}
                 </h3>
               )}
               {subtitle && (
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">
+                <p className="mt-0.5 text-xs text-muted-foreground truncate">
                   {subtitle}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center active:scale-95"
               aria-label="Close"
             >
               <X className="w-5 h-5" />

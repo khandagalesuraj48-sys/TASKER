@@ -566,51 +566,71 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
           </div>
         </div>
 
-        {/* Strictly Isolated Space Indicator */}
-        {scope === 'workplace' ? (
-          <div className="flex items-center justify-between p-3 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-900/60">
-            <div className="flex items-center gap-2.5">
-              <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <div>
-                <p className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
-                  Workplace Task
-                </p>
-                <p className="text-[10px] text-indigo-700/80 dark:text-indigo-400">
-                  Organization task collaboration & team assignment
-                </p>
-              </div>
-            </div>
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-400/30 uppercase tracking-wider">
-              Workplace Only
-            </span>
+        {/* Interactive Space Switcher */}
+        {!isEditing ? (
+          <div className="p-1 rounded-xl bg-muted/60 border border-border/80 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setScope('personal')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                scope === 'personal'
+                  ? 'bg-background text-foreground shadow-xs border border-border/60'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <User className="w-3.5 h-3.5 text-blue-500" />
+              <span>Personal Space</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">Private</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope('workplace')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                scope === 'workplace'
+                  ? 'bg-background text-foreground shadow-xs border border-border/60'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5 text-purple-500" />
+              <span>Workplace</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium">Team ERP</span>
+            </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between p-3 bg-blue-50/80 dark:bg-blue-950/40 rounded-2xl border border-blue-200 dark:border-blue-900/60">
+          <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/80">
             <div className="flex items-center gap-2.5">
-              <User className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              {scope === 'workplace' ? (
+                <Building2 className="w-4 h-4 text-purple-500 shrink-0" />
+              ) : (
+                <User className="w-4 h-4 text-blue-500 shrink-0" />
+              )}
               <div>
-                <p className="text-xs font-bold text-blue-950 dark:text-blue-200">
-                  Personal Task
+                <p className="text-xs font-bold text-foreground">
+                  {scope === 'workplace' ? 'Workplace Task' : 'Personal Task'}
                 </p>
-                <p className="text-[10px] text-blue-700/80 dark:text-blue-400">
-                  Private task visible strictly to you
+                <p className="text-[11px] text-muted-foreground">
+                  {scope === 'workplace' ? 'Organization collaboration & team assignment' : 'Private task visible strictly to you'}
                 </p>
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-400/30 uppercase tracking-wider">
-              Personal Only
+            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+              scope === 'workplace'
+                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+            }`}>
+              {scope === 'workplace' ? 'Workplace' : 'Personal'}
             </span>
           </div>
         )}
 
         {/* Organization Selector (When workplace scope is active) */}
         {scope === 'workplace' && (
-          <div className="p-3 bg-purple-50/70 dark:bg-purple-950/30 rounded-2xl border border-purple-200 dark:border-purple-900/60 space-y-1.5 animate-in fade-in duration-150">
+          <div className="p-3 bg-muted/30 rounded-xl border border-border/80 space-y-1.5 animate-in fade-in duration-150">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wider">
-                Target Organization Workplace <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                Target Organization Workplace <span className="text-destructive">*</span>
               </label>
-              <span className="text-[10px] text-purple-500 dark:text-purple-400 font-semibold">
+              <span className="text-[10px] text-muted-foreground font-medium">
                 {availableOrgs.length} available
               </span>
             </div>
@@ -621,7 +641,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 setSelectedOrgId(newId);
                 setSelectedEmployeeId('');
               }}
-              className="w-full rounded-xl border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-purple-950 dark:text-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               {availableOrgs.map((org) => (
                 <option key={org.id} value={org.id}>
@@ -634,19 +654,19 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
         {/* Site Selector (When in Workplace Scope) */}
         {scope === 'workplace' && sites && sites.length > 0 && (
-          <div className="space-y-1.5 p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60">
+          <div className="space-y-1.5 p-3 rounded-xl bg-muted/30 border border-border/80">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                 Work Site / Location
               </label>
-              <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">
+              <span className="text-[10px] text-muted-foreground font-medium">
                 {sites.length} {sites.length === 1 ? 'Site Assigned' : 'Sites Available'}
               </span>
             </div>
             <select
               value={selectedSiteId}
               onChange={(e) => setSelectedSiteId(e.target.value)}
-              className="w-full rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-indigo-950 dark:text-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               {(isPlatformAdmin || isAdmin || isOwner) ? (
                 <option value="">All Sites / General</option>
@@ -664,8 +684,8 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
         {/* Title (Required) */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-            Task Title <span className="text-rose-500">*</span>
+          <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
+            Task Title <span className="text-destructive">*</span>
           </label>
           <input
             type="text"
@@ -673,13 +693,13 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="What needs to be done?"
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           />
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+          <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
             Description / Details
           </label>
           <textarea
@@ -687,7 +707,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add any context, specifications, or instructions..."
             rows={3}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 resize-y"
           />
         </div>
 
@@ -697,7 +717,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
           <div>
             {scope === 'personal' ? (
               <>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
                   Person / Pending With
                 </label>
                 <input
@@ -705,19 +725,19 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                   value={personName}
                   onChange={(e) => setPersonName(e.target.value)}
                   placeholder="e.g. Self, Ramesh, Bank"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 />
               </>
             ) : (
               <>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wider">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Assigned Employee (Directory)
                   </label>
                   <button
                     type="button"
                     onClick={() => setIsQuickAddOpen(!isQuickAddOpen)}
-                    className="text-[11px] font-medium text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5"
+                    className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
                   >
                     <UserPlus className="w-3 h-3" />
                     <span>{isQuickAddOpen ? 'Cancel' : '+ Quick Add'}</span>
@@ -725,13 +745,13 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 </div>
 
                 {isQuickAddOpen ? (
-                  <div className="p-2.5 rounded-xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/50 dark:bg-purple-950/20 space-y-2">
+                  <div className="p-2.5 rounded-xl border border-border/80 bg-muted/40 space-y-2">
                     <input
                       type="text"
                       placeholder="New Employee Name *"
                       value={quickName}
                       onChange={(e) => setQuickName(e.target.value)}
-                      className="w-full p-2 text-xs rounded-lg border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-input/80 bg-background text-foreground placeholder:text-muted-foreground"
                     />
                     <div className="flex items-center gap-2">
                       <input
@@ -739,7 +759,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                         placeholder="Designation"
                         value={quickDesignation}
                         onChange={(e) => setQuickDesignation(e.target.value)}
-                        className="flex-1 p-2 text-xs rounded-lg border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+                        className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-input/80 bg-background text-foreground placeholder:text-muted-foreground"
                       />
                       <Button
                         size="sm"
@@ -764,7 +784,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                         setPersonName('');
                       }
                     }}
-                    className="w-full rounded-xl border border-purple-200 dark:border-purple-900/60 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-purple-500 focus:outline-none"
+                    className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                   >
                     <option value="">-- Unassigned (General Workplace Task) --</option>
                     {employees.map((emp) => (
@@ -780,13 +800,13 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
           {/* Priority */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
               Priority
             </label>
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -797,27 +817,27 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
           {/* Due Date */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
               Due Date
             </label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             />
           </div>
 
           {/* Initial Status (only for creation) */}
           {!isEditing && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
                 Initial Status
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 <option value="pending">Pending (Default)</option>
                 <option value="in_progress">In Progress</option>
@@ -832,7 +852,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         {/* Initial Note (only for new tasks) */}
         {!isEditing && (
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
               Initial Note / Remark (Optional)
             </label>
             <input
@@ -840,15 +860,15 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               value={initialNote}
               onChange={(e) => setInitialNote(e.target.value)}
               placeholder="e.g. Initial conversation held today..."
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-input/80 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             />
           </div>
         )}
 
         {/* File Attachments Zone */}
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <Paperclip className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        <div className="pt-3 border-t border-border/60">
+          <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
             <span>Attach Supporting Documents (Optional)</span>
           </label>
 
@@ -860,13 +880,13 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               {selectedFiles.map((file, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-xs"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border border-border/80 text-xs"
                 >
-                  <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-xs">{file.name}</span>
+                  <span className="font-medium text-foreground truncate max-w-xs">{file.name}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveFile(idx)}
-                    className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg"
+                    className="p-1 text-muted-foreground hover:text-destructive rounded-lg"
                     title="Remove file"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -878,7 +898,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         </div>
 
         {/* Smart Reminder Configuration */}
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div className="pt-3 border-t border-border/60">
           <ReminderControls
             value={reminder}
             onChange={setReminder}
@@ -887,7 +907,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex justify-end gap-3 pt-3 border-t border-border/60">
           <Button variant="outline" size="sm" type="button" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
