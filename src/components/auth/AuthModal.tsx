@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Logo } from '../common/Logo';
+import { AuthSwitch } from '../ui/auth-switch';
 import {
   Lock,
   Mail,
@@ -297,6 +298,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full animate-pulse w-full" />
               </div>
             </div>
+          )}
+
+          {/* Sign In / Create Account Toggle Switch */}
+          {(view === 'signin' || view === 'signup') && (
+            <AuthSwitch
+              activeTab={view}
+              onTabChange={(newTab) => {
+                resetForm();
+                setView(newTab);
+              }}
+            />
           )}
 
           {/* ============================================================ */}
