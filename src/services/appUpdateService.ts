@@ -12,6 +12,7 @@ export interface AppRelease {
   release_notes: string | null;
   apk_url: string;
   release_url?: string;
+  windows_exe_url?: string;
   is_mandatory: boolean;
   created_at: string;
 }
@@ -114,12 +115,39 @@ export function isValidApkUrl(url: string): boolean {
  * On Windows Desktop, reads via Electron IPC.
  * On web or in development, defaults safely to package.json metadata.
  */
+function parseSemver(v: string): number[] {
+  return v
+    .replace(/^v/i, '')
+    .split('.')
+    .map((part) => parseInt(part, 10) || 0);
+}
+
+export function compareSemver(v1: string, v2: string): number {
+  const p1 = parseSemver(v1);
+  const p2 = parseSemver(v2);
+  const maxLen = Math.max(p1.length, p2.length);
+  for (let i = 0; i < maxLen; i++) {
+    const num1 = p1[i] || 0;
+    const num2 = p2[i] || 0;
+    if (num1 > num2) return 1;
+    if (num1 < num2) return -1;
+  }
+  return 0;
+}
+
+/**
+ * Get the currently installed app version and versionCode.
+ * On native Android, reads from PackageManager via Capacitor App plugin.
+ * On Windows Desktop, reads via Electron IPC.
+ * On web or in development, defaults safely to package.json metadata.
+ */
 export async function getInstalledVersion(): Promise<{ versionName: string; versionCode: number }> {
   // 1. Windows Desktop (Electron)
   if (isWindowsApp() && (window as any).electron?.getVersion) {
     try {
       const versionName = await (window as any).electron.getVersion();
-      return { versionName: versionName || APP_VERSION, versionCode: APP_BUILD_CODE };
+      const code = versionName === '1.0.21' ? 24 : versionName === '1.0.20' ? 23 : APP_BUILD_CODE;
+      return { versionName: versionName || APP_VERSION, versionCode: code };
     } catch (e) {
       console.warn('Electron getVersion failed:', e);
     }
@@ -187,6 +215,7 @@ export async function fetchLatestRelease(): Promise<AppRelease | null> {
       release_notes: releaseData.release_notes || '',
       apk_url: releaseData.apk_url || releaseData.release_url || '',
       release_url: releaseData.release_url || releaseData.apk_url || '',
+      windows_exe_url: releaseData.windows_exe_url || releaseData.release_url || '',
       is_mandatory: Boolean(releaseData.is_mandatory),
       created_at: releaseData.created_at,
     };
@@ -197,11 +226,21 @@ export async function fetchLatestRelease(): Promise<AppRelease | null> {
 }
 
 /**
- * Compares installed version code with latest release.
+ * Compares installed version code or semver with latest release.
  */
-export function isUpdateAvailable(installedCode: number, latest?: AppRelease | null): boolean {
-  if (!latest || typeof latest.version_code !== 'number') return false;
-  return latest.version_code > installedCode;
+export function isUpdateAvailable(
+  installedCode: number,
+  latest?: AppRelease | null,
+  installedVersionName?: string
+): boolean {
+  if (!latest) return false;
+  if (typeof latest.version_code === 'number' && typeof installedCode === 'number') {
+    if (latest.version_code > installedCode) return true;
+  }
+  if (latest.version_name && installedVersionName) {
+    if (compareSemver(latest.version_name, installedVersionName) > 0) return true;
+  }
+  return false;
 }
 
 /**

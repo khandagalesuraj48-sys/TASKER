@@ -183,6 +183,10 @@ function setupIpc() {
         const fileStream = fs.createWriteStream(targetPath);
         const request = net.request(downloadUrl);
 
+        request.on('redirect', () => {
+          request.followRedirect();
+        });
+
         request.on('response', (response) => {
           if (response.statusCode >= 400) {
             reject(new Error(`Failed to download update: HTTP ${response.statusCode}`));

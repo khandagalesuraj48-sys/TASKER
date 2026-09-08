@@ -120,21 +120,33 @@ async function uploadToSupabase(
 - Cross-platform unified auto-updates across Android and Windows Desktop.
 - Native Windows Desktop notifications, system tray support, and local storage persistence.`;
 
+  // Read dynamic versionCode from android/app/build.gradle or fallback
+  let versionCode = 25;
+  try {
+    const gradlePath = path.join(process.cwd(), 'android', 'app', 'build.gradle');
+    if (fs.existsSync(gradlePath)) {
+      const gradle = fs.readFileSync(gradlePath, 'utf8');
+      const match = gradle.match(/versionCode\s+(\d+)/);
+      if (match) versionCode = parseInt(match[1], 10);
+    }
+  } catch {}
+
   await client
     .from('app_releases')
     .upsert(
       {
         version_name: version,
-        version_code: 24,
+        version_code: versionCode,
         release_notes: releaseNotes,
         apk_url: `${env.supabaseUrl}/storage/v1/object/public/app-releases/TASKER-v${version}.apk`,
-        release_url: `https://github.com/khandagalesuraj48-sys/TASKER/releases/tag/v${version}`,
+        release_url: publicExeUrl,
+        windows_exe_url: publicExeUrl,
         is_mandatory: true,
       },
       { onConflict: 'version_code' }
     );
 
-  console.log(`✔ Supabase app_releases table updated.`);
+  console.log(`✔ Supabase app_releases table updated with version_code ${versionCode} and Windows URL.`);
   return publicExeUrl;
 }
 

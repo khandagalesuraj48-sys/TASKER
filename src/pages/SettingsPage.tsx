@@ -16,10 +16,14 @@ import {
   Smartphone,
   Sparkles,
   Globe,
+  Monitor,
 } from 'lucide-react';
+import { isWindowsApp } from '../services/appUpdateService';
 
 export const SettingsPage: React.FC = () => {
   const isAndroid = Capacitor.getPlatform() === 'android';
+  const isDesktop = isWindowsApp();
+  const isSupportedPlatform = isAndroid || isDesktop;
   const { showToast } = useToast();
 
   const {
@@ -40,7 +44,7 @@ export const SettingsPage: React.FC = () => {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
 
   const handleManualCheck = async () => {
-    if (!isAndroid) return;
+    if (!isSupportedPlatform) return;
     await checkForUpdate();
     if (!updateError) {
       showToast('Checked for updates successfully.', 'info');
@@ -54,29 +58,41 @@ export const SettingsPage: React.FC = () => {
         <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
           {isAndroid ? (
             <Smartphone className="w-6 h-6 text-primary" />
+          ) : isDesktop ? (
+            <Monitor className="w-6 h-6 text-primary" />
           ) : (
             <Globe className="w-6 h-6 text-primary" />
           )}
-          <span>{isAndroid ? 'App Updates & Version' : 'System Information & Settings'}</span>
+          <span>{isSupportedPlatform ? 'App Updates & Version' : 'System Information & Settings'}</span>
         </h2>
         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
           {isAndroid
             ? 'Direct in-app Android updates and release management'
+            : isDesktop
+            ? 'Direct in-app Windows Desktop updates and release management'
             : 'TASKER Enterprise Platform & System Information'}
         </p>
       </div>
 
-      {/* App Updates & System Version Card (Android Only) */}
-      {isAndroid ? (
+      {/* App Updates & System Version Card (Android & Windows Desktop) */}
+      {isSupportedPlatform ? (
         <Card className="rounded-xl border border-border bg-card shadow-xs">
           <CardContent className="p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-2.5">
-                <Smartphone className="w-5 h-5 text-primary" />
+                {isAndroid ? (
+                  <Smartphone className="w-5 h-5 text-primary" />
+                ) : (
+                  <Monitor className="w-5 h-5 text-primary" />
+                )}
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">App Updates & Version</h3>
+                  <h3 className="text-sm font-bold text-foreground">
+                    {isAndroid ? 'Android App Updates & Version' : 'Windows Desktop Updates & Version'}
+                  </h3>
                   <p className="text-xs text-muted-foreground">
-                    Direct in-app Android updates via official system package installer
+                    {isAndroid
+                      ? 'Direct in-app Android updates via official system package installer'
+                      : 'Direct in-app Windows updates with auto-installer executable'}
                   </p>
                 </div>
               </div>
@@ -159,7 +175,9 @@ export const SettingsPage: React.FC = () => {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Download the latest APK directly without USB cable or PC connection.
+                      {isAndroid
+                        ? 'Download the latest APK directly without USB cable or PC connection.'
+                        : 'Download and run the official Windows release (.exe) installer directly.'}
                     </p>
                   </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { Button } from './common/Button';
-import { AppRelease } from '../services/appUpdateService';
+import { AppRelease, isWindowsApp } from '../services/appUpdateService';
 import { backHandlerService } from '../services/backHandlerService';
 import {
   Download,
@@ -44,6 +44,8 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   onOpenPermissionSettings,
   isMandatory = false,
 }) => {
+  const isWindows = isWindowsApp();
+
   // Register Android back button handling
   useEffect(() => {
     if (!isOpen) return;
@@ -188,7 +190,9 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                 />
               </div>
               <p className="text-[11px] text-blue-600 dark:text-blue-300">
-                The official Android package installer will prompt you to confirm installation once downloaded.
+                {isWindows
+                  ? 'The Windows installer will start automatically once downloaded.'
+                  : 'The official Android package installer will prompt you to confirm installation once downloaded.'}
               </p>
             </div>
           )}
@@ -200,15 +204,15 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
               <div className="flex-1 space-y-1.5">
                 <p className="font-semibold">Update Notice</p>
                 <p className="text-[11px] leading-relaxed">{error}</p>
-                {release.apk_url && (
+                {(release.windows_exe_url || release.release_url || release.apk_url) && (
                   <div className="pt-1">
                     <a
-                      href={release.apk_url}
+                      href={isWindows ? (release.windows_exe_url || release.release_url || release.apk_url) : release.apk_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-semibold underline hover:text-blue-700"
                     >
-                      Download APK directly via browser
+                      {isWindows ? 'Download Windows installer (.exe) directly via browser' : 'Download APK directly via browser'}
                     </a>
                   </div>
                 )}
@@ -217,7 +221,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
           )}
 
           {/* Unknown sources permission required hint */}
-          {needsInstallPermission && onOpenPermissionSettings && (
+          {needsInstallPermission && onOpenPermissionSettings && !isWindows && (
             <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-xs text-amber-800 dark:text-amber-200 space-y-2">
               <div className="flex items-center gap-2 font-bold">
                 <Settings className="w-4 h-4" />
@@ -238,7 +242,9 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
           )}
 
           <div className="text-[11px] text-slate-400 leading-relaxed">
-            Note: TASKER never installs updates automatically. Android will present the official system verification prompt for you to manually confirm.
+            {isWindows
+              ? 'Note: TASKER will launch the official installer for you to confirm the installation.'
+              : 'Note: TASKER never installs updates automatically. Android will present the official system verification prompt for you to manually confirm.'}
           </div>
         </div>
 

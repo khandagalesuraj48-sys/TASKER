@@ -88,7 +88,11 @@ export const useAppUpdate = (): AppUpdateState => {
         const latest = await fetchLatestRelease();
         setLatestRelease(latest);
 
-        const available = isUpdateAvailable(currentInstalled.versionCode, latest);
+        const available = isUpdateAvailable(
+          currentInstalled.versionCode,
+          latest,
+          currentInstalled.versionName
+        );
         setUpdateAvailable(available);
 
         if (available && latest && resetDismissal) {
@@ -104,15 +108,15 @@ export const useAppUpdate = (): AppUpdateState => {
         isCheckingRef.current = false;
       }
     },
-    [isAndroid]
+    [isSupportedPlatform]
   );
 
   const downloadAndInstall = useCallback(async () => {
-    if (!isAndroid) {
+    if (!isSupportedPlatform) {
       return;
     }
 
-    if (!latestRelease || !latestRelease.apk_url) {
+    if (!latestRelease || (!latestRelease.apk_url && !latestRelease.release_url)) {
       setError('No valid release URL available to download.');
       return;
     }
@@ -131,6 +135,7 @@ export const useAppUpdate = (): AppUpdateState => {
       try {
         const exeUrl =
           (latestRelease as any).windows_exe_url ||
+          latestRelease.release_url ||
           `https://xargfforwknnicudigxs.supabase.co/storage/v1/object/public/app-releases/TASKER-Setup-${latestRelease.version_name}.exe`;
 
         // Subscribe to download progress from Electron
@@ -217,40 +222,42 @@ export const useAppUpdate = (): AppUpdateState => {
     setIsDismissed(true);
   }, []);
 
-  // Background/Foreground check: check on app resume if on native Android
+  // Background/Foreground check: check on app resume if on native Android or Desktop
   useEffect(() => {
-    if (!isAndroid) {
+    if (!isSupportedPlatform) {
       return;
     }
 
     let appStateListener: any = null;
 
     const handleResume = async () => {
-      // 1. Re-check actual installed version directly from PackageManager
+      // 1. Re-check actual installed version
       const currentInstalled = await getInstalledVersion();
       setInstalledVersion(currentInstalled);
 
-      // 2. Check if an install attempt was recently launched
-      const pendingCodeStr = sessionStorage.getItem('tasker_pending_update_code');
-      if (pendingCodeStr) {
-        const pendingCode = parseInt(pendingCodeStr, 10);
-        const pendingVersion = sessionStorage.getItem('tasker_pending_update_version') || '';
-        sessionStorage.removeItem('tasker_pending_update_code');
-        sessionStorage.removeItem('tasker_pending_update_version');
-        sessionStorage.removeItem('tasker_pending_update_time');
+      // 2. Check if an install attempt was recently launched (Android)
+      if (isAndroid) {
+        const pendingCodeStr = sessionStorage.getItem('tasker_pending_update_code');
+        if (pendingCodeStr) {
+          const pendingCode = parseInt(pendingCodeStr, 10);
+          const pendingVersion = sessionStorage.getItem('tasker_pending_update_version') || '';
+          sessionStorage.removeItem('tasker_pending_update_code');
+          sessionStorage.removeItem('tasker_pending_update_version');
+          sessionStorage.removeItem('tasker_pending_update_time');
 
-        if (currentInstalled.versionCode >= pendingCode) {
-          // Success: The APK was installed and the app is now at target version!
-          setUpdateAvailable(false);
-          setError(null);
-          setIsDismissed(false);
-        } else {
-          // Failed or Cancelled: Returned to app, but still running older version
-          setError(
-            `Update to v${pendingVersion || '1.0.17'} was not installed. If Android cancelled the update, please enable "Install unknown apps" in Settings and try again.`
-          );
-          // PREVENT UPDATE LOOP: Dismiss modal so user isn't trapped in an infinite modal popup
-          setIsDismissed(true);
+          if (currentInstalled.versionCode >= pendingCode) {
+            // Success: The APK was installed and the app is now at target version!
+            setUpdateAvailable(false);
+            setError(null);
+            setIsDismissed(false);
+          } else {
+            // Failed or Cancelled: Returned to app, but still running older version
+            setError(
+              `Update to v${pendingVersion || '1.0.22'} was not installed. If Android cancelled the update, please enable "Install unknown apps" in Settings and try again.`
+            );
+            // PREVENT UPDATE LOOP: Dismiss modal so user isn't trapped in an infinite modal popup
+            setIsDismissed(true);
+          }
         }
       }
 
@@ -279,11 +286,11 @@ export const useAppUpdate = (): AppUpdateState => {
         appStateListener.remove();
       }
     };
-  }, [checkForUpdate, isAndroid]);
+  }, [checkForUpdate, isSupportedPlatform, isAndroid]);
 
-  const isMandatory = Boolean(isAndroid && latestRelease?.is_mandatory && updateAvailable);
+  const isMandatory = Boolean(isSupportedPlatform && latestRelease?.is_mandatory && updateAvailable);
   const showUpdateAvailable = Boolean(
-    isAndroid && updateAvailable && (!isDismissed || (isMandatory && !error))
+    isSupportedPlatform && updateAvailable && (!isDismissed || (isMandatory && !error))
   );
 
   return {
