@@ -15,6 +15,7 @@ import {
   X,
   LogOut,
   Sparkles,
+  Radio,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
@@ -28,6 +29,7 @@ export const AdminLayout: React.FC = () => {
 
   const navItems = [
     { to: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, end: true },
+    { to: '/admin/releases', label: 'Release Center', icon: <Radio className="w-4 h-4" /> },
     { to: '/admin/users', label: 'Users & Admins', icon: <Users className="w-4 h-4" /> },
     { to: '/admin/organizations', label: 'Organizations', icon: <Building2 className="w-4 h-4" /> },
     { to: '/admin/members', label: 'Organization Members', icon: <UserCheck className="w-4 h-4" /> },

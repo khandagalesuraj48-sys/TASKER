@@ -44,6 +44,7 @@ import { AdminDirectoryPage } from './pages/admin/AdminDirectoryPage';
 import { AdminRolesPage } from './pages/admin/AdminRolesPage';
 import { AdminAuditPage } from './pages/admin/AdminAuditPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { AdminReleasesPage } from './pages/admin/AdminReleasesPage';
 
 export const App: React.FC = () => {
   return (
@@ -69,6 +70,7 @@ export const App: React.FC = () => {
                         }
                       >
                         <Route index element={<AdminDashboardPage />} />
+                        <Route path="releases" element={<AdminReleasesPage />} />
                         <Route path="users" element={<AdminUsersPage />} />
                         <Route path="organizations" element={<AdminOrganizationsPage />} />
                         <Route path="members" element={<AdminMembersPage />} />

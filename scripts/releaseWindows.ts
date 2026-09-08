@@ -136,9 +136,11 @@ async function uploadToSupabase(
     .upsert(
       {
         version_name: version,
+        version_code: 24,
         version_code: versionCode,
         release_notes: releaseNotes,
         apk_url: `${env.supabaseUrl}/storage/v1/object/public/app-releases/TASKER-v${version}.apk`,
+        release_url: `https://github.com/khandagalesuraj48-sys/TASKER/releases/tag/v${version}`,
         release_url: publicExeUrl,
         windows_exe_url: publicExeUrl,
         is_mandatory: true,
@@ -146,6 +148,7 @@ async function uploadToSupabase(
       { onConflict: 'version_code' }
     );
 
+  console.log(`✔ Supabase app_releases table updated.`);
   console.log(`✔ Supabase app_releases table updated with version_code ${versionCode} and Windows URL.`);
   return publicExeUrl;
 }

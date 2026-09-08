@@ -14,6 +14,10 @@ import {
   AppRelease,
   isWindowsApp,
 } from '../services/appUpdateService';
+import {
+  releaseChannelService,
+  ReleaseChannel,
+} from '../services/releaseChannelService';
 import { APP_VERSION, APP_BUILD_CODE } from '../constants';
 
 export interface AppUpdateState {
@@ -30,10 +34,15 @@ export interface AppUpdateState {
   error: string | null;
   downloadUri: string | null;
   needsInstallPermission: boolean;
-  checkForUpdate: () => Promise<void>;
+  userChannel: ReleaseChannel;
+  isBeta: boolean;
+  joinBeta: () => Promise<void>;
+  leaveBeta: () => Promise<void>;
+  checkForUpdate: (resetDismissal?: boolean) => Promise<void>;
   downloadAndInstall: () => Promise<void>;
   openPermissionSettings: () => Promise<void>;
   dismissBanner: () => void;
+  refreshChannel: () => Promise<void>;
 }
 
 export const useAppUpdate = (): AppUpdateState => {
@@ -54,11 +63,21 @@ export const useAppUpdate = (): AppUpdateState => {
   const [downloadUri, setDownloadUri] = useState<string | null>(null);
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
   const [needsInstallPermission, setNeedsInstallPermission] = useState<boolean>(false);
+  const [userChannel, setUserChannel] = useState<ReleaseChannel>('stable');
 
   const isCheckingRef = useRef<boolean>(false);
   const isDownloadingRef = useRef<boolean>(false);
 
-  // Initialize installed version on mount
+  // Initialize installed version and user release channel
+  const refreshChannel = useCallback(async () => {
+    try {
+      const channel = await releaseChannelService.getMyReleaseChannel();
+      setUserChannel(channel);
+    } catch {
+      setUserChannel('stable');
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     getInstalledVersion().then((version) => {
@@ -66,10 +85,11 @@ export const useAppUpdate = (): AppUpdateState => {
         setInstalledVersion(version);
       }
     });
+    refreshChannel();
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshChannel]);
 
   const checkForUpdate = useCallback(
     async (resetDismissal = true) => {
@@ -85,6 +105,7 @@ export const useAppUpdate = (): AppUpdateState => {
         const currentInstalled = await getInstalledVersion();
         setInstalledVersion(currentInstalled);
 
+        // Fetch release strictly filtered by user's release channel
         const latest = await fetchLatestRelease();
         setLatestRelease(latest);
 
@@ -110,6 +131,18 @@ export const useAppUpdate = (): AppUpdateState => {
     },
     [isSupportedPlatform]
   );
+
+  const joinBeta = useCallback(async () => {
+    await releaseChannelService.joinBeta();
+    await refreshChannel();
+    await checkForUpdate(true);
+  }, [refreshChannel, checkForUpdate]);
+
+  const leaveBeta = useCallback(async () => {
+    await releaseChannelService.leaveBeta();
+    await refreshChannel();
+    await checkForUpdate(true);
+  }, [refreshChannel, checkForUpdate]);
 
   const downloadAndInstall = useCallback(async () => {
     if (!isSupportedPlatform) {
@@ -210,7 +243,7 @@ export const useAppUpdate = (): AppUpdateState => {
       setIsDownloading(false);
       isDownloadingRef.current = false;
     }
-  }, [isAndroid, isDesktop, latestRelease]);
+  }, [isSupportedPlatform, isDesktop, latestRelease]);
 
   const openPermissionSettings = useCallback(async () => {
     if (!isAndroid) return;
@@ -231,11 +264,10 @@ export const useAppUpdate = (): AppUpdateState => {
     let appStateListener: any = null;
 
     const handleResume = async () => {
-      // 1. Re-check actual installed version
       const currentInstalled = await getInstalledVersion();
       setInstalledVersion(currentInstalled);
 
-      // 2. Check if an install attempt was recently launched (Android)
+      // Check if an install attempt was recently launched (Android)
       if (isAndroid) {
         const pendingCodeStr = sessionStorage.getItem('tasker_pending_update_code');
         if (pendingCodeStr) {
@@ -246,22 +278,18 @@ export const useAppUpdate = (): AppUpdateState => {
           sessionStorage.removeItem('tasker_pending_update_time');
 
           if (currentInstalled.versionCode >= pendingCode) {
-            // Success: The APK was installed and the app is now at target version!
             setUpdateAvailable(false);
             setError(null);
             setIsDismissed(false);
           } else {
-            // Failed or Cancelled: Returned to app, but still running older version
             setError(
               `Update to v${pendingVersion || '1.0.22'} was not installed. If Android cancelled the update, please enable "Install unknown apps" in Settings and try again.`
             );
-            // PREVENT UPDATE LOOP: Dismiss modal so user isn't trapped in an infinite modal popup
             setIsDismissed(true);
           }
         }
       }
 
-      // 3. Re-check remote update availability without re-popping dismissed modal
       checkForUpdate(false);
     };
 
@@ -304,9 +332,14 @@ export const useAppUpdate = (): AppUpdateState => {
     error,
     downloadUri,
     needsInstallPermission,
+    userChannel,
+    isBeta: userChannel === 'beta',
+    joinBeta,
+    leaveBeta,
     checkForUpdate,
     downloadAndInstall,
     openPermissionSettings,
     dismissBanner,
+    refreshChannel,
   };
 };

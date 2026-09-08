@@ -190,6 +190,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                 />
               </div>
               <p className="text-[11px] text-blue-600 dark:text-blue-300">
+                The official Android package installer will prompt you to confirm installation once downloaded.
                 {isWindows
                   ? 'The Windows installer will start automatically once downloaded.'
                   : 'The official Android package installer will prompt you to confirm installation once downloaded.'}
@@ -204,10 +205,10 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
               <div className="flex-1 space-y-1.5">
                 <p className="font-semibold">Update Notice</p>
                 <p className="text-[11px] leading-relaxed">{error}</p>
-                {(release.windows_exe_url || release.release_url || release.apk_url) && (
+                {((release as any).windows_exe_url || release.release_url || release.apk_url) && (
                   <div className="pt-1">
                     <a
-                      href={isWindows ? (release.windows_exe_url || release.release_url || release.apk_url) : release.apk_url}
+                      href={isWindows ? ((release as any).windows_exe_url || release.release_url || release.apk_url) : release.apk_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-semibold underline hover:text-blue-700"
