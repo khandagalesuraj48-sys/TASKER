@@ -99,9 +99,9 @@ export const OrgTasksPage: React.FC = () => {
     return tasks.filter((t) => {
       if (t.is_deleted) return false;
 
-      // Site Assignment Restriction: regular users only see tasks for their assigned sites
-      if (!isAdmin && !isOwner && !isPlatformAdmin && userAssignedSiteIds.length > 0) {
-        if (t.site_id && !userAssignedSiteIds.includes(t.site_id)) return false;
+      // Site Assignment Restriction: regular users ONLY see tasks for their assigned sites
+      if (!isAdmin && !isOwner && !isPlatformAdmin) {
+        if (!t.site_id || !userAssignedSiteIds.includes(t.site_id)) return false;
       }
 
       if (statusFilter !== 'all' && t.status !== statusFilter) return false;
@@ -236,24 +236,22 @@ export const OrgTasksPage: React.FC = () => {
             <span>साईट्स (Sites):</span>
           </div>
 
-          <button
-            onClick={() => selectSite('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
-              !selectedSite
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            {(!isAdmin && !isOwner && !isPlatformAdmin && userAssignedSiteIds.length > 0)
-              ? 'माझ्या साईट्स (My Sites)'
-              : 'सर्व साईट्स (All Sites)'}
-          </button>
+          {(isAdmin || isOwner || isPlatformAdmin || sites.length > 1) && (
+            <button
+              onClick={() => selectSite('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                !selectedSite
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {!isAdmin && !isOwner && !isPlatformAdmin
+                ? 'माझ्या सर्व साईट्स'
+                : 'सर्व साईट्स (All Sites)'}
+            </button>
+          )}
 
-          {(
-            (isAdmin || isOwner || isPlatformAdmin || userAssignedSiteIds.length === 0)
-              ? sites
-              : sites.filter((s) => userAssignedSiteIds.includes(s.id))
-          ).map((s) => {
+          {sites.map((s) => {
             const isSelected = selectedSite?.id === s.id;
             return (
               <button
@@ -278,6 +276,12 @@ export const OrgTasksPage: React.FC = () => {
               </button>
             );
           })}
+
+          {!isAdmin && !isOwner && !isPlatformAdmin && sites.length === 0 && (
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900/50">
+              ⚠️ तुम्हाला अद्याप कोणतीही साईट नियुक्त केलेली नाही.
+            </span>
+          )}
         </div>
 
         {(isAdmin || isOwner) && (

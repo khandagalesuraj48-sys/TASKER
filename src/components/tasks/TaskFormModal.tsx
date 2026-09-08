@@ -50,7 +50,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const { triggerRefresh } = useTask();
   const { displayName, userEmail } = useAuth();
   const currentUser = displayName || userEmail || DEFAULT_USER_NAME;
-  const { currentOrg, isEnterpriseMode, organizations, userApprovedOrgs, sites, selectedSite } = useEnterprise();
+  const { currentOrg, isEnterpriseMode, organizations, userApprovedOrgs, sites, selectedSite, isAdmin, isOwner } = useEnterprise();
   const { isPlatformAdmin } = useAdmin();
 
   const [title, setTitle] = useState<string>('');
@@ -298,7 +298,8 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setScope(defaultScope);
       const defaultOrg = defaultScope === 'workplace' ? (initialValues?.org_id || currentOrg?.id || availableOrgs[0]?.id || '') : '';
       setSelectedOrgId(defaultOrg);
-      setSelectedSiteId(initialValues?.site_id || selectedSite?.id || '');
+      const defaultSite = initialValues?.site_id || selectedSite?.id || (sites.length === 1 ? sites[0].id : '');
+      setSelectedSiteId(defaultSite);
       setSelectedEmployeeId(initialValues?.assigned_employee_id || '');
       setReminder({
         is_enabled: false,
@@ -639,7 +640,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 कामाची साईट / लोकेशन (Site)
               </label>
               <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">
-                {sites.length} साईट्स उपलब्ध
+                {sites.length} {sites.length === 1 ? 'साईट नियुक्त' : 'साईट्स उपलब्ध'}
               </span>
             </div>
             <select
@@ -647,7 +648,11 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               onChange={(e) => setSelectedSiteId(e.target.value)}
               className="w-full rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-indigo-950 dark:text-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">सर्व साईट्स / सामान्य (All Sites / General)</option>
+              {(isPlatformAdmin || isAdmin || isOwner) ? (
+                <option value="">सर्व साईट्स / सामान्य (All Sites / General)</option>
+              ) : sites.length === 0 ? (
+                <option value="">कोणतीही साईट नियुक्त नाही (No site assigned)</option>
+              ) : null}
               {sites.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} ({s.code})

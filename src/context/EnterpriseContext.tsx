@@ -38,6 +38,7 @@ interface EnterpriseContextType {
   selectedProject: OrgProject | null;
   selectProject: (id: string | null) => void;
   sites: OrgSite[];
+  allSites: OrgSite[];
   selectedSite: OrgSite | null;
   selectSite: (id: string | null) => void;
   userAssignedSiteIds: string[];
@@ -64,6 +65,7 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Multi-Site Architecture inside Organization
   const [sites, setSites] = useState<OrgSite[]>([]);
+  const [allSites, setAllSites] = useState<OrgSite[]>([]);
   const [selectedSite, setSelectedSite] = useState<OrgSite | null>(null);
   const [userAssignedSiteIds, setUserAssignedSiteIds] = useState<string[]>([]);
 
@@ -128,12 +130,32 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         ]);
         setUserMembership(membership);
         setHasRequestedJoin(pending);
-        setSites(loadedSites);
+
+        const isUserAdminOrOwner = Boolean(
+          (activeOrg.owner_id && user.id && activeOrg.owner_id === user.id) ||
+          membership?.role === 'org_owner' ||
+          membership?.role === 'org_admin'
+        );
+
+        // Strict Site Filtering:
+        // Admin / Owner sees all sites
+        // Regular members ONLY see their explicitly assigned sites
+        const visibleSites = isUserAdminOrOwner
+          ? loadedSites
+          : loadedSites.filter((s) => assignedSites.includes(s.id));
+
+        setSites(visibleSites);
+        setAllSites(loadedSites);
         setUserAssignedSiteIds(assignedSites);
 
         setSelectedSite((prev) => {
-          if (!prev) return null;
-          return loadedSites.find((s) => s.id === prev.id) || null;
+          if (!prev) {
+            if (!isUserAdminOrOwner && visibleSites.length === 1) {
+              return visibleSites[0];
+            }
+            return null;
+          }
+          return visibleSites.find((s) => s.id === prev.id) || null;
         });
 
         // Note: Do NOT automatically reset isEnterpriseMode. The user's choice is persistent
@@ -141,6 +163,7 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       } else {
         setUserMembership(null);
         setSites([]);
+        setAllSites([]);
         setSelectedSite(null);
         setUserAssignedSiteIds([]);
 
@@ -235,8 +258,25 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         getOrgSites(currentOrg.id),
         user?.id ? getUserAssignedSites(user.id, currentOrg.id) : Promise.resolve([]),
       ]);
-      setSites(loadedSites);
+
+      const isUserAdminOrOwner = isOwner || isAdmin;
+      const visibleSites = isUserAdminOrOwner
+        ? loadedSites
+        : loadedSites.filter((s) => assignedSites.includes(s.id));
+
+      setSites(visibleSites);
+      setAllSites(loadedSites);
       setUserAssignedSiteIds(assignedSites);
+
+      setSelectedSite((prev) => {
+        if (!prev) {
+          if (!isUserAdminOrOwner && visibleSites.length === 1) {
+            return visibleSites[0];
+          }
+          return null;
+        }
+        return visibleSites.find((s) => s.id === prev.id) || null;
+      });
     } catch (err) {
       console.warn('Failed refreshing sites:', err);
     }
@@ -291,6 +331,7 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         selectedProject: null,
         selectProject: () => {},
         sites,
+        allSites,
         selectedSite,
         selectSite,
         userAssignedSiteIds,
