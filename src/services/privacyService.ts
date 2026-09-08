@@ -1,4 +1,5 @@
 import { OfflineSyncService } from './offlineSyncService';
+import { APP_VERSION } from '../constants';
 
 export const exportUserDataAsJson = async (): Promise<string> => {
   const tables = [
@@ -18,7 +19,7 @@ export const exportUserDataAsJson = async (): Promise<string> => {
   const exportBundle: Record<string, any> = {
     appName: 'TASKER',
     exportDate: new Date().toISOString(),
-    version: '1.0.21',
+    version: APP_VERSION,
     data: {},
   };
 

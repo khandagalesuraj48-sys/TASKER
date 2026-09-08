@@ -288,5 +288,5 @@ export function exportTaskToPdf({
 
   // Download PDF
   const cleanTitle = task.title.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
-  doc.save(`TASKER_WorkOrder_${cleanTitle}_v1.0.21.pdf`);
+  doc.save(`TASKER_WorkOrder_${cleanTitle}.pdf`);
 }

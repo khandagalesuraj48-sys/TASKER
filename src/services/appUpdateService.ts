@@ -3,6 +3,7 @@
 import { App } from '@capacitor/app';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { APP_VERSION, APP_BUILD_CODE } from '../constants';
 
 export interface AppRelease {
   id: string;
@@ -118,7 +119,7 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
   if (isWindowsApp() && (window as any).electron?.getVersion) {
     try {
       const versionName = await (window as any).electron.getVersion();
-      return { versionName: versionName || '1.0.21', versionCode: 24 };
+      return { versionName: versionName || APP_VERSION, versionCode: APP_BUILD_CODE };
     } catch (e) {
       console.warn('Electron getVersion failed:', e);
     }
@@ -137,14 +138,14 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
 
     try {
       const info = await App.getInfo();
-      const versionName = info.version || '1.0.21';
-      const versionCode = Number((info as any).build) || 24;
+      const versionName = info.version || APP_VERSION;
+      const versionCode = Number((info as any).build) || APP_BUILD_CODE;
       return { versionName, versionCode };
     } catch (e) {
       console.warn('App.getInfo failed, using fallback version:', e);
     }
   }
-  return { versionName: '1.0.21', versionCode: 24 };
+  return { versionName: APP_VERSION, versionCode: APP_BUILD_CODE };
 }
 
 /**

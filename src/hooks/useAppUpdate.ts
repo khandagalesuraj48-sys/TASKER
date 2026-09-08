@@ -14,6 +14,7 @@ import {
   AppRelease,
   isWindowsApp,
 } from '../services/appUpdateService';
+import { APP_VERSION, APP_BUILD_CODE } from '../constants';
 
 export interface AppUpdateState {
   installedVersion: {
@@ -41,8 +42,8 @@ export const useAppUpdate = (): AppUpdateState => {
   const isSupportedPlatform = isAndroid || isDesktop;
 
   const [installedVersion, setInstalledVersion] = useState<{ versionName: string; versionCode: number }>({
-    versionName: '1.0.21',
-    versionCode: 24,
+    versionName: APP_VERSION,
+    versionCode: APP_BUILD_CODE,
   });
   const [latestRelease, setLatestRelease] = useState<AppRelease | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);

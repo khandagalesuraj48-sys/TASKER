@@ -205,3 +205,4 @@ Format:
     return localRuleBasedTaskParser(cleanTranscript, selectedLang);
   }
 }
+

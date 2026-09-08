@@ -101,3 +101,4 @@ export function discardTimer(): void {
   localStorage.removeItem(ACTIVE_TIMER_KEY);
   window.dispatchEvent(new Event('tasker_timer_updated'));
 }
+
