@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import {
@@ -25,9 +25,10 @@ import { DEFAULT_USER_NAME } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { useAdmin } from '../../context/AdminContext';
+import { extractTaskFromDocument } from '../../services/aiTaskService';
 import { FileUploadZone } from './FileUploadZone';
 import { ReminderControls } from '../reminders/ReminderControls';
-import { Paperclip, X, User, Building2, UserPlus } from 'lucide-react';
+import { Paperclip, X, User, Building2, UserPlus, Sparkles, FileUp, Loader2 } from 'lucide-react';
 
 interface TaskFormModalProps {
   isOpen: boolean;
@@ -86,6 +87,55 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
     recurrence_type: 'once',
     custom_interval_minutes: null,
   });
+
+  // AI Document Parsing State
+  const [isAiParsing, setIsAiParsing] = useState<boolean>(false);
+  const aiFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAiFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsAiParsing(true);
+    try {
+      showToast('AI डॉक्युमेंट वाचत आहे, कृपया थोडा वेळ थांबा...', 'info');
+      const result = await extractTaskFromDocument(file);
+
+      if (result.title) setTitle(result.title);
+      if (result.description) {
+        let fullDesc = result.description;
+        if (result.subtasks && result.subtasks.length > 0) {
+          fullDesc += '\n\nकामाचे टप्पे (Action Items):\n' + result.subtasks.map((s, i) => `${i + 1}. ${s}`).join('\n');
+        }
+        setDescription(fullDesc);
+      }
+      if (result.priority) setPriority(result.priority);
+      if (result.dueDate) setDueDate(result.dueDate);
+
+      if (result.suggestedSite && sites.length > 0) {
+        const query = result.suggestedSite.toLowerCase();
+        const matched = sites.find(
+          (s) =>
+            s.name.toLowerCase().includes(query) ||
+            s.code.toLowerCase().includes(query) ||
+            query.includes(s.code.toLowerCase())
+        );
+        if (matched) {
+          setSelectedSiteId(matched.id);
+        }
+      }
+
+      // Also attach the uploaded document to selectedFiles
+      setSelectedFiles((prev) => [...prev, file]);
+      showToast('✨ AI ने PDF मधून सर्व माहिती टास्क फॉर्ममध्ये भरली!', 'success');
+    } catch (err: any) {
+      console.error('AI parse error:', err);
+      showToast('AI डॉक्युमेंट वाचताना त्रुटी आली: ' + (err.message || 'Error'), 'error');
+    } finally {
+      setIsAiParsing(false);
+      if (aiFileInputRef.current) aiFileInputRef.current.value = '';
+    }
+  };
 
   // Load active organization's employees when in workplace scope
   useEffect(() => {
@@ -332,6 +382,56 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* ✨ AI PDF / Document Import Card */}
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-violet-600/10 via-indigo-600/10 to-purple-600/10 border border-violet-200 dark:border-violet-900/60 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Sparkles className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-slate-900 dark:text-slate-100">
+                  ✨ AI PDF Task Import
+                </span>
+                <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 uppercase">
+                  Gemini AI
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                वर्क ऑर्डर किंवा प्रोजेक्ट PDF निवडा, AI सर्व तपशील वाचून फॉर्म भरेल
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <input
+              type="file"
+              ref={aiFileInputRef}
+              onChange={handleAiFileUpload}
+              accept=".pdf,application/pdf,image/*"
+              className="hidden"
+            />
+            <button
+              type="button"
+              disabled={isAiParsing}
+              onClick={() => aiFileInputRef.current?.click()}
+              className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+            >
+              {isAiParsing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>AI वाचत आहे...</span>
+                </>
+              ) : (
+                <>
+                  <FileUp className="w-3.5 h-3.5" />
+                  <span>PDF Import करा</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Strictly Isolated Space Indicator */}
         {scope === 'workplace' ? (
           <div className="flex items-center justify-between p-3 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-900/60">

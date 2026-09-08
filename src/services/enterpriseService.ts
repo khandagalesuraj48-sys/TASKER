@@ -21,6 +21,7 @@ export interface OrgMemberWithDetails {
   created_at: string;
   email?: string;
   employee?: ErpEmployee | null;
+  assignedSiteIds?: string[];
 }
 
 export interface OrgJoinRequestItem {
@@ -213,14 +214,42 @@ export const getOrgMembers = async (orgId: string): Promise<OrgMemberWithDetails
       if (e.user_id) empMap.set(e.user_id, e);
     });
 
-    return memberships.map((m: any) => ({
-      id: m.id,
-      user_id: m.user_id,
-      org_id: m.org_id,
-      role: m.role,
-      created_at: m.created_at,
-      employee: empMap.get(m.user_id) || null,
-    }));
+    // Fetch assigned sites for all members of this org
+    const { data: userSites } = await supabase
+      .from('org_user_sites')
+      .select('user_id, site_id')
+      .eq('org_id', orgId);
+
+    const siteMap = new Map<string, string[]>();
+    userSites?.forEach((us: any) => {
+      const existing = siteMap.get(us.user_id) || [];
+      existing.push(us.site_id);
+      siteMap.set(us.user_id, existing);
+    });
+
+    // Fetch user emails from join requests or metadata cache
+    const { data: joinReqs } = await supabase
+      .from('org_join_requests')
+      .select('user_id, user_email');
+
+    const emailMap = new Map<string, string>();
+    joinReqs?.forEach((r: any) => {
+      if (r.user_id && r.user_email) emailMap.set(r.user_id, r.user_email);
+    });
+
+    return memberships.map((m: any) => {
+      const emp = empMap.get(m.user_id);
+      return {
+        id: m.id,
+        user_id: m.user_id,
+        org_id: m.org_id,
+        role: m.role,
+        created_at: m.created_at,
+        email: emp?.email || emailMap.get(m.user_id) || undefined,
+        employee: emp || null,
+        assignedSiteIds: siteMap.get(m.user_id) || [],
+      };
+    });
   } catch (err) {
     console.error('Error fetching org members:', err);
     return [];
@@ -673,3 +702,44 @@ export const removeUserFromSite = async (
     return false;
   }
 };
+
+/**
+ * Set/update all assigned sites for a user (checkboxes multi-selection)
+ */
+export const setUserSites = async (
+  userId: string,
+  orgId: string,
+  siteIds: string[]
+): Promise<boolean> => {
+  if (!userId || !orgId) return false;
+  try {
+    // 1. Delete existing site assignments for this user in this org
+    await supabase
+      .from('org_user_sites')
+      .delete()
+      .eq('user_id', userId)
+      .eq('org_id', orgId);
+
+    // 2. Insert new site assignments if any
+    if (siteIds && siteIds.length > 0) {
+      const rows = siteIds.map((siteId) => ({
+        user_id: userId,
+        org_id: orgId,
+        site_id: siteId,
+      }));
+      const { error } = await supabase
+        .from('org_user_sites')
+        .insert(rows);
+
+      if (error) {
+        console.warn('Error inserting user sites:', error);
+        return false;
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error('Error in setUserSites:', err);
+    return false;
+  }
+};
+
