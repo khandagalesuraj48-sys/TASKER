@@ -39,8 +39,10 @@ android/app/build/
 android/.gradle/
 android/local.properties
 release/
+release-windows/
 *.apk
 *.aab
+*.exe
 *.keystore
 *.jks
 TASKER_UPDATED_RELEASE/

@@ -12,6 +12,7 @@ import {
   checkCanInstallPackages,
   openInstallPermissionSettings,
   AppRelease,
+  isWindowsApp,
 } from '../services/appUpdateService';
 
 export interface AppUpdateState {
@@ -36,6 +37,8 @@ export interface AppUpdateState {
 
 export const useAppUpdate = (): AppUpdateState => {
   const isAndroid = Capacitor.getPlatform() === 'android';
+  const isDesktop = isWindowsApp();
+  const isSupportedPlatform = isAndroid || isDesktop;
 
   const [installedVersion, setInstalledVersion] = useState<{ versionName: string; versionCode: number }>({
     versionName: '1.0.21',
@@ -69,8 +72,8 @@ export const useAppUpdate = (): AppUpdateState => {
 
   const checkForUpdate = useCallback(
     async (resetDismissal = true) => {
-      // App updates are strictly Android-only. Never check on Web/Vercel.
-      if (!isAndroid || isCheckingRef.current || isDownloadingRef.current) {
+      // App updates supported on Android and Windows Desktop. Never check on Web/Vercel.
+      if (!isSupportedPlatform || isCheckingRef.current || isDownloadingRef.current) {
         return;
       }
 
@@ -122,6 +125,36 @@ export const useAppUpdate = (): AppUpdateState => {
     setError(null);
     setDownloadProgress(0);
 
+    // Handle Windows Desktop Update via Electron
+    if (isDesktop && (window as any).electron?.downloadUpdate) {
+      try {
+        const exeUrl =
+          (latestRelease as any).windows_exe_url ||
+          `https://xargfforwknnicudigxs.supabase.co/storage/v1/object/public/app-releases/TASKER-Setup-${latestRelease.version_name}.exe`;
+
+        // Subscribe to download progress from Electron
+        const unsubscribe = (window as any).electron.onUpdateProgress?.((pct: number) => {
+          setDownloadProgress(pct);
+        });
+
+        const downloadedPath = await (window as any).electron.downloadUpdate(exeUrl);
+        if (unsubscribe) unsubscribe();
+        setDownloadProgress(100);
+
+        // Hand off to installer and exit
+        await (window as any).electron.installUpdate(downloadedPath);
+      } catch (e: any) {
+        console.error('Desktop download/install error:', e);
+        // Fallback: open release page in browser
+        window.open(latestRelease.release_url || latestRelease.apk_url, '_blank');
+        setError(e?.message || 'Download error. Opening release download page.');
+      } finally {
+        setIsDownloading(false);
+        isDownloadingRef.current = false;
+      }
+      return;
+    }
+
     try {
       // 1. Check unknown sources installation permission on Android before downloading
       const canInstall = await checkCanInstallPackages();
@@ -171,7 +204,7 @@ export const useAppUpdate = (): AppUpdateState => {
       setIsDownloading(false);
       isDownloadingRef.current = false;
     }
-  }, [isAndroid, latestRelease]);
+  }, [isAndroid, isDesktop, latestRelease]);
 
   const openPermissionSettings = useCallback(async () => {
     if (!isAndroid) return;

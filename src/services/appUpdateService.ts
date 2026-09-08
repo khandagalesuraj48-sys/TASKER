@@ -72,19 +72,36 @@ export const UpdatePlugin = registerPlugin<UpdatePluginInterface>('UpdatePlugin'
 export const isAndroid = (): boolean => Capacitor.getPlatform() === 'android';
 
 /**
- * Validates that the APK URL is secure and matches trusted distribution sources.
+ * Detects if the current running platform is Windows Desktop (Electron).
+ */
+export const isWindowsApp = (): boolean => {
+  return (
+    typeof window !== 'undefined' &&
+    ((window as any).isElectron === true ||
+      Boolean((window as any).electron) ||
+      navigator.userAgent.toLowerCase().includes('electron'))
+  );
+};
+
+/**
+ * Validates that the APK/EXE URL is secure and matches trusted distribution sources.
  */
 export function isValidApkUrl(url: string): boolean {
   if (!url || typeof url !== 'string') return false;
   try {
     const parsed = new URL(url.trim());
     if (parsed.protocol !== 'https:') return false;
-    // Allow GitHub Releases for TASKER or configured domain
+    // Allow GitHub Releases for TASKER or configured domain or Supabase storage
     const isGithubRelease =
       parsed.hostname === 'github.com' &&
       parsed.pathname.includes('/khandagalesuraj48-sys/TASKER/releases/');
-    const isApkFile = parsed.pathname.endsWith('.apk') || url.includes('.apk');
-    return (isGithubRelease || isApkFile) && !url.toLowerCase().includes('javascript:');
+    const isSupabase = parsed.hostname.includes('supabase.co');
+    const isBinary =
+      parsed.pathname.endsWith('.apk') ||
+      url.includes('.apk') ||
+      parsed.pathname.endsWith('.exe') ||
+      url.includes('.exe');
+    return (isGithubRelease || isSupabase || isBinary) && !url.toLowerCase().includes('javascript:');
   } catch {
     return false;
   }
@@ -93,11 +110,22 @@ export function isValidApkUrl(url: string): boolean {
 /**
  * Get the currently installed app version and versionCode.
  * On native Android, reads from PackageManager via Capacitor App plugin.
+ * On Windows Desktop, reads via Electron IPC.
  * On web or in development, defaults safely to package.json metadata.
  */
 export async function getInstalledVersion(): Promise<{ versionName: string; versionCode: number }> {
+  // 1. Windows Desktop (Electron)
+  if (isWindowsApp() && (window as any).electron?.getVersion) {
+    try {
+      const versionName = await (window as any).electron.getVersion();
+      return { versionName: versionName || '1.0.21', versionCode: 24 };
+    } catch (e) {
+      console.warn('Electron getVersion failed:', e);
+    }
+  }
+
+  // 2. Native Android
   if (Capacitor.isNativePlatform()) {
-    // 1. Query live Android PackageManager directly via UpdatePlugin
     try {
       const liveInfo = await UpdatePlugin.getInstalledVersion();
       if (liveInfo && liveInfo.versionName && typeof liveInfo.versionCode === 'number') {
@@ -107,7 +135,6 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
       console.warn('UpdatePlugin.getInstalledVersion failed, falling back to App.getInfo:', e);
     }
 
-    // 2. Fallback to Capacitor App.getInfo()
     try {
       const info = await App.getInfo();
       const versionName = info.version || '1.0.21';
@@ -123,11 +150,11 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
 /**
  * Fetch the latest active release metadata from Supabase.
  * Read-only query against public.app_releases with graceful error fallback.
- * Disabled on Web/Vercel as App Updates are Android-only.
+ * Supported on Android and Windows Desktop.
  */
 export async function fetchLatestRelease(): Promise<AppRelease | null> {
-  // App updates are strictly Android-only. Do not check or query on Web/Vercel.
-  if (!isAndroid()) {
+  // App updates are supported on Android and Windows Desktop. Disabled on standard Web.
+  if (!isAndroid() && !isWindowsApp()) {
     return null;
   }
 

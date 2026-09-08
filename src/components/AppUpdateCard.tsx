@@ -5,17 +5,18 @@ import { Capacitor } from '@capacitor/core';
 import { Button } from './common/Button';
 import { UpdateModal } from './UpdateModal';
 import { useAppUpdate } from '../hooks/useAppUpdate';
+import { isWindowsApp } from '../services/appUpdateService';
 import { Sparkles, Download } from 'lucide-react';
 
 /**
- * Non-blocking banner displayed when a newer APK version is available.
- * Android-only. Never displayed on Web/Vercel.
+ * Non-blocking banner displayed when a newer version is available.
+ * Supported on Android and Windows Desktop. Never displayed on Web/Vercel.
  * Can be dismissed for the session, or clicked to view release notes / install.
  * If mandatory, automatically displays the modal.
  */
 export const AppUpdateCard: React.FC = () => {
-  // App updates are strictly Android-only. Never render on Web/Vercel.
-  if (Capacitor.getPlatform() !== 'android') {
+  // Supported on Android and Windows Desktop. Never render on generic Web.
+  if (Capacitor.getPlatform() !== 'android' && !isWindowsApp()) {
     return null;
   }
 
