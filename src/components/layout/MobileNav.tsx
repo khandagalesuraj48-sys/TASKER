@@ -52,8 +52,8 @@ export const MobileNav: React.FC = () => {
 
   const workplaceItems: NavItem[] = [
     { to: '/org/tasks', label: 'Org Tasks', icon: <Building2 className="w-5 h-5 text-indigo-500" /> },
+    { to: '/org/pending', label: 'Pending', icon: <Clock className="w-5 h-5 text-amber-500" /> },
     { to: '/org/assigned-to-me', label: 'Assigned', icon: <UserCheck className="w-5 h-5 text-blue-500" /> },
-    { to: '/org/created-by-me', label: 'Created', icon: <Send className="w-5 h-5 text-emerald-500" /> },
     { to: '/org/employees', label: 'Team', icon: <Users className="w-5 h-5 text-purple-500" /> },
   ];
 
@@ -130,6 +130,14 @@ export const MobileNav: React.FC = () => {
                   >
                     <Building2 className="w-4 h-4 text-indigo-500" />
                     <span>Organization Tasks</span>
+                  </NavLink>
+                  <NavLink
+                    to="/org/pending"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  >
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    <span>Site Pending Tasks (प्रलंबित कामे)</span>
                   </NavLink>
                   <NavLink
                     to="/org/assigned-to-me"

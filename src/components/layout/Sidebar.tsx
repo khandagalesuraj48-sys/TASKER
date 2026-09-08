@@ -99,6 +99,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: <Building2 className="w-4 h-4 text-indigo-500" />,
     },
     {
+      to: '/org/pending',
+      label: 'Site Pending (प्रलंबित कामे)',
+      icon: <Clock className="w-4 h-4 text-amber-500" />,
+    },
+    {
       to: '/org/assigned-to-me',
       label: 'My Assigned Tasks',
       icon: <UserCheck className="w-4 h-4 text-blue-500" />,
@@ -389,7 +394,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 shadow-2xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
-              TASKER v1.0.16
+              TASKER v1.0.17
             </span>
           </div>
           <p className="text-[9.5px] font-medium text-slate-400 dark:text-slate-500 tracking-tight leading-tight">

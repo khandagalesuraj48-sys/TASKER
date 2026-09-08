@@ -25,6 +25,7 @@ import { SettingsPage } from './pages/SettingsPage';
 
 // Organization Workplace Pages
 import { OrgTasksPage } from './pages/OrgTasksPage';
+import { OrgPendingTasksPage } from './pages/OrgPendingTasksPage';
 import { OrgAssignedTasksPage } from './pages/OrgAssignedTasksPage';
 import { OrgCreatedTasksPage } from './pages/OrgCreatedTasksPage';
 import { EmployeeDirectoryPage } from './pages/EmployeeDirectoryPage';
@@ -101,6 +102,7 @@ export const App: React.FC = () => {
 
                         {/* Organization Workplace Routes */}
                         <Route path="org/tasks" element={<OrgTasksPage />} />
+                        <Route path="org/pending" element={<OrgPendingTasksPage />} />
                         <Route path="org/tasks/:id" element={<TaskDetailPage />} />
                         <Route path="org/assigned-to-me" element={<OrgAssignedTasksPage />} />
                         <Route path="org/created-by-me" element={<OrgCreatedTasksPage />} />

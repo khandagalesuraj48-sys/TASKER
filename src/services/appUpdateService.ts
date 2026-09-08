@@ -110,14 +110,14 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
     // 2. Fallback to Capacitor App.getInfo()
     try {
       const info = await App.getInfo();
-      const versionName = info.version || '1.0.16';
-      const versionCode = Number((info as any).build) || 19;
+      const versionName = info.version || '1.0.17';
+      const versionCode = Number((info as any).build) || 20;
       return { versionName, versionCode };
     } catch (e) {
       console.warn('App.getInfo failed, using fallback version:', e);
     }
   }
-  return { versionName: '1.0.16', versionCode: 19 };
+  return { versionName: '1.0.17', versionCode: 20 };
 }
 
 /**
