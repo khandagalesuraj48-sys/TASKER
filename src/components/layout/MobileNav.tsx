@@ -45,10 +45,13 @@ export const MobileNav: React.FC = () => {
           onClick={() => setMoreMenuOpen(false)}
         >
           <div
-            className="w-full bg-card text-card-foreground rounded-t-2xl border-t border-border p-4 pb-8 pb-safe shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto"
+            className="w-full bg-card text-card-foreground rounded-t-2xl border-t border-border/80 p-4 pb-8 pb-safe shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-border pb-2.5">
+            {/* Native Sheet Drag Handle Indicator */}
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto -mt-1 mb-2" />
+
+            <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
               <div>
                 <h3 className="text-sm font-bold text-foreground">TASKER Operations</h3>
                 <p className="text-[11px] text-muted-foreground">Workspace modules & management</p>
@@ -56,7 +59,7 @@ export const MobileNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMoreMenuOpen(false)}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/70 active:scale-95"
                 aria-label="Close menu"
               >
                 <X className="w-5 h-5" />
@@ -64,7 +67,7 @@ export const MobileNav: React.FC = () => {
             </div>
 
             {/* Space Switcher */}
-            <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-md border border-border/60">
+            <div className="grid grid-cols-2 gap-1 p-1 bg-muted/60 rounded-lg border border-border/60">
               <button
                 type="button"
                 onClick={() => {
@@ -73,7 +76,7 @@ export const MobileNav: React.FC = () => {
                   setMoreMenuOpen(false);
                 }}
                 className={cn(
-                  'py-2 text-xs font-bold rounded-sm transition-all flex items-center justify-center gap-1.5',
+                  'py-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 active:scale-95',
                   !isEnterpriseMode
                     ? 'bg-background text-primary shadow-2xs'
                     : 'text-muted-foreground'
@@ -91,7 +94,7 @@ export const MobileNav: React.FC = () => {
                   setMoreMenuOpen(false);
                 }}
                 className={cn(
-                  'py-2 text-xs font-bold rounded-sm transition-all flex items-center justify-center gap-1.5',
+                  'py-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 active:scale-95',
                   isEnterpriseMode
                     ? 'bg-background text-workplace shadow-2xs'
                     : 'text-muted-foreground'
@@ -112,7 +115,7 @@ export const MobileNav: React.FC = () => {
                   <NavLink
                     to="/org/created-by-me"
                     onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-foreground hover:bg-muted"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/70 active:scale-[0.99]"
                   >
                     <Send className="w-4 h-4 text-emerald-500" />
                     <span>Tasks Delegated Out by Me</span>
@@ -120,7 +123,7 @@ export const MobileNav: React.FC = () => {
                   <NavLink
                     to="/org/employees"
                     onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-foreground hover:bg-muted"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/70 active:scale-[0.99]"
                   >
                     <Users className="w-4 h-4 text-purple-500" />
                     <span>Employee Directory</span>
@@ -128,7 +131,7 @@ export const MobileNav: React.FC = () => {
                   <NavLink
                     to="/org/history"
                     onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-foreground hover:bg-muted"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/70 active:scale-[0.99]"
                   >
                     <History className="w-4 h-4 text-amber-500" />
                     <span>Assignment History Audit</span>
@@ -136,21 +139,21 @@ export const MobileNav: React.FC = () => {
                   <NavLink
                     to="/org/notifications"
                     onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-foreground hover:bg-muted"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/70 active:scale-[0.99]"
                   >
                     <Bell className="w-4 h-4 text-rose-500" />
                     <span>Notifications & Alerts</span>
                   </NavLink>
 
                   {isAdmin && (
-                    <div className="pt-2 border-t border-border">
+                    <div className="pt-2 border-t border-border/80">
                       <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">
                         Administration
                       </p>
                       <NavLink
                         to="/org/manage"
                         onClick={() => setMoreMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 active:scale-[0.99]"
                       >
                         <ShieldAlert className="w-4 h-4" />
                         <span>Organization Management</span>
@@ -166,7 +169,7 @@ export const MobileNav: React.FC = () => {
                   <NavLink
                     to="/completed"
                     onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-foreground hover:bg-muted"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/70 active:scale-[0.99]"
                   >
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     <span>Completed Archive</span>
@@ -174,7 +177,7 @@ export const MobileNav: React.FC = () => {
                   <NavLink
                     to="/reminders"
                     onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-foreground hover:bg-muted"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/70 active:scale-[0.99]"
                   >
                     <Bell className="w-4 h-4 text-sky-500" />
                     <span>Reminders & Schedules</span>
@@ -182,7 +185,7 @@ export const MobileNav: React.FC = () => {
                   <NavLink
                     to="/bin"
                     onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-foreground hover:bg-muted"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/70 active:scale-[0.99]"
                   >
                     <Trash2 className="w-4 h-4 text-muted-foreground" />
                     <span>Recycle Bin</span>
@@ -192,11 +195,11 @@ export const MobileNav: React.FC = () => {
 
               {/* Platform Admin Link */}
               {isPlatformAdmin && (
-                <div className="pt-2 border-t border-border">
+                <div className="pt-2 border-t border-border/80">
                   <NavLink
                     to="/admin"
                     onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 active:scale-[0.99]"
                   >
                     <Shield className="w-4 h-4" />
                     <span>Platform Admin Control Center</span>
@@ -205,14 +208,14 @@ export const MobileNav: React.FC = () => {
               )}
 
               {/* General Settings */}
-              <div className="pt-2 border-t border-border">
+              <div className="pt-2 border-t border-border/80">
                 <NavLink
                   to="/settings"
                   onClick={() => setMoreMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-foreground hover:bg-muted"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/70 active:scale-[0.99]"
                 >
                   <Settings className="w-4 h-4" />
-                  <span>Settings & Android Updates</span>
+                  <span>Settings & App Updates</span>
                 </NavLink>
               </div>
             </div>
@@ -221,7 +224,7 @@ export const MobileNav: React.FC = () => {
       )}
 
       {/* Main 5-Tab Sticky Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 inset-x-0 z-30 bg-card/95 backdrop-blur-md border-t border-border lg:hidden pb-safe">
+      <nav className="fixed bottom-0 inset-x-0 z-30 bg-card/95 backdrop-blur-md border-t border-border/80 lg:hidden pb-safe shadow-lg">
         <div className="grid grid-cols-5 h-16 items-center px-1">
           {/* Tab 1: Dashboard / Home */}
           <NavLink
@@ -229,21 +232,33 @@ export const MobileNav: React.FC = () => {
             end
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center gap-0.5 h-full transition-colors min-h-[44px]',
+                'flex flex-col items-center justify-center gap-0.5 h-full transition-all min-h-[44px] relative active:scale-95',
                 isActive
                   ? isEnterpriseMode ? 'text-workplace font-bold' : 'text-primary font-bold'
                   : 'text-muted-foreground hover:text-foreground'
               )
             }
           >
-            {isEnterpriseMode ? (
-              <Building2 className="w-5 h-5" />
-            ) : (
-              <LayoutDashboard className="w-5 h-5" />
+            {({ isActive }) => (
+              <>
+                {isEnterpriseMode ? (
+                  <Building2 className="w-5 h-5" />
+                ) : (
+                  <LayoutDashboard className="w-5 h-5" />
+                )}
+                <span className="text-[10px] tracking-tight truncate max-w-[56px]">
+                  {isEnterpriseMode ? 'Board' : 'Tasks'}
+                </span>
+                {isActive && (
+                  <span
+                    className={cn(
+                      'w-1 h-1 rounded-full absolute bottom-1.5',
+                      isEnterpriseMode ? 'bg-workplace' : 'bg-primary'
+                    )}
+                  />
+                )}
+              </>
             )}
-            <span className="text-[10px] tracking-tight truncate max-w-[56px]">
-              {isEnterpriseMode ? 'Board' : 'Tasks'}
-            </span>
           </NavLink>
 
           {/* Tab 2: Pending Tasks */}
@@ -251,22 +266,29 @@ export const MobileNav: React.FC = () => {
             to={isEnterpriseMode ? '/org/pending' : '/pending'}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center gap-0.5 h-full transition-colors relative min-h-[44px]',
+                'flex flex-col items-center justify-center gap-0.5 h-full transition-all relative min-h-[44px] active:scale-95',
                 isActive
                   ? 'text-amber-600 dark:text-amber-400 font-bold'
                   : 'text-muted-foreground hover:text-foreground'
               )
             }
           >
-            <div className="relative">
-              <Clock className="w-5 h-5" />
-              {pendingCount > 0 && (
-                <span className="absolute -top-1.5 -right-2 px-1 min-w-[14px] h-[14px] text-[9px] font-bold bg-amber-500 text-white rounded-full flex items-center justify-center">
-                  {pendingCount > 99 ? '99+' : pendingCount}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] tracking-tight">Pending</span>
+            {({ isActive }) => (
+              <>
+                <div className="relative">
+                  <Clock className="w-5 h-5" />
+                  {pendingCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 px-1 min-w-[15px] h-[15px] text-[9px] font-mono font-bold bg-amber-500 text-white rounded-full flex items-center justify-center shadow-xs">
+                      {pendingCount > 99 ? '99+' : pendingCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] tracking-tight">Pending</span>
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-amber-500 absolute bottom-1.5" />
+                )}
+              </>
+            )}
           </NavLink>
 
           {/* Tab 3: Centered Quick Add Action Button */}
@@ -275,10 +297,10 @@ export const MobileNav: React.FC = () => {
               type="button"
               onClick={() => openCreateModal({ scope: isEnterpriseMode ? 'workplace' : 'personal' })}
               className={cn(
-                'w-11 h-11 rounded-full text-white flex items-center justify-center shadow-md active:scale-95 transition-transform min-h-[44px] min-w-[44px]',
+                'w-11 h-11 rounded-full text-white flex items-center justify-center shadow-md active:scale-90 transition-all min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-offset-2',
                 isEnterpriseMode
-                  ? 'bg-workplace hover:bg-workplace/90'
-                  : 'bg-primary hover:bg-primary/90'
+                  ? 'bg-workplace hover:bg-workplace/90 shadow-workplace/30 focus:ring-workplace'
+                  : 'bg-primary hover:bg-primary/90 shadow-primary/30 focus:ring-primary'
               )}
               aria-label="Create new task"
             >
@@ -291,21 +313,33 @@ export const MobileNav: React.FC = () => {
             to={isEnterpriseMode ? '/org/assigned-to-me' : '/completed'}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center gap-0.5 h-full transition-colors min-h-[44px]',
+                'flex flex-col items-center justify-center gap-0.5 h-full transition-all min-h-[44px] relative active:scale-95',
                 isActive
                   ? isEnterpriseMode ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-emerald-600 dark:text-emerald-400 font-bold'
                   : 'text-muted-foreground hover:text-foreground'
               )
             }
           >
-            {isEnterpriseMode ? (
-              <UserCheck className="w-5 h-5" />
-            ) : (
-              <CheckCircle2 className="w-5 h-5" />
+            {({ isActive }) => (
+              <>
+                {isEnterpriseMode ? (
+                  <UserCheck className="w-5 h-5" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5" />
+                )}
+                <span className="text-[10px] tracking-tight truncate max-w-[56px]">
+                  {isEnterpriseMode ? 'Assigned' : 'Done'}
+                </span>
+                {isActive && (
+                  <span
+                    className={cn(
+                      'w-1 h-1 rounded-full absolute bottom-1.5',
+                      isEnterpriseMode ? 'bg-blue-500' : 'bg-emerald-500'
+                    )}
+                  />
+                )}
+              </>
             )}
-            <span className="text-[10px] tracking-tight truncate max-w-[56px]">
-              {isEnterpriseMode ? 'Assigned' : 'Done'}
-            </span>
           </NavLink>
 
           {/* Tab 5: More Menu Drawer */}
@@ -313,12 +347,15 @@ export const MobileNav: React.FC = () => {
             type="button"
             onClick={() => setMoreMenuOpen(true)}
             className={cn(
-              'flex flex-col items-center justify-center gap-0.5 h-full transition-colors min-h-[44px]',
+              'flex flex-col items-center justify-center gap-0.5 h-full transition-all min-h-[44px] relative active:scale-95',
               moreMenuOpen ? 'text-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <MoreHorizontal className="w-5 h-5" />
             <span className="text-[10px] tracking-tight">More</span>
+            {moreMenuOpen && (
+              <span className="w-1 h-1 rounded-full bg-foreground absolute bottom-1.5" />
+            )}
           </button>
         </div>
       </nav>

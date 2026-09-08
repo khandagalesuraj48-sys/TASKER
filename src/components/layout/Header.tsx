@@ -112,14 +112,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   };
 
   return (
-    <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border transition-colors pt-safe shadow-2xs">
+    <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border/80 transition-colors pt-safe shadow-2xs">
       <div className="flex items-center justify-between h-14 px-3 sm:px-6 max-w-7xl mx-auto w-full">
         {/* Left Side: Mobile Menu Button & Breadcrumbs */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
             onClick={onOpenMobileMenu}
-            className="lg:hidden p-1.5 -ml-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted focus:outline-none min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors"
+            className="lg:hidden p-2 -ml-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/70 focus:outline-none min-w-[38px] min-h-[38px] flex items-center justify-center transition-colors active:scale-95"
             aria-label="Open sidebar menu"
           >
             <Menu className="w-5 h-5" />
@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
           {/* Desktop Breadcrumb */}
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground min-w-0">
-            <span className="font-semibold text-foreground/80 flex items-center gap-1">
+            <span className="font-semibold text-foreground/80 flex items-center gap-1.5">
               {isEnterpriseMode ? (
                 <>
                   <Building2 className="w-3.5 h-3.5 text-workplace" />
@@ -140,12 +140,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 </>
               )}
             </span>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
             <span className="font-medium text-foreground truncate">{getPageTitle()}</span>
           </div>
 
           {/* Mobile compact title */}
-          <div className="sm:hidden font-semibold text-xs text-foreground truncate max-w-[120px]">
+          <div className="sm:hidden font-semibold text-xs text-foreground truncate max-w-[130px]">
             {getPageTitle()}
           </div>
         </div>
@@ -155,13 +155,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           <button
             type="button"
             onClick={() => openUniversalSearch()}
-            className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted border border-border rounded-md transition-colors group shadow-2xs"
+            className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground bg-muted/40 hover:bg-muted/80 border border-border/80 rounded-lg transition-all group shadow-2xs"
           >
             <div className="flex items-center gap-2 min-w-0 truncate">
               <Search className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
               <span className="truncate">Search tasks, sites, notes...</span>
             </div>
-            <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground bg-background border border-border rounded shadow-2xs shrink-0">
+            <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/80 bg-background/80 border border-border/80 rounded shadow-2xs shrink-0">
               Ctrl K
             </kbd>
           </button>
@@ -173,7 +173,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           <button
             type="button"
             onClick={() => openUniversalSearch()}
-            className="md:hidden p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors"
+            className="md:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-lg min-w-[38px] min-h-[38px] flex items-center justify-center transition-colors active:scale-95"
             aria-label="Search"
           >
             <Search className="w-4 h-4" />
@@ -182,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           {/* Realtime Live Sync Status */}
           {isRealtimeConnected && (
             <span
-              className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold"
+              className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-semibold"
               title="Supabase Realtime is active. Data syncs live."
             >
               <Radio className="w-2.5 h-2.5 text-emerald-500 animate-pulse" />
@@ -204,10 +204,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                   }
                 }}
                 className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors shadow-2xs',
+                  'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all shadow-2xs active:scale-95',
                   isEnterpriseMode
-                    ? 'border-workplace/30 bg-workplace/10 text-workplace'
-                    : 'border-primary/30 bg-primary/10 text-primary'
+                    ? 'border-workplace/30 bg-workplace/10 text-workplace hover:bg-workplace/15'
+                    : 'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15'
                 )}
                 title="Switch Workspace"
               >
@@ -228,8 +228,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
               {/* Multi-Org Dropdown */}
               {orgDropdownOpen && userApprovedOrgs.length > 1 && (
-                <div className="absolute right-0 top-full mt-1.5 w-60 bg-card rounded-md shadow-lg border border-border p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <div className="absolute right-0 top-full mt-1.5 w-60 bg-card rounded-xl shadow-lg border border-border/80 p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Switch Workplace Organization
                   </div>
                   {userApprovedOrgs.map((org) => (
@@ -243,10 +243,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                         navigate('/org/tasks');
                       }}
                       className={cn(
-                        'w-full text-left px-2.5 py-1.5 rounded-sm text-xs font-medium flex items-center justify-between transition-colors',
+                        'w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors',
                         currentOrg?.id === org.id
                           ? 'bg-workplace/15 text-workplace font-semibold'
-                          : 'text-foreground hover:bg-muted'
+                          : 'text-foreground hover:bg-muted/70'
                       )}
                     >
                       <span className="truncate">{org.legal_name}</span>
@@ -255,7 +255,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                       )}
                     </button>
                   ))}
-                  <div className="border-t border-border mt-1 pt-1">
+                  <div className="border-t border-border/80 mt-1 pt-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -263,7 +263,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                         setOrgDropdownOpen(false);
                         navigate('/');
                       }}
-                      className="w-full text-left px-2.5 py-1.5 rounded-sm text-xs font-medium text-foreground hover:bg-muted flex items-center gap-1.5"
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/70 flex items-center gap-1.5"
                     >
                       <User className="w-3.5 h-3.5 text-primary" />
                       <span>Switch to Personal Space</span>
@@ -278,7 +278,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           <button
             type="button"
             onClick={() => setVoiceModalOpen(true)}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1 text-xs"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors flex items-center gap-1 text-xs active:scale-95"
             title="AI Voice-to-Task (मराठी / हिंदी / English)"
           >
             <Mic className="w-4 h-4 text-primary animate-pulse" />
@@ -293,7 +293,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             type="button"
             onClick={() => openCreateModal({ scope: isEnterpriseMode ? 'workplace' : 'personal' })}
             className={cn(
-              'hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-white text-xs font-semibold shadow-xs transition-colors',
+              'hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold shadow-xs transition-all active:scale-95',
               isEnterpriseMode ? 'bg-workplace hover:bg-workplace/90' : 'bg-primary hover:bg-primary/90'
             )}
             title="Create Task"
@@ -307,17 +307,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             <button
               type="button"
               onClick={() => setProfileOpen(!profileOpen)}
-              className="flex items-center gap-1.5 p-1 rounded-md hover:bg-muted transition-colors focus:outline-none"
+              className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-muted/70 transition-colors focus:outline-none active:scale-95"
               aria-label="User profile menu"
             >
-              <div className="w-7 h-7 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs">
+              <div className="w-7 h-7 rounded-full bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs">
                 {(displayName || userEmail || 'U').charAt(0).toUpperCase()}
               </div>
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-56 bg-card rounded-md shadow-lg border border-border p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-2 py-1.5 border-b border-border">
+              <div className="absolute right-0 top-full mt-1.5 w-56 bg-card rounded-xl shadow-lg border border-border/80 p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-2.5 py-2 border-b border-border/80">
                   <p className="font-semibold text-xs text-foreground truncate leading-tight">
                     {displayName || 'Operative'}
                   </p>
@@ -330,7 +330,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                   <Link
                     to="/settings"
                     onClick={() => setProfileOpen(false)}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs text-foreground hover:bg-muted transition-colors"
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-foreground hover:bg-muted/70 transition-colors"
                   >
                     <span>Settings & App Updates</span>
                   </Link>
@@ -339,7 +339,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                     <Link
                       to="/admin"
                       onClick={() => setProfileOpen(false)}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-muted transition-colors"
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-muted/70 transition-colors"
                     >
                       <Shield className="w-3.5 h-3.5" />
                       <span>Platform Admin</span>
@@ -352,7 +352,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                       toggleTheme();
                       setProfileOpen(false);
                     }}
-                    className="w-full flex items-center justify-between px-2 py-1.5 rounded-sm text-xs text-foreground hover:bg-muted transition-colors"
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-foreground hover:bg-muted/70 transition-colors"
                   >
                     <span>Appearance</span>
                     <span className="text-[10px] font-semibold text-muted-foreground capitalize">
@@ -361,14 +361,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                   </button>
                 </div>
 
-                <div className="border-t border-border pt-1">
+                <div className="border-t border-border/80 pt-1">
                   <button
                     type="button"
                     onClick={() => {
                       setProfileOpen(false);
                       signOut();
                     }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs text-destructive hover:bg-destructive/10 transition-colors font-medium"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-destructive hover:bg-destructive/10 transition-colors font-medium"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Sign Out</span>

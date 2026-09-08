@@ -174,7 +174,7 @@ export const AppLayout: React.FC = () => {
   }, [stats.pending, stats.inProgress, stats.partial, user?.id, isEnterpriseMode]);
 
   return (
-    <div className="flex h-screen min-h-[100dvh] w-full max-w-full bg-background text-foreground overflow-hidden relative transition-colors">
+    <div className="flex h-screen min-h-[100dvh] w-full max-w-full bg-background text-foreground selection:bg-primary/20 selection:text-primary overflow-hidden relative transition-colors">
       {/* Desktop & Mobile Drawer Sidebar */}
       <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 
@@ -187,17 +187,17 @@ export const AppLayout: React.FC = () => {
 
         {/* Supabase Configuration Alert (if placeholder in .env) */}
         {!isConfigured && (
-          <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900 px-4 py-3 sm:px-6">
+          <div className="bg-amber-500/10 border-b border-amber-500/25 px-4 py-3 sm:px-6">
             <div className="flex items-center justify-between flex-wrap gap-2 max-w-7xl mx-auto">
               <div className="flex items-center gap-2.5 text-amber-800 dark:text-amber-200 text-xs sm:text-sm font-medium">
                 <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
                 <span>
-                  Supabase is not configured yet. Run the SQL migration and add credentials to <code className="bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded text-xs">.env</code>.
+                  Supabase is not configured yet. Run the SQL migration and add credentials to <code className="bg-amber-500/15 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded text-xs font-mono">.env</code>.
                 </span>
               </div>
               <Link
                 to="/settings"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300 underline"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300 underline underline-offset-2"
               >
                 <Database className="w-3.5 h-3.5" />
                 Setup Guide
@@ -207,7 +207,7 @@ export const AppLayout: React.FC = () => {
         )}
 
         {/* Main View Router Outlet */}
-        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-12 overflow-x-hidden min-w-0">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-28 lg:pb-12 overflow-x-hidden min-w-0">
           {/* Notification Permission Enforcer */}
           <NotificationPermissionEnforcer />
           {/* App Update Banner */}
