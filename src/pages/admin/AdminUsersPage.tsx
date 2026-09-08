@@ -194,8 +194,8 @@ export const AdminUsersPage: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">App Users & Organization Directory</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">App Users & Organization Directory</h1>
+          <p className="text-xs text-muted-foreground mt-1">
             Central user management: view all registered app users, see their joined organizations, and assign or move users between workplaces.
           </p>
         </div>
@@ -203,14 +203,14 @@ export const AdminUsersPage: React.FC = () => {
           <button
             onClick={loadData}
             disabled={loading}
-            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5"
+            className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-xs font-semibold transition-all border border-border/50 flex items-center gap-1.5 shadow-2xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
           <button
             onClick={() => setShowAddAdminModal(true)}
-            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-xs font-semibold transition-all shadow-xs flex items-center gap-1.5"
           >
             <UserPlus className="w-4 h-4" />
             <span>Assign Super Admin</span>
@@ -222,78 +222,78 @@ export const AdminUsersPage: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div
           onClick={() => setFilterMode('all')}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+          className={`p-4 rounded-xl border transition-all cursor-pointer shadow-2xs ${
             filterMode === 'all'
-              ? 'bg-indigo-950/40 border-indigo-500/50 shadow-lg'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+              ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/20'
+              : 'bg-card border-border/80 hover:border-border'
           }`}
         >
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Users</p>
-          <p className="text-2xl font-black text-white mt-1">{appUsers.length}</p>
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Users</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{appUsers.length}</p>
         </div>
 
         <div
           onClick={() => setFilterMode('in_org')}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+          className={`p-4 rounded-xl border transition-all cursor-pointer shadow-2xs ${
             filterMode === 'in_org'
-              ? 'bg-blue-950/40 border-blue-500/50 shadow-lg'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+              ? 'bg-blue-500/10 border-blue-500/40 ring-1 ring-blue-500/20'
+              : 'bg-card border-border/80 hover:border-border'
           }`}
         >
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">In Workplace</p>
-          <p className="text-2xl font-black text-blue-400 mt-1">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">In Workplace</p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
             {appUsers.filter((u) => u.organizations.length > 0).length}
           </p>
         </div>
 
         <div
           onClick={() => setFilterMode('multi_org')}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+          className={`p-4 rounded-xl border transition-all cursor-pointer shadow-2xs ${
             filterMode === 'multi_org'
-              ? 'bg-purple-950/40 border-purple-500/50 shadow-lg'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+              ? 'bg-purple-500/10 border-purple-500/40 ring-1 ring-purple-500/20'
+              : 'bg-card border-border/80 hover:border-border'
           }`}
         >
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Multi-Workplace</p>
-          <p className="text-2xl font-black text-purple-400 mt-1">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Multi-Workplace</p>
+          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
             {appUsers.filter((u) => u.organizations.length > 1).length}
           </p>
         </div>
 
         <div
           onClick={() => setFilterMode('no_org')}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+          className={`p-4 rounded-xl border transition-all cursor-pointer shadow-2xs ${
             filterMode === 'no_org'
-              ? 'bg-amber-950/40 border-amber-500/50 shadow-lg'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+              ? 'bg-amber-500/10 border-amber-500/40 ring-1 ring-amber-500/20'
+              : 'bg-card border-border/80 hover:border-border'
           }`}
         >
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Personal Only</p>
-          <p className="text-2xl font-black text-amber-400 mt-1">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Personal Only</p>
+          <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
             {appUsers.filter((u) => u.organizations.length === 0).length}
           </p>
         </div>
       </div>
 
       {/* App Users Management Directory Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2 text-indigo-400">
+      <div className="bg-card border border-border/80 rounded-xl p-5 space-y-4 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
+          <div className="flex items-center gap-2 text-primary">
             <Users className="w-5 h-5" />
-            <h2 className="text-base font-bold text-white">All App Registered Users</h2>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold">
+            <h2 className="text-base font-bold text-foreground">All App Registered Users</h2>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-semibold">
               {filteredUsers.length} shown
             </span>
           </div>
 
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search user, email, org..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+              className="w-full pl-9 pr-3 py-2 rounded-lg bg-background border border-input/80 text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
@@ -301,7 +301,7 @@ export const AdminUsersPage: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="text-slate-400 border-b border-slate-800/80">
+              <tr className="text-muted-foreground border-b border-border/80">
                 <th className="pb-3 font-semibold">User Details</th>
                 <th className="pb-3 font-semibold">Joined Organizations & Roles</th>
                 <th className="pb-3 font-semibold">Admin Privilege</th>
@@ -309,39 +309,39 @@ export const AdminUsersPage: React.FC = () => {
                 <th className="pb-3 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-border/60">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-500">
+                  <td colSpan={5} className="py-8 text-center text-muted-foreground">
                     No users matching criteria.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
+                  <tr key={u.id} className="hover:bg-muted/40 transition-colors">
                     <td className="py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0">
                           {(u.display_name || u.email || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-bold text-white flex items-center gap-1.5">
+                          <p className="font-semibold text-foreground flex items-center gap-1.5">
                             <span>{u.display_name || 'App User'}</span>
                             {u.is_platform_admin && (
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-primary/15 text-primary border border-primary/25">
                                 SUPER ADMIN
                               </span>
                             )}
                           </p>
-                          <p className="text-[11px] text-slate-400">{u.email}</p>
-                          <p className="text-[9px] font-mono text-slate-500 mt-0.5">{u.id}</p>
+                          <p className="text-[11px] text-muted-foreground">{u.email}</p>
+                          <p className="text-[9px] font-mono text-muted-foreground mt-0.5">{u.id}</p>
                         </div>
                       </div>
                     </td>
 
                     <td className="py-3">
                       {u.organizations.length === 0 ? (
-                        <span className="text-[11px] text-slate-500 italic">
+                        <span className="text-[11px] text-muted-foreground italic">
                           Personal Space Only
                         </span>
                       ) : (
@@ -349,11 +349,11 @@ export const AdminUsersPage: React.FC = () => {
                           {u.organizations.map((org) => (
                             <div
                               key={org.membership_id || org.org_id}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px]"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/60 border border-border/70 text-foreground text-[11px]"
                             >
-                              <Building2 className="w-3 h-3 text-indigo-400 shrink-0" />
-                              <span className="font-bold">{org.org_name}</span>
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 uppercase">
+                              <Building2 className="w-3 h-3 text-primary shrink-0" />
+                              <span className="font-semibold">{org.org_name}</span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-primary/15 text-primary uppercase">
                                 {org.role}
                               </span>
                             </div>
@@ -364,23 +364,23 @@ export const AdminUsersPage: React.FC = () => {
 
                     <td className="py-3">
                       {u.is_platform_admin ? (
-                        <span className="inline-flex items-center gap-1 text-indigo-400 font-semibold text-[11px]">
+                        <span className="inline-flex items-center gap-1 text-primary font-semibold text-[11px]">
                           <Shield className="w-3.5 h-3.5" />
                           Platform Admin
                         </span>
                       ) : (
-                        <span className="text-slate-500 text-[11px]">Standard User</span>
+                        <span className="text-muted-foreground text-[11px]">Standard User</span>
                       )}
                     </td>
 
-                    <td className="py-3 text-slate-400">
+                    <td className="py-3 text-muted-foreground">
                       {new Date(u.created_at).toLocaleDateString()}
                     </td>
 
                     <td className="py-3 text-right">
                       <button
                         onClick={() => openManageOrgModal(u)}
-                        className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl font-bold text-xs border border-indigo-500/30 transition-all flex items-center gap-1.5 ml-auto"
+                        className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-semibold text-xs border border-primary/20 transition-all flex items-center gap-1.5 ml-auto shadow-2xs"
                       >
                         <ArrowRightLeft className="w-3.5 h-3.5" />
                         <span>Manage Orgs</span>
@@ -395,19 +395,19 @@ export const AdminUsersPage: React.FC = () => {
       </div>
 
       {/* Central Platform Administrators Section */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2 text-indigo-400">
+      <div className="bg-card border border-border/80 rounded-xl p-5 space-y-4 shadow-2xs">
+        <div className="flex items-center justify-between pb-3 border-b border-border/80">
+          <div className="flex items-center gap-2 text-primary">
             <Shield className="w-5 h-5" />
-            <h2 className="text-base font-bold text-white">Central Platform Administrators</h2>
+            <h2 className="text-base font-bold text-foreground">Central Platform Administrators</h2>
           </div>
-          <span className="text-xs text-slate-400 font-semibold">{admins.length} registered</span>
+          <span className="text-xs text-muted-foreground font-semibold">{admins.length} registered</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="text-slate-400 border-b border-slate-800/80">
+              <tr className="text-muted-foreground border-b border-border/80">
                 <th className="pb-3 font-semibold">Admin Email / Identity</th>
                 <th className="pb-3 font-semibold">Role</th>
                 <th className="pb-3 font-semibold">Status</th>
@@ -415,46 +415,46 @@ export const AdminUsersPage: React.FC = () => {
                 <th className="pb-3 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-border/60">
               {admins.map((adm) => (
-                <tr key={adm.id} className="hover:bg-slate-800/30 transition-colors">
+                <tr key={adm.id} className="hover:bg-muted/40 transition-colors">
                   <td className="py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 flex items-center justify-center font-bold text-xs">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-xs">
                         {(adm.email || 'A').charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-bold text-white">{adm.email || 'Admin User'}</p>
-                        <p className="text-[10px] text-slate-500 font-mono">{adm.user_id}</p>
+                        <p className="font-semibold text-foreground">{adm.email || 'Admin User'}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono">{adm.user_id}</p>
                       </div>
                     </div>
                   </td>
                   <td className="py-3">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 uppercase">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-primary/10 border border-primary/20 text-primary uppercase">
                       {adm.role}
                     </span>
                   </td>
                   <td className="py-3">
                     {adm.is_active ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold text-[11px]">
+                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
                         <CheckCircle className="w-3.5 h-3.5" />
                         Active
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-rose-400 font-semibold text-[11px]">
+                      <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-semibold text-[11px]">
                         <XCircle className="w-3.5 h-3.5" />
                         Revoked
                       </span>
                     )}
                   </td>
-                  <td className="py-3 text-slate-400">
+                  <td className="py-3 text-muted-foreground">
                     {new Date(adm.created_at).toLocaleDateString()}
                   </td>
                   <td className="py-3 text-right">
                     {adm.is_active && (
                       <button
                         onClick={() => handleRevokeAdmin(adm.id, adm.email)}
-                        className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg font-semibold text-[11px] border border-rose-500/20 transition-all"
+                        className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg font-semibold text-[11px] border border-rose-500/20 transition-all shadow-2xs"
                       >
                         Revoke
                       </button>
@@ -469,21 +469,21 @@ export const AdminUsersPage: React.FC = () => {
 
       {/* Modal: Manage User Organizations (Move or Multi-Org Assign) */}
       {showManageOrgModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-5 text-foreground">
+            <div className="flex items-center justify-between pb-3 border-b border-border/80">
               <div>
-                <h3 className="font-bold text-base text-white flex items-center gap-2">
-                  <ArrowRightLeft className="w-5 h-5 text-indigo-400" />
+                <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+                  <ArrowRightLeft className="w-5 h-5 text-primary" />
                   Manage User Organizations
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {selectedUser.display_name} ({selectedUser.email})
                 </p>
               </div>
               <button
                 onClick={() => setShowManageOrgModal(false)}
-                className="text-slate-400 hover:text-white text-lg p-1"
+                className="text-muted-foreground hover:text-foreground text-lg p-1"
               >
                 ✕
               </button>
@@ -491,12 +491,12 @@ export const AdminUsersPage: React.FC = () => {
 
             {/* Current Memberships */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+              <label className="text-xs font-bold text-foreground uppercase tracking-wider block">
                 Current Assigned Organizations
               </label>
 
               {selectedUser.organizations.length === 0 ? (
-                <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center text-xs text-slate-400">
+                <div className="p-3.5 rounded-xl bg-muted/40 border border-border/70 text-center text-xs text-muted-foreground">
                   This user currently operates in Personal Space only. Not assigned to any organization yet.
                 </div>
               ) : (
@@ -504,13 +504,13 @@ export const AdminUsersPage: React.FC = () => {
                   {selectedUser.organizations.map((org) => (
                     <div
                       key={org.org_id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-slate-800 border border-slate-700"
+                      className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/70"
                     >
                       <div className="flex items-center gap-2.5">
-                        <Building2 className="w-4 h-4 text-indigo-400" />
+                        <Building2 className="w-4 h-4 text-primary" />
                         <div>
-                          <p className="font-bold text-white text-xs">{org.org_name}</p>
-                          <span className="text-[10px] text-indigo-300 uppercase font-semibold">
+                          <p className="font-bold text-foreground text-xs">{org.org_name}</p>
+                          <span className="text-[10px] text-primary uppercase font-semibold">
                             Role: {org.role}
                           </span>
                         </div>
@@ -518,7 +518,7 @@ export const AdminUsersPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveFromOrg(selectedUser.id, org.org_id, org.org_name)}
-                        className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-semibold border border-rose-500/20 transition-all flex items-center gap-1"
+                        className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold border border-rose-500/20 transition-all flex items-center gap-1 shadow-2xs"
                       >
                         <Trash2 className="w-3 h-3" />
                         <span>Remove</span>
@@ -530,21 +530,21 @@ export const AdminUsersPage: React.FC = () => {
             </div>
 
             {/* Assign / Move Form */}
-            <form onSubmit={handleAssignOrMoveOrg} className="space-y-4 pt-3 border-t border-slate-800">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+            <form onSubmit={handleAssignOrMoveOrg} className="space-y-4 pt-3 border-t border-border/80">
+              <label className="text-xs font-bold text-foreground uppercase tracking-wider block">
                 Assign or Move to Organization
               </label>
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="block text-xs font-medium text-foreground mb-1">
                     Select Target Organization
                   </label>
                   <select
                     value={targetOrgId}
                     onChange={(e) => setTargetOrgId(e.target.value)}
                     required
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-input/80 text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="">-- Choose Organization --</option>
                     {organizations
@@ -558,13 +558,13 @@ export const AdminUsersPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="block text-xs font-medium text-foreground mb-1">
                     Assign Role in Organization
                   </label>
                   <select
                     value={targetRole}
                     onChange={(e) => setTargetRole(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-input/80 text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="team_member">Team Member (Collaborator)</option>
                     <option value="supervisor">Supervisor</option>
@@ -574,17 +574,17 @@ export const AdminUsersPage: React.FC = () => {
                 </div>
 
                 {/* Exclusive Move Checkbox */}
-                <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700 flex items-start gap-2.5">
+                <div className="p-3 rounded-xl bg-muted/40 border border-border/70 flex items-start gap-2.5">
                   <input
                     type="checkbox"
                     id="exclusiveMove"
                     checked={exclusiveMove}
                     onChange={(e) => setExclusiveMove(e.target.checked)}
-                    className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-900 border-slate-700"
+                    className="mt-0.5 rounded text-primary focus:ring-primary bg-background border-border/80"
                   />
-                  <label htmlFor="exclusiveMove" className="text-xs text-slate-300 cursor-pointer">
-                    <span className="font-bold text-white block">Exclusive Move</span>
-                    <span className="text-slate-400 text-[11px]">
+                  <label htmlFor="exclusiveMove" className="text-xs text-foreground cursor-pointer">
+                    <span className="font-semibold text-foreground block">Exclusive Move</span>
+                    <span className="text-muted-foreground text-[11px]">
                       Remove user from all other organizations and place exclusively into this target organization.
                       (Uncheck to give multi-organization access).
                     </span>
@@ -596,14 +596,14 @@ export const AdminUsersPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowManageOrgModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl"
+                  className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground text-xs font-semibold rounded-lg shadow-2xs"
                 >
                   Close
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingOrg || !targetOrgId}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-lg shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {isSavingOrg ? 'Saving...' : exclusiveMove ? 'Move Exclusively' : 'Assign to Organization'}
                 </button>
@@ -615,28 +615,28 @@ export const AdminUsersPage: React.FC = () => {
 
       {/* Modal: Add Platform Admin */}
       {showAddAdminModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <h3 className="font-bold text-base text-white flex items-center gap-2">
-                <Shield className="w-4 h-4 text-indigo-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-foreground">
+            <div className="flex items-center justify-between pb-2 border-b border-border/80">
+              <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+                <Shield className="w-4 h-4 text-primary" />
                 Assign Platform Super Admin
               </h3>
               <button
                 onClick={() => setShowAddAdminModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Enter the registered email of the user to grant <span className="font-mono text-indigo-300">SUPER_ADMIN</span> privileges.
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Enter the registered email of the user to grant <span className="font-mono text-primary font-semibold">SUPER_ADMIN</span> privileges.
             </p>
 
             <form onSubmit={handleGrantAdmin} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-foreground mb-1">
                   User Email Address
                 </label>
                 <input
@@ -645,7 +645,7 @@ export const AdminUsersPage: React.FC = () => {
                   placeholder="e.g. admin@tasker.com"
                   value={newAdminEmail}
                   onChange={(e) => setNewAdminEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-background border border-input/80 text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
@@ -653,14 +653,14 @@ export const AdminUsersPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddAdminModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl"
+                  className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground text-xs font-semibold rounded-lg shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingAdmin}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-lg shadow-xs transition-all flex items-center gap-1.5"
                 >
                   {isSubmittingAdmin ? 'Assigning...' : 'Assign Super Admin'}
                 </button>
