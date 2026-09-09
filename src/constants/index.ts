@@ -1,8 +1,8 @@
 import { TaskPriority, TaskStatus } from '../types/task';
 
 export const APP_NAME = 'TASKER';
-export const APP_VERSION = '1.0.24';
-export const APP_BUILD_CODE = 27;
+export const APP_VERSION = '1.0.25';
+export const APP_BUILD_CODE = 28;
 export const DEFAULT_USER_NAME = import.meta.env.VITE_DEFAULT_USER_NAME || 'Pawan';
 export const STORAGE_BUCKET = 'task-attachments';
 export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB

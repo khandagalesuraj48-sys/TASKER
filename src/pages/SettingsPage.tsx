@@ -53,7 +53,7 @@ export const SettingsPage: React.FC = () => {
   const directApkUrl =
     latestRelease?.apk_url ||
     latestRelease?.release_url ||
-    'https://xargfforwknnicudigxs.supabase.co/storage/v1/object/public/app-releases/TASKER-v1.0.24.apk';
+    `https://xargfforwknnicudigxs.supabase.co/storage/v1/object/public/app-releases/TASKER-v${latestRelease?.version_name || '1.0.25'}.apk`;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
