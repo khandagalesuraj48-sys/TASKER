@@ -21,12 +21,6 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
-  DollarSign,
-  FolderLock,
-  Truck,
-  CheckSquare,
-  BarChart3,
-  Layers,
 } from 'lucide-react';
 import { useTask } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
@@ -80,8 +74,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     });
   };
 
-  // Suite expand/collapse accordion in sidebar
-  const [suiteExpanded, setSuiteExpanded] = useState<boolean>(false);
 
   // Personal space navigation items
   const personalNavItems = [
@@ -167,16 +159,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     },
   ];
 
-  // Enterprise Suite (Future ERP Modules preserved and cleanly indicated)
-  const enterpriseSuiteItems = [
-    { label: 'ERP Overview', icon: <BarChart3 className="w-4 h-4 shrink-0" /> },
-    { label: 'Accounting & Invoices', icon: <DollarSign className="w-4 h-4 shrink-0" /> },
-    { label: 'Work Approvals', icon: <CheckSquare className="w-4 h-4 shrink-0" /> },
-    { label: 'Human Resources', icon: <Users className="w-4 h-4 shrink-0" /> },
-    { label: 'Inventory & Stock', icon: <Layers className="w-4 h-4 shrink-0" /> },
-    { label: 'Document Archive', icon: <FolderLock className="w-4 h-4 shrink-0" /> },
-    { label: 'Fleet & Vehicles', icon: <Truck className="w-4 h-4 shrink-0" /> },
-  ];
 
   const sidebarContent = (
     <div
@@ -356,40 +338,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Enterprise Suite Section (Archived/Planned Modules) */}
-          {!isCollapsed && (
-            <div className="pt-2 border-t border-border/80 mt-2 space-y-1">
-              <button
-                type="button"
-                onClick={() => setSuiteExpanded(!suiteExpanded)}
-                className="w-full flex items-center justify-between px-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <span>Enterprise Suite</span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-muted text-muted-foreground font-mono">
-                  {suiteExpanded ? 'Hide' : 'Beta'}
-                </span>
-              </button>
-
-              {suiteExpanded && (
-                <div className="space-y-0.5 pt-1 pl-1">
-                  {enterpriseSuiteItems.map((mod) => (
-                    <div
-                      key={mod.label}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors cursor-default"
-                    >
-                      <div className="flex items-center gap-2">
-                        {mod.icon}
-                        <span className="text-[11px]">{mod.label}</span>
-                      </div>
-                      <Badge variant="outline" size="xs" className="text-[9px] py-0 px-1 opacity-70">
-                        Planned
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Platform Superadmin Navigation Item (if verified platform admin) */}
           {isPlatformAdmin && (

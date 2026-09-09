@@ -148,6 +148,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         onClick={handleCardClick}
         className={cn(
           'group relative rounded-md border border-border bg-card text-card-foreground p-3.5 sm:p-4 transition-all shadow-2xs hover:border-primary/40',
+          'group relative rounded-xl border border-border bg-card text-card-foreground p-4 transition-all shadow-xs hover:shadow-md hover:border-primary/40',
           isBin ? 'opacity-85 bg-muted/30' : 'cursor-pointer'
         )}
       >
@@ -349,6 +350,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 type="button"
                 onClick={handleWhatsAppShare}
                 className="px-2 py-1 rounded-sm bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 title="Share via WhatsApp"
               >
                 <Share2 className="w-3 h-3" />
@@ -361,9 +363,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 onClick={handleToggleSpeak}
                 className={cn(
                   'px-2 py-1 rounded-sm border text-[11px] font-medium flex items-center gap-1 transition-colors',
+                  'px-2.5 py-1 rounded-lg border text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer',
                   isSpeaking
                     ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40 animate-pulse'
                     : 'bg-muted/50 text-muted-foreground hover:text-foreground border-border'
+                    : 'bg-muted/50 text-muted-foreground hover:text-foreground border-border/80'
                 )}
                 title="Listen to task"
               >
@@ -392,12 +396,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                       setQuickDoneOpen(true);
                     }}
                     className="px-2.5 py-1 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1 shadow-2xs transition-colors"
+                    className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Done</span>
                   </button>
                 ) : (
                   <span className="px-2 py-0.5 rounded-sm bg-muted text-[11px] font-medium text-muted-foreground flex items-center gap-1 border border-border/60">
+                  <span className="px-2.5 py-1 rounded-lg bg-muted text-[11px] font-medium text-muted-foreground flex items-center gap-1 border border-border/60">
                     <span>👁️ View Only</span>
                   </span>
                 )
@@ -406,6 +412,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   type="button"
                   onClick={() => navigate(`/tasks/${task.id}`)}
                   className="px-2 py-1 rounded-sm text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <span>View</span>
                   <ArrowRight className="w-3 h-3" />

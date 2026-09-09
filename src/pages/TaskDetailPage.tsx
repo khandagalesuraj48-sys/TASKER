@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTaskById, softDeleteTask, canUserDeleteTask, canUserEditTask } from '../services/taskService';
 import { getStatusHistory } from '../services/statusHistoryService';
@@ -37,7 +37,6 @@ import {
   Trash2,
   CheckCircle2,
   GitFork,
-  FileUp,
   Paperclip,
   MessageSquare,
   History,
@@ -48,12 +47,12 @@ import {
   Share2,
   UserPlus,
   Users,
-  ArrowRight,
-  Sparkles,
   UserCheck,
   Copy,
   MessageCircle,
   FileText,
+  MoreVertical,
+  Timer,
 } from 'lucide-react';
 import { shareTaskViaWhatsApp } from '../services/whatsappService';
 import { exportTaskToPdf } from '../services/pdfExportService';
@@ -79,6 +78,7 @@ export const TaskDetailPage: React.FC = () => {
   const canEdit = task
     ? canUserEditTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner)
     : false;
+
   const [history, setHistory] = useState<TaskStatusHistory[]>([]);
   const [notes, setNotes] = useState<TaskNote[]>([]);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
@@ -86,7 +86,12 @@ export const TaskDetailPage: React.FC = () => {
   const [reminder, setReminder] = useState<TaskReminder | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Modals state
+  // Active Tab state: 'deliverables' | 'discussion' | 'history'
+  const [activeTab, setActiveTab] = useState<'deliverables' | 'discussion' | 'history'>('deliverables');
+
+  // Modals & Menus state
+  const [moreMenuOpen, setMoreMenuOpen] = useState<boolean>(false);
+  const [showTimeTracker, setShowTimeTracker] = useState<boolean>(false);
   const [statusModalOpen, setStatusModalOpen] = useState<boolean>(false);
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
@@ -94,9 +99,25 @@ export const TaskDetailPage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [quickCompleteOpen, setQuickCompleteOpen] = useState<boolean>(false);
-
   const [subtasks, setSubtasks] = useState<DelegatedSubtask[]>([]);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close more menu when clicked outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false);
+      }
+    };
+    if (moreMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [moreMenuOpen]);
 
   const loadTaskData = useCallback(async () => {
     if (!id) return;
@@ -130,6 +151,7 @@ export const TaskDetailPage: React.FC = () => {
   const handleExportPdf = () => {
     if (!task) return;
     setIsExportingPdf(true);
+    setMoreMenuOpen(false);
     try {
       const totalDuration = getTotalTaskDurationSeconds(task.id);
       exportTaskToPdf({
@@ -151,6 +173,7 @@ export const TaskDetailPage: React.FC = () => {
 
   const handleWhatsAppShare = () => {
     if (!task) return;
+    setMoreMenuOpen(false);
     shareTaskViaWhatsApp(task, subtasks);
     showToast('WhatsApp work order prepared.', 'success');
   };
@@ -206,7 +229,7 @@ export const TaskDetailPage: React.FC = () => {
     if (!task) return;
     try {
       const isPast = task.due_date && new Date(task.due_date).getTime() <= Date.now();
-      const defaultRemindAt = (!task.due_date || isPast)
+      const defaultRemindAt = !task.due_date || isPast
         ? new Date(Date.now() + 15 * 60 * 1000).toISOString()
         : new Date(task.due_date).toISOString();
       const updatedRem = await saveTaskReminder(task.id, {
@@ -230,8 +253,8 @@ export const TaskDetailPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto space-y-5 animate-pulse">
-        <div className="h-6 bg-muted rounded w-24"></div>
-        <div className="h-12 bg-muted rounded-lg w-2/3"></div>
+        <div className="h-8 bg-muted rounded-lg w-48"></div>
+        <div className="h-44 bg-muted rounded-xl"></div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 h-96 bg-muted rounded-xl"></div>
           <div className="h-96 bg-muted rounded-xl"></div>
@@ -243,12 +266,12 @@ export const TaskDetailPage: React.FC = () => {
   if (!task || task.is_deleted) {
     const isWorkplace = isEnterpriseMode || task?.scope === 'workplace';
     return (
-      <div className="max-w-md mx-auto my-12 text-center p-8 bg-card rounded-xl border border-border shadow-xs space-y-3">
-        <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-1" />
+      <div className="max-w-md mx-auto my-12 text-center p-8 bg-card rounded-2xl border border-border shadow-xs space-y-4">
+        <AlertCircle className="w-12 h-12 text-destructive mx-auto" />
         <h3 className="text-lg font-bold text-foreground">
           {task?.is_deleted ? 'Task Moved to Bin' : 'Task Not Found'}
         </h3>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground leading-relaxed">
           {task?.is_deleted
             ? 'This task has been archived or moved to the Recycle Bin.'
             : 'The task you are trying to view does not exist or has been permanently deleted.'}
@@ -267,10 +290,11 @@ export const TaskDetailPage: React.FC = () => {
   const overdue = isTaskOverdue(task.due_date, task.status);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5 pb-12">
-      {/* Top Navigation & Action Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
-        <div className="flex items-center gap-3">
+    <div className="max-w-6xl mx-auto space-y-5 pb-16">
+      {/* 1. Breadcrumb & Clean Action Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
+        {/* Left: Breadcrumbs and ID pill */}
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="ghost"
             size="sm"
@@ -281,196 +305,229 @@ export const TaskDetailPage: React.FC = () => {
                 navigate(task.scope === 'workplace' || isEnterpriseMode ? '/org/tasks' : '/tasks');
               }
             }}
-            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+            className="h-8 px-2 text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-lg cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 mr-1.5" />
             <span className="text-xs font-semibold">Back</span>
           </Button>
 
-          <div className="h-4 w-px bg-border hidden sm:block" />
+          <span className="text-muted-foreground/40 hidden sm:inline">•</span>
 
-          {/* Task ID Monospace Reference Pill */}
+          <Badge
+            variant={task.scope === 'workplace' ? 'workplace' : 'secondary'}
+            className="text-[11px] font-semibold h-6"
+          >
+            {task.scope === 'workplace' ? 'Workplace' : 'Personal'}
+          </Badge>
+
+          {task.custom_fields?.site_name && (
+            <Badge variant="outline" className="text-[11px] font-medium text-muted-foreground h-6">
+              Site: {task.custom_fields.site_name}
+            </Badge>
+          )}
+
           <button
             type="button"
             onClick={handleCopyId}
             title="Click to copy full Task ID"
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/70 hover:bg-muted text-[11px] font-mono font-medium text-muted-foreground transition-colors border border-border/50"
+            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-muted/60 hover:bg-muted text-[11px] font-mono font-medium text-muted-foreground transition-colors border border-border/60 cursor-pointer"
           >
             <span>#{task.id.slice(0, 8).toUpperCase()}</span>
             <Copy className="w-3 h-3 opacity-60" />
           </button>
         </div>
 
-        {/* Global Action Toolbar */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShareModalOpen(true)}
-            className="h-8 text-xs font-medium"
-          >
-            <Share2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-            Share
-          </Button>
-          {canEdit ? (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAssignModalOpen(true)}
-                className="h-8 text-xs font-medium"
-              >
-                <UserPlus className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                Assign
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditModalOpen(true)}
-                className="h-8 text-xs font-medium"
-              >
-                <Edit2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                Edit
-              </Button>
-            </>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-xs font-medium text-muted-foreground border border-border/80">
-              <span>👁️ View Only (फक्त वाचनासाठी)</span>
-            </span>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleWhatsAppShare}
-            className="h-8 text-xs font-medium text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400"
-            title="Share Work Order on WhatsApp"
-          >
-            <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
-            WhatsApp
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportPdf}
-            disabled={isExportingPdf}
-            className="h-8 text-xs font-medium text-primary border-primary/30 hover:bg-primary/10"
-            title="Download Official Branded PDF Work Order & Audit Report"
-          >
-            <FileText className="w-3.5 h-3.5 mr-1.5" />
-            {isExportingPdf ? 'Exporting...' : 'PDF Work-Order'}
-          </Button>
-
-          {canEdit && task.status !== 'completed' && (
+        {/* Right: Consolidated Action Toolbar */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Status Button (Quick change) */}
+          {canEdit && (
             <Button
               size="sm"
-              className="h-8 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+              variant="outline"
+              onClick={() => setStatusModalOpen(true)}
+              className="h-8 text-xs font-semibold border-border/80 hover:bg-muted cursor-pointer"
+            >
+              <Clock className="w-3.5 h-3.5 mr-1.5 text-primary" />
+              <span>Status</span>
+            </Button>
+          )}
+
+          {/* Edit Task */}
+          {canEdit && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditModalOpen(true)}
+              className="h-8 text-xs font-semibold border-border/80 hover:bg-muted cursor-pointer"
+            >
+              <Edit2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+              <span>Edit</span>
+            </Button>
+          )}
+
+          {/* Primary Action Button */}
+          {canEdit && task.status !== 'completed' ? (
+            <Button
+              size="sm"
+              className="h-8 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs px-3 cursor-pointer"
               onClick={() => setQuickCompleteOpen(true)}
             >
               <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-              {task.parent_task_id ? 'Attach Log Book' : 'Done with Proof'}
+              <span>{task.parent_task_id ? 'Attach Log Book' : 'Done with Proof'}</span>
             </Button>
-          )}
+          ) : !canEdit ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/80 text-xs font-medium text-muted-foreground border border-border/60">
+              👁️ View Only
+            </span>
+          ) : null}
 
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-8 text-xs font-semibold"
-            onClick={() => setStatusModalOpen(true)}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-primary" />
-            Status
-          </Button>
-
-          {canDelete && (
+          {/* More Actions Dropdown */}
+          <div className="relative" ref={moreMenuRef}>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setDeleteConfirmOpen(true)}
-              className="h-8 text-xs font-medium text-destructive hover:bg-destructive/10 hover:text-destructive border-border"
+              onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+              className="h-8 px-2.5 text-xs font-medium border-border/80 hover:bg-muted cursor-pointer"
+              title="More Actions"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <MoreVertical className="w-3.5 h-3.5" />
             </Button>
-          )}
+
+            {moreMenuOpen && (
+              <div className="absolute right-0 mt-1.5 w-56 rounded-xl border border-border bg-popover p-1.5 shadow-xl z-50 animate-in fade-in-50 zoom-in-95 text-xs space-y-0.5">
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      setAssignModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-foreground hover:bg-muted transition-colors font-medium cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4 text-primary" />
+                    <span>Assign / Handover</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleWhatsAppShare}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors font-medium cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Send on WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportPdf}
+                  disabled={isExportingPdf}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-foreground hover:bg-muted transition-colors font-medium cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-primary" />
+                  <span>{isExportingPdf ? 'Exporting PDF...' : 'Download PDF Work Order'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    setShareModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-foreground hover:bg-muted transition-colors font-medium cursor-pointer"
+                >
+                  <Share2 className="w-4 h-4 text-muted-foreground" />
+                  <span>Share Web Link</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    setShowTimeTracker((prev) => !prev);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-foreground hover:bg-muted transition-colors font-medium cursor-pointer"
+                >
+                  <Timer className="w-4 h-4 text-indigo-500" />
+                  <span>{showTimeTracker ? 'Hide Time Tracker' : 'Time Tracker & Hours'}</span>
+                </button>
+
+                {canDelete && (
+                  <>
+                    <div className="h-px bg-border my-1" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMoreMenuOpen(false);
+                        setDeleteConfirmOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-destructive hover:bg-destructive/10 transition-colors font-semibold cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Move to Recycle Bin</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Delegated Subtask Banner (User C action item) */}
+      {/* Delegated Subtask Banner (If applicable) */}
       {task.parent_task_id && (
-        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 shadow-xs space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                <GitFork className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">
-                  Delegated Action Item
-                </span>
-                <h3 className="text-xs sm:text-sm font-bold text-foreground">
-                  Parent Project: {task.custom_fields?.parent_task_title || 'Workplace Task'}
-                </h3>
-              </div>
+        <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+              <GitFork className="w-4 h-4" />
             </div>
-            {task.custom_fields?.delegated_by_name && (
-              <span className="text-xs font-medium text-muted-foreground bg-card px-2.5 py-1 rounded-md border border-border">
-                Delegated by: <strong className="text-foreground">{task.custom_fields.delegated_by_name}</strong>
+            <div>
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">
+                Delegated Deliverable
               </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-primary/15 text-xs">
-            <div className="text-muted-foreground">
-              Deliverable assigned to you: <strong className="text-foreground">{task.title}</strong>
+              <span className="font-bold text-foreground">
+                Parent Task: {task.custom_fields?.parent_task_title || 'Workplace Task'}
+              </span>
             </div>
-            {task.status !== 'completed' && (
-              <Button
-                size="sm"
-                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                onClick={() => setQuickCompleteOpen(true)}
-              >
-                <FileUp className="w-3.5 h-3.5 mr-1" />
-                Attach Log Book & Complete
-              </Button>
-            )}
           </div>
+          {task.custom_fields?.delegated_by_name && (
+            <span className="text-muted-foreground text-[11px]">
+              Assigned by: <strong className="text-foreground">{task.custom_fields.delegated_by_name}</strong>
+            </span>
+          )}
         </div>
       )}
 
-      {/* Main Task Record Card */}
-      <Card className="rounded-xl border border-border bg-card shadow-xs">
-        <CardContent className="p-5 sm:p-6 space-y-5">
-          {/* Status & Classification Badges */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/60">
+      {/* 2. Executive Hero Card */}
+      <Card className="rounded-2xl border border-border bg-card shadow-xs overflow-hidden">
+        <CardContent className="p-5 sm:p-6 space-y-4">
+          {/* Badges & Meta Row */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-border/60 text-xs">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={task.status} isOverdue={overdue} size="md" />
               <PriorityBadge priority={task.priority} size="md" />
-              <Badge
-                variant={task.scope === 'workplace' ? 'workplace' : 'secondary'}
-                className="text-[11px] font-semibold"
-              >
-                {task.scope === 'workplace' ? 'Workplace Task' : 'Personal Task'}
-              </Badge>
-              {task.custom_fields?.site_name && (
-                <Badge variant="outline" className="text-[11px] font-medium text-muted-foreground">
-                  Site: {task.custom_fields.site_name}
-                </Badge>
+              {overdue && (
+                <span className="px-2 py-0.5 rounded-md bg-destructive/15 text-destructive font-bold text-[11px]">
+                  ⚠️ OVERDUE
+                </span>
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Created by: <strong className="text-foreground font-medium">{task.created_by}</strong></span>
+            <div className="text-muted-foreground text-xs flex items-center gap-1.5">
+              <span>Created by:</span>
+              <strong className="text-foreground font-medium">{task.created_by}</strong>
               <span>•</span>
-              <span className="font-mono text-[11px]">{formatDateTime(task.created_at)}</span>
+              <span className="font-mono text-[11px]">{formatDateOnly(task.created_at)}</span>
             </div>
           </div>
 
           {/* Title & Description */}
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight leading-snug">
               {task.title}
             </h1>
             {task.description ? (
-              <div className="mt-3 text-sm text-foreground/90 whitespace-pre-line leading-relaxed bg-muted/30 p-4 rounded-lg border border-border/60">
+              <div className="mt-3 text-xs sm:text-sm text-foreground/90 whitespace-pre-line leading-relaxed bg-muted/30 p-3.5 sm:p-4 rounded-xl border border-border/50">
                 {task.description}
               </div>
             ) : (
@@ -478,435 +535,422 @@ export const TaskDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* Handover & Action Banner or Completed Submission Banner */}
+          {/* Compact Ownership / Handover Banner */}
           {task.status === 'completed' ? (
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-500/15 pb-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs font-bold shrink-0">
-                    <CheckCircle2 className="w-5 h-5" />
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-50/60 dark:bg-emerald-950/20 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold shrink-0 shadow-xs">
+                  <CheckCircle2 className="w-4 h-4" />
+                </span>
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                    Completed & Verified
                   </span>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 block">
-                      Task Completed & Verified
+                  <span className="font-semibold text-foreground text-xs">
+                    By: {task.completed_by || task.person_name || 'Team Member'}
+                  </span>
+                  {task.completed_at && (
+                    <span className="text-[11px] text-muted-foreground ml-2">
+                      ({formatDateTime(task.completed_at)})
                     </span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-sm font-bold text-foreground">
-                        Completed by: {task.completed_by || task.person_name || 'Team Member'}
-                      </span>
-                      <span className="text-[10px] font-mono text-muted-foreground">
-                        {task.completed_at ? formatDateTime(task.completed_at) : ''}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs bg-card hover:bg-muted"
-                    onClick={() => setStatusModalOpen(true)}
-                  >
-                    Change Status / Re-open
-                  </Button>
+                  )}
                 </div>
               </div>
-
-              {/* Work Done Remarks */}
-              <div>
-                <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block mb-1 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Work Done Remarks & Outcome:</span>
-                </span>
-                <div className="p-3 bg-card rounded-lg border border-emerald-500/20 text-xs font-medium text-foreground leading-relaxed shadow-2xs">
-                  "{task.reassigned_by || (assignments.length > 0 && assignments[0].remark) || 'Work completed successfully.'}"
-                </div>
-              </div>
-
-              {/* Handover Trail Journey */}
-              <div className="pt-2 border-t border-emerald-500/15">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
-                  Lifecycle Trail
-                </span>
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                  <div className="flex items-center gap-1 shrink-0 px-2 py-1 rounded-md bg-card border border-border text-[11px]">
-                    <span className="text-muted-foreground font-medium">{task.created_by}</span>
-                    <span className="text-[10px] text-muted-foreground/60">(Created)</span>
-                  </div>
-                  <ArrowRight className="w-3 h-3 text-muted-foreground/60 shrink-0" />
-                  <div className="flex items-center gap-1 shrink-0 px-2 py-1 rounded-md bg-card border border-border text-[11px]">
-                    <span className="text-foreground font-medium">{task.person_name || 'Assignee'}</span>
-                    <span className="text-[10px] text-muted-foreground/60">(Assigned)</span>
-                  </div>
-                  <ArrowRight className="w-3 h-3 text-muted-foreground/60 shrink-0" />
-                  <div className="flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-md bg-emerald-600 text-white font-semibold text-[11px] shadow-xs">
-                    <span>✓ {task.completed_by || task.person_name || 'Completed'}</span>
-                  </div>
-                </div>
+              <div className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 italic">
+                "{task.reassigned_by || (assignments.length > 0 && assignments[0].remark) || 'Work completed successfully.'}"
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-primary/15 pb-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs font-bold shrink-0">
-                    <UserCheck className="w-5 h-5" />
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shrink-0 shadow-xs">
+                  <UserCheck className="w-4 h-4" />
+                </span>
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-primary block">
+                    Current Assignee
                   </span>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-primary block">
-                      Current Assignee & Ownership
-                    </span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-sm font-bold text-foreground">
-                        {task.person_name || 'Unassigned'}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-primary/10 text-primary">
-                        Action Required
-                      </span>
-                    </div>
-                  </div>
+                  <span className="font-bold text-foreground text-sm">
+                    {task.person_name || 'Unassigned'}
+                  </span>
                 </div>
+              </div>
 
-                {/* Quick Actions */}
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-end sm:self-center">
+                {task.reassigned_by || (assignments.length > 0 && assignments[0].remark) ? (
+                  <span className="text-[11px] text-muted-foreground italic max-w-xs truncate">
+                    Note: "{task.reassigned_by || assignments[0].remark}"
+                  </span>
+                ) : null}
+                {canEdit && (
                   <Button
                     size="sm"
-                    className="h-7 text-xs font-semibold"
-                    onClick={() => setStatusModalOpen(true)}
-                  >
-                    Submit / Status
-                  </Button>
-                  <Button
                     variant="outline"
-                    size="sm"
-                    className="h-7 text-xs font-medium bg-card hover:bg-muted"
+                    className="h-7 text-xs bg-card cursor-pointer"
                     onClick={() => setAssignModalOpen(true)}
                   >
-                    Handover / Reassign
+                    Handover
                   </Button>
-                </div>
-              </div>
-
-              {/* Immediate Action Instruction */}
-              <div>
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span>Immediate Instructions for {task.person_name || 'Assignee'}:</span>
-                </span>
-                {task.reassigned_by || (assignments.length > 0 && assignments[0].remark) ? (
-                  <div className="p-3 bg-card rounded-lg border border-border text-xs font-medium text-foreground leading-relaxed shadow-2xs">
-                    "{task.reassigned_by || assignments[0].remark}"
-                  </div>
-                ) : (
-                  <div className="text-xs text-muted-foreground italic">
-                    Follow project description above. Use "Handover / Reassign" to dispatch specific deliverables.
-                  </div>
                 )}
               </div>
-
-              {/* Visual Handover Rail (A ➔ B ➔ C) */}
-              {assignments.length > 0 && (
-                <div className="pt-2 border-t border-primary/15">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
-                    Delegation Chain (A ➔ B ➔ C)
-                  </span>
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                    <div className="flex items-center gap-1 shrink-0 px-2 py-1 rounded-md bg-card border border-border text-[11px]">
-                      <span className="text-muted-foreground font-medium">{task.created_by}</span>
-                      <span className="text-[10px] text-muted-foreground/60">(Created)</span>
-                    </div>
-                    {assignments.slice().reverse().map((asgn, idx) => (
-                      <React.Fragment key={asgn.id || idx}>
-                        <ArrowRight className="w-3 h-3 text-muted-foreground/60 shrink-0" />
-                        <div
-                          className={`flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-md border text-[11px] ${
-                            idx === assignments.length - 1
-                              ? 'bg-primary text-primary-foreground border-primary font-semibold shadow-xs'
-                              : 'bg-card text-foreground border-border'
-                          }`}
-                        >
-                          <span>{asgn.assigned_to_name || 'Member'}</span>
-                          <span
-                            className={`text-[10px] ${
-                              idx === assignments.length - 1 ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                            }`}
-                          >
-                            ({asgn.status})
-                          </span>
-                        </div>
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
-
-          {/* Key Metrics Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border text-xs">
-            <div className="space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Pending With
-              </span>
-              <div className="flex items-center gap-1.5 text-foreground font-medium">
-                <User className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="truncate">{task.person_name || 'None'}</span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Due Date
-              </span>
-              <div className="flex items-center gap-1.5 font-medium">
-                <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className={overdue ? 'text-destructive font-bold' : 'text-foreground'}>
-                  {task.due_date ? formatDateOnly(task.due_date) : 'No due date'}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Pending Since
-              </span>
-              <div className="flex items-center gap-1.5 text-foreground font-medium">
-                <Clock className="w-3.5 h-3.5 text-amber-500" />
-                <span>
-                  {task.status === 'pending'
-                    ? formatRelativePending(task.pending_since)
-                    : formatDateOnly(task.pending_since)}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Last Updated
-              </span>
-              <span className="text-foreground font-mono text-[11px] block">
-                {formatDateTime(task.updated_at)}
-              </span>
-            </div>
-          </div>
-
-          {/* Smart Reminder Bar */}
-          <div className="p-3.5 bg-muted/40 border border-border/80 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5">
-              {reminder && reminder.is_enabled && reminder.status !== 'stopped' && task.status !== 'completed' ? (
-                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0">
-                  <Bell className="w-3.5 h-3.5" />
-                </span>
-              ) : (
-                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground shrink-0">
-                  <BellOff className="w-3.5 h-3.5" />
-                </span>
-              )}
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-foreground">Operational Reminder</span>
-                  {reminder && reminder.is_enabled && reminder.status !== 'stopped' && task.status !== 'completed' ? (
-                    <Badge variant="default" className="text-[10px] h-4 px-1.5 py-0">Active</Badge>
-                  ) : task.status === 'completed' ? (
-                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 text-emerald-600 border-emerald-500/30">Auto Stopped</Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 text-muted-foreground">Inactive</Badge>
-                  )}
-                </div>
-
-                <div className="text-muted-foreground text-[11px] mt-0.5">
-                  {reminder && reminder.is_enabled && reminder.status !== 'stopped' && task.status !== 'completed' ? (
-                    <span>
-                      Alert scheduled: <strong className="text-foreground">{formatDateTime(reminder.next_trigger_at)}</strong> ({reminder.recurrence_type})
-                    </span>
-                  ) : task.status === 'completed' ? (
-                    <span>All recurring reminders terminated upon task completion.</span>
-                  ) : (
-                    <span>No active push alert configured for this task.</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {task.status !== 'completed' && (
-              <div className="flex items-center gap-2">
-                {reminder && reminder.is_enabled && reminder.status !== 'stopped' ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSnoozeReminder(15)}
-                      className="h-7 text-xs bg-card"
-                    >
-                      Snooze 15m
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleStopReminder}
-                      className="h-7 text-xs text-destructive hover:bg-destructive/10"
-                    >
-                      Stop
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={handleQuickEnableReminder}
-                    className="h-7 text-xs"
-                  >
-                    Enable Alert
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
         </CardContent>
       </Card>
 
-      {/* Two Column Layout: Left (Subtasks, Notes, Files) | Right (Assignments & Audit Trail) */}
+      {/* Optional Collapsible Time Tracker (if toggled) */}
+      {showTimeTracker && (
+        <div className="animate-in fade-in-50 duration-200">
+          <TaskTimeTracker taskId={task.id} taskTitle={task.title} />
+        </div>
+      )}
+
+      {/* 3. Main Workspace: Tabs (Left 2-cols) + Key Metadata Sidebar (Right 1-col) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Subtasks Checklist Section */}
-          <Card className="rounded-xl border border-border bg-card shadow-xs">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <ListTodo className="w-4 h-4 text-primary" />
-                  <span>Delegated Subtasks & Action Items</span>
-                </h2>
-              </div>
-              <TaskSubtasks taskId={task.id} parentTask={task} onSubtasksUpdated={loadTaskData} />
-            </CardContent>
-          </Card>
+        {/* Left 2 Columns: Structured Tabbed Workspace */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Tabs Navigation Header */}
+          <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/60">
+            <button
+              type="button"
+              onClick={() => setActiveTab('deliverables')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'deliverables'
+                  ? 'bg-background text-foreground shadow-2xs font-bold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ListTodo className="w-3.5 h-3.5 text-primary" />
+              <span>कार्ये व पुरावे (Tasks & Proofs)</span>
+              {(subtasks.length > 0 || attachments.length > 0) && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-primary/10 text-primary font-mono">
+                  {subtasks.length + attachments.length}
+                </span>
+              )}
+            </button>
 
-          {/* Notes Section */}
-          <Card className="rounded-xl border border-border bg-card shadow-xs">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                  <span>Activity Notes & Remarks</span>
-                  <span className="text-xs font-normal text-muted-foreground">({notes.length})</span>
-                </h2>
-              </div>
-              <TaskNotes
-                taskId={task.id}
-                notes={notes}
-                onNotesUpdated={loadTaskData}
-              />
-            </CardContent>
-          </Card>
+            <button
+              type="button"
+              onClick={() => setActiveTab('discussion')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'discussion'
+                  ? 'bg-background text-foreground shadow-2xs font-bold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-indigo-500" />
+              <span>नोंदी व चर्चा (Discussion & Notes)</span>
+              {notes.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-500/10 text-indigo-500 font-mono">
+                  {notes.length}
+                </span>
+              )}
+            </button>
 
-          {/* Attachments Section */}
-          <Card className="rounded-xl border border-border bg-card shadow-xs">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Paperclip className="w-4 h-4 text-muted-foreground" />
-                  <span>Verification Proofs & Log Books</span>
-                  <span className="text-xs font-normal text-muted-foreground">({attachments.length})</span>
-                </h2>
-              </div>
-              <TaskAttachments
+            <button
+              type="button"
+              onClick={() => setActiveTab('history')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'history'
+                  ? 'bg-background text-foreground shadow-2xs font-bold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <History className="w-3.5 h-3.5 text-slate-500" />
+              <span>इतिहास व ट्रेल (Audit & Trail)</span>
+              {history.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-500/10 text-slate-500 font-mono">
+                  {history.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* TAB 1: Deliverables & Proofs */}
+          {activeTab === 'deliverables' && (
+            <div className="space-y-4 animate-in fade-in-50 duration-200">
+              {/* Delegated Subtasks Card */}
+              <Card className="rounded-2xl border border-border bg-card shadow-xs">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-border/80 pb-3">
+                    <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <ListTodo className="w-4 h-4 text-primary" />
+                      <span>Delegated Subtasks & Action Items</span>
+                    </h2>
+                  </div>
+                  <TaskSubtasks taskId={task.id} parentTask={task} onSubtasksUpdated={loadTaskData} />
+                </CardContent>
+              </Card>
+
+              {/* Attachments & Proofs Card */}
+              <Card className="rounded-2xl border border-border bg-card shadow-xs">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-border/80 pb-3">
+                    <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Paperclip className="w-4 h-4 text-primary" />
+                      <span>Verification Proofs & Log Books</span>
+                      <span className="text-xs font-normal text-muted-foreground">({attachments.length})</span>
+                    </h2>
+                  </div>
+                  <TaskAttachments
+                    taskId={task.id}
+                    attachments={attachments}
+                    onAttachmentsUpdated={loadTaskData}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* TAB 2: Discussion & Notes */}
+          {activeTab === 'discussion' && (
+            <div className="space-y-4 animate-in fade-in-50 duration-200">
+              {/* Activity Notes & Remarks */}
+              <Card className="rounded-2xl border border-border bg-card shadow-xs">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-border/80 pb-3">
+                    <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-indigo-500" />
+                      <span>Activity Notes & Remarks</span>
+                      <span className="text-xs font-normal text-muted-foreground">({notes.length})</span>
+                    </h2>
+                  </div>
+                  <TaskNotes
+                    taskId={task.id}
+                    notes={notes}
+                    onNotesUpdated={loadTaskData}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Live Team Discussion */}
+              <TaskDiscussion
                 taskId={task.id}
-                attachments={attachments}
-                onAttachmentsUpdated={loadTaskData}
+                teamMembers={assignments.map((a) => ({
+                  id: a.assigned_to,
+                  full_name: a.assigned_to_name || 'Member',
+                  email: a.assigned_to_name || 'Member',
+                }))}
               />
-            </CardContent>
-          </Card>
+            </div>
+          )}
+
+          {/* TAB 3: History & Audit */}
+          {activeTab === 'history' && (
+            <div className="space-y-4 animate-in fade-in-50 duration-200">
+              {/* Assignment Delegation Chain */}
+              <Card className="rounded-2xl border border-border bg-card shadow-xs">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-border/80 pb-3">
+                    <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Users className="w-4 h-4 text-primary" />
+                      <span>Assignment Handover Journey</span>
+                      <span className="text-xs font-normal text-muted-foreground">({assignments.length})</span>
+                    </h2>
+                    {canEdit && (
+                      <button
+                        onClick={() => setAssignModalOpen(true)}
+                        className="text-xs text-primary hover:underline font-semibold cursor-pointer"
+                      >
+                        + Handover
+                      </button>
+                    )}
+                  </div>
+
+                  {assignments.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic py-3 text-center">
+                      No formal handover history logged yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {assignments.map((asgn) => (
+                        <div
+                          key={asgn.id}
+                          className="p-3 rounded-xl border border-border bg-muted/20 text-xs space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-foreground">
+                              {asgn.assigned_to_name || 'Team Member'}
+                            </span>
+                            <Badge
+                              variant={asgn.status === 'completed' ? 'success' : 'secondary'}
+                              className="text-[10px] capitalize px-1.5 py-0"
+                            >
+                              {asgn.status}
+                            </Badge>
+                          </div>
+                          {asgn.remark && (
+                            <p className="text-muted-foreground italic text-[11px]">
+                              "{asgn.remark}"
+                            </p>
+                          )}
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1 font-mono pt-0.5">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatDateTime(asgn.assigned_at)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Status History Timeline */}
+              <Card className="rounded-2xl border border-border bg-card shadow-xs">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-border/80 pb-3">
+                    <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <History className="w-4 h-4 text-muted-foreground" />
+                      <span>Status Change Timeline</span>
+                      <span className="text-xs font-normal text-muted-foreground">({history.length})</span>
+                    </h2>
+                  </div>
+                  <StatusTimeline history={history} />
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
 
-        {/* Right 1 Col */}
-        <div className="space-y-6">
-          {/* Live Time Tracker & Billable Hours */}
-          <TaskTimeTracker taskId={task.id} taskTitle={task.title} />
+        {/* Right 1 Column: Clean Executive Metadata & Reminder Controls */}
+        <div className="space-y-4">
+          {/* Key Facts Card */}
+          <Card className="rounded-2xl border border-border bg-card shadow-xs">
+            <CardContent className="p-5 space-y-3.5 text-xs">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80 pb-2 border-b border-border/60">
+                Task Parameters
+              </h3>
 
-          {/* Task-Specific Live Discussion & @Mentions */}
-          <TaskDiscussion
-            taskId={task.id}
-            teamMembers={assignments.map((a) => ({
-              id: a.assigned_to,
-              full_name: a.assigned_to_name || 'Member',
-              email: a.assigned_to_name || 'Member',
-            }))}
-          />
-
-          {/* Assignment History */}
-          <Card className="rounded-xl border border-border bg-card shadow-xs">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Users className="w-4 h-4 text-primary" />
-                  <span>Assignment History</span>
-                  <span className="text-xs font-normal text-muted-foreground">({assignments.length})</span>
-                </h2>
-                <button
-                  onClick={() => setAssignModalOpen(true)}
-                  className="text-xs text-primary hover:underline font-semibold"
-                >
-                  + Assign
-                </button>
+              <div className="space-y-1">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                  Pending With
+                </span>
+                <div className="flex items-center gap-1.5 text-foreground font-semibold">
+                  <User className="w-3.5 h-3.5 text-primary" />
+                  <span className="truncate">{task.person_name || 'None'}</span>
+                </div>
               </div>
 
-              {assignments.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-2">
-                  No formal workplace assignments logged yet. Click "Assign" above to hand over this task.
-                </p>
-              ) : (
-                <div className="space-y-2.5">
-                  {assignments.map((asgn) => (
-                    <div
-                      key={asgn.id}
-                      className="p-3 rounded-lg border border-border bg-muted/30 text-xs space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-foreground">
-                          {asgn.assigned_to_name || 'Team Member'}
-                        </span>
-                        <Badge
-                          variant={asgn.status === 'completed' ? 'success' : 'secondary'}
-                          className="text-[10px] capitalize px-1.5 py-0"
-                        >
-                          {asgn.status}
-                        </Badge>
-                      </div>
-                      {asgn.remark && (
-                        <p className="text-muted-foreground italic text-[11px]">
-                          "{asgn.remark}"
-                        </p>
-                      )}
-                      <div className="text-[10px] text-muted-foreground flex items-center gap-1 font-mono pt-0.5">
-                        <Clock className="w-3 h-3" />
-                        <span>{formatDateTime(asgn.assigned_at)}</span>
-                      </div>
-                    </div>
-                  ))}
+              <div className="space-y-1">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                  Due Date
+                </span>
+                <div className="flex items-center gap-1.5 font-semibold">
+                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className={overdue ? 'text-destructive font-bold' : 'text-foreground'}>
+                    {task.due_date ? formatDateOnly(task.due_date) : 'No due date'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                  Pending Since
+                </span>
+                <div className="flex items-center gap-1.5 text-foreground font-semibold">
+                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  <span>
+                    {task.status === 'pending'
+                      ? formatRelativePending(task.pending_since)
+                      : formatDateOnly(task.pending_since)}
+                  </span>
+                </div>
+              </div>
+
+              {task.custom_fields?.site_name && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Assigned Site
+                  </span>
+                  <span className="text-foreground font-semibold block truncate">
+                    {task.custom_fields.site_name}
+                  </span>
                 </div>
               )}
+
+              <div className="space-y-1 pt-2 border-t border-border/60">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                  Last Updated
+                </span>
+                <span className="text-muted-foreground font-mono text-[11px] block">
+                  {formatDateTime(task.updated_at)}
+                </span>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Status History Timeline */}
-          <Card className="rounded-xl border border-border bg-card shadow-xs">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <History className="w-4 h-4 text-muted-foreground" />
-                  <span>Audit Trail & Status History</span>
-                  <span className="text-xs font-normal text-muted-foreground">({history.length})</span>
-                </h2>
+          {/* Operational Push Reminder Card */}
+          <Card className="rounded-2xl border border-border bg-card shadow-xs">
+            <CardContent className="p-4 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {reminder && reminder.is_enabled && reminder.status !== 'stopped' && task.status !== 'completed' ? (
+                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0">
+                      <Bell className="w-3.5 h-3.5" />
+                    </span>
+                  ) : (
+                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-muted text-muted-foreground shrink-0">
+                      <BellOff className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                  <span className="font-bold text-foreground">Operational Alert</span>
+                </div>
+
+                {reminder && reminder.is_enabled && reminder.status !== 'stopped' && task.status !== 'completed' ? (
+                  <Badge variant="default" className="text-[10px] h-4 px-1.5 py-0">Active</Badge>
+                ) : task.status === 'completed' ? (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 text-emerald-600 border-emerald-500/30">Auto Stopped</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 text-muted-foreground">Off</Badge>
+                )}
               </div>
-              <StatusTimeline history={history} />
+
+              <p className="text-[11px] text-muted-foreground leading-normal">
+                {reminder && reminder.is_enabled && reminder.status !== 'stopped' && task.status !== 'completed' ? (
+                  <span>Alert set for <strong className="text-foreground">{formatDateTime(reminder.next_trigger_at)}</strong></span>
+                ) : (
+                  <span>Enable reminders to get push notifications before deadlines.</span>
+                )}
+              </p>
+
+              {task.status !== 'completed' && (
+                <div className="pt-1 flex items-center gap-1.5">
+                  {reminder && reminder.is_enabled && reminder.status !== 'stopped' ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSnoozeReminder(15)}
+                        className="h-7 text-xs flex-1 cursor-pointer"
+                      >
+                        Snooze 15m
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleStopReminder}
+                        className="h-7 text-xs text-destructive hover:bg-destructive/10 cursor-pointer"
+                      >
+                        Stop
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={handleQuickEnableReminder}
+                      className="h-7 text-xs w-full cursor-pointer"
+                    >
+                      Enable Alert
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Share Task Modal */}
+      {/* Modals */}
       {shareModalOpen && (
         <TaskShareModal
           task={task}
@@ -915,7 +959,6 @@ export const TaskDetailPage: React.FC = () => {
         />
       )}
 
-      {/* Assign Task Modal */}
       {assignModalOpen && (
         <TaskAssignmentModal
           task={task}
@@ -925,7 +968,6 @@ export const TaskDetailPage: React.FC = () => {
         />
       )}
 
-      {/* Change Status Modal */}
       {statusModalOpen && (
         <ChangeStatusModal
           task={task}
@@ -935,7 +977,6 @@ export const TaskDetailPage: React.FC = () => {
         />
       )}
 
-      {/* Edit Task Modal */}
       {editModalOpen && (
         <TaskFormModal
           taskToEdit={task}
@@ -945,7 +986,6 @@ export const TaskDetailPage: React.FC = () => {
         />
       )}
 
-      {/* Quick Complete Modal */}
       {quickCompleteOpen && task && (
         <QuickCompleteModal
           task={task}
@@ -955,7 +995,6 @@ export const TaskDetailPage: React.FC = () => {
         />
       )}
 
-      {/* Move to Bin Confirmation */}
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
