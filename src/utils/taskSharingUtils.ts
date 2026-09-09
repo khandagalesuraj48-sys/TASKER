@@ -9,42 +9,42 @@ export const shareTaskOnWhatsApp = (task: Task, siteName?: string): void => {
   const taskLink = `${origin}/tasks/${task.id}`;
 
   const priorityLabels: Record<string, string> = {
-    urgent: '🔴 तातडीचे (Urgent)',
-    high: '🟠 उच्च (High)',
-    medium: '🟡 मध्यम (Medium)',
-    low: '🟢 सामान्य (Low)',
+    urgent: '🔴 Urgent',
+    high: '🟠 High',
+    medium: '🟡 Medium',
+    low: '🟢 Low',
   };
 
   const statusLabels: Record<string, string> = {
-    pending: '⏳ प्रलंबित (Pending)',
-    in_progress: '⚙️ चालू आहे (In Progress)',
-    completed: '✅ पूर्ण झाले (Completed)',
-    transferred: '🔄 हस्तांतरित (Transferred)',
-    delayed: '⚠️ विलंबित (Delayed)',
+    pending: '⏳ Pending',
+    in_progress: '⚙️ In Progress',
+    completed: '✅ Completed',
+    transferred: '🔄 Transferred',
+    delayed: '⚠️ Delayed',
   };
 
-  const siteText = siteName || (task.site_id ? 'कार्य साईट' : 'सामान्य कार्यक्षेत्र');
+  const siteText = siteName || (task.site_id ? 'Assigned Site' : 'General Workspace');
   const priorityText = priorityLabels[task.priority] || task.priority;
   const statusText = statusLabels[task.status] || task.status;
-  const dueDateText = task.due_date ? formatDateOnly(task.due_date) : 'तारीख दिलेली नाही';
-  const personText = task.person_name || 'अद्याप कोणाला दिले नाही';
+  const dueDateText = task.due_date ? formatDateOnly(task.due_date) : 'No due date set';
+  const personText = task.person_name || 'Unassigned';
 
   const message = [
-    `📋 *टास्क अपडेट: ${task.title}*`,
+    `📋 *Task Update: ${task.title}*`,
     `━━━━━━━━━━━━━━━━━━━━`,
-    `📍 *साईट:* ${siteText}`,
-    `👤 *जबाबदार व्यक्ती:* ${personText}`,
-    `⚡ *प्राधान्य:* ${priorityText}`,
-    `📊 *स्थिती:* ${statusText}`,
-    `📅 *अंतिम मुदत:* ${dueDateText}`,
+    `📍 *Site:* ${siteText}`,
+    `👤 *Assigned To:* ${personText}`,
+    `⚡ *Priority:* ${priorityText}`,
+    `📊 *Status:* ${statusText}`,
+    `📅 *Due Date:* ${dueDateText}`,
     task.description ? `
-📝 *कामाचा तपशील:*
+📝 *Description:*
 ${task.description}` : '',
     `
-🔗 *ॲपमध्ये टास्क उघडा:*
+🔗 *Open Task in TASKER:*
 ${taskLink}`,
     `━━━━━━━━━━━━━━━━━━━━`,
-    `_TASKER App द्वारे पाठवले_`
+    `_Sent via TASKER App_`
   ].filter(Boolean).join('\n');
 
   const encoded = encodeURIComponent(message);
@@ -55,7 +55,7 @@ ${taskLink}`,
 };
 
 /**
- * AI Audio Reader: Speaks task details aloud in Marathi / English
+ * AI Audio Reader: Speaks task details aloud in English
  */
 export const speakTaskDetails = (
   title: string,
@@ -70,12 +70,12 @@ export const speakTaskDetails = (
   // Cancel any ongoing speech
   window.speechSynthesis.cancel();
 
-  let textToSpeak = `टास्क: ${title}. `;
+  let textToSpeak = `Task: ${title}. `;
   if (siteName) {
-    textToSpeak += `साईट: ${siteName}. `;
+    textToSpeak += `Site: ${siteName}. `;
   }
   if (description) {
-    textToSpeak += `तपशील: ${description}. `;
+    textToSpeak += `Details: ${description}. `;
   }
 
   const utterance = new SpeechSynthesisUtterance(textToSpeak);

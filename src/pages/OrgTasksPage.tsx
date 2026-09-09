@@ -88,21 +88,25 @@ export const OrgTasksPage: React.FC = () => {
 
   const handleDeleteTask = async (e: React.MouseEvent, t: Task) => {
     e.stopPropagation();
-    if (!window.confirm(`खरोखर "${t.title}" हा टास्क हटवायचा आहे का?`)) {
+    if (!window.confirm(`Are you sure you want to delete "${t.title}"?`)) {
       return;
     }
     try {
       await softDeleteTask(t.id);
-      showToast(`टास्क "${t.title}" हटवला आहे.`, 'info');
+      showToast(`Task "${t.title}" deleted.`, 'info');
       triggerRefresh();
     } catch (err: any) {
-      showToast(err.message || 'टास्क हटवण्यात त्रुटी आली.', 'error');
+      showToast(err.message || 'Failed to delete task.', 'error');
     }
   };
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
       if (t.is_deleted) return false;
+
+      // Delegated Deliverables / Subtasks Rule:
+      // Subtasks must NOT appear on the main operations board; they are nested inside their parent task.
+      if (t.parent_task_id) return false;
 
       // Site Assignment Restriction: regular users ONLY see tasks for their assigned sites
       if (!isAdmin && !isOwner && !isPlatformAdmin) {
@@ -126,16 +130,16 @@ export const OrgTasksPage: React.FC = () => {
   const handleSendJoinRequest = async () => {
     try {
       await requestJoin();
-      showToast('कार्यस्थळ प्रवेश विनंती पाठवली आहे. ॲडमिन मंजुरीची प्रतीक्षा आहे.', 'success');
+      showToast('Workplace access request submitted. Awaiting admin approval.', 'success');
     } catch {
-      showToast('विनंती पाठवण्यात त्रुटी आली.', 'error');
+      showToast('Failed to send request.', 'error');
     }
   };
 
   const handleCreateSite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentOrg?.id || !newSiteName.trim()) {
-      showToast('कृपया साईटचे नाव प्रविष्ट करा.', 'error');
+      showToast('Please enter a site name.', 'error');
       return;
     }
     setIsCreatingSite(true);
@@ -147,7 +151,7 @@ export const OrgTasksPage: React.FC = () => {
         newSiteAddress.trim()
       );
       if (created) {
-        showToast(`'${created.name}' नवीन साईट तयार केली!`, 'success');
+        showToast(`Site '${created.name}' created successfully!`, 'success');
         await refreshSites();
         selectSite(created.id);
         setIsAddSiteOpen(false);
@@ -155,10 +159,10 @@ export const OrgTasksPage: React.FC = () => {
         setNewSiteCode('');
         setNewSiteAddress('');
       } else {
-        showToast('साईट्स तयार करण्यात त्रुटी आली.', 'error');
+        showToast('Failed to create site.', 'error');
       }
     } catch {
-      showToast('साईट्स तयार करण्यात त्रुटी आली.', 'error');
+      showToast('Failed to create site.', 'error');
     } finally {
       setIsCreatingSite(false);
     }
@@ -173,7 +177,7 @@ export const OrgTasksPage: React.FC = () => {
         </div>
         <div>
           <h2 className="text-xl font-bold text-foreground">
-            {currentOrg?.legal_name || 'कार्यस्थळ कार्यक्षेत्र (Workplace Space)'}
+            {currentOrg?.legal_name || 'Workplace Space'}
           </h2>
           <p className="text-xs text-primary font-semibold uppercase tracking-wider mt-1">
             Enterprise & Multi-Site Tasks
@@ -181,15 +185,15 @@ export const OrgTasksPage: React.FC = () => {
         </div>
 
         <p className="text-xs text-muted-foreground leading-relaxed max-w-md mx-auto">
-          तुमचे वैयक्तिक टास्क स्पेस (Personal Space) नेहमीप्रमाणे सुरक्षित आणि सक्रिय आहे. कंपनी किंवा संस्थेच्या कार्यस्थळावर काम करण्यासाठी आणि सहकाऱ्यांसोबत जोडले जाण्यासाठी ॲडमिन मंजुरी आवश्यक आहे.
+          Your Personal Space remains fully functional and secure. Admin approval is required to access organization workplace tasks and collaborate with teammates.
         </p>
 
         <div className="pt-2">
           {hasRequestedJoin ? (
             <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-300 font-semibold space-y-1">
-              <p>⏳ कार्यस्थळ प्रवेश विनंती पाठवली आहे.</p>
+              <p>⏳ Workplace access request submitted.</p>
               <p className="text-[11px] font-normal text-amber-600 dark:text-amber-400">
-                ॲडमिनने मंजुरी देऊन तुम्हाला संस्थेत आणि संबंधित साईटवर समाविष्ट केल्यावर तुम्हाला सर्व कामे दिसतील.
+                You will see all tasks once the admin approves your request and assigns your sites.
               </p>
             </div>
           ) : (
@@ -199,7 +203,7 @@ export const OrgTasksPage: React.FC = () => {
               leftIcon={<Send className="w-4 h-4" />}
               className="w-full sm:w-auto"
             >
-              कार्यस्थळ प्रवेशाची विनंती पाठवा (Request Workplace Access)
+              Request Workplace Access
             </Button>
           )}
         </div>
@@ -422,7 +426,7 @@ export const OrgTasksPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={(e) => handleDeleteTask(e, t)}
-                          title="टास्क हटवा (Delete Task)"
+                          title="Delete Task"
                           className="p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -469,7 +473,7 @@ export const OrgTasksPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-primary" />
                 <h3 className="text-base font-bold text-foreground">
-                  नवीन साईट तयार करा
+                  Create New Site
                 </h3>
               </div>
               <button
@@ -483,12 +487,12 @@ export const OrgTasksPage: React.FC = () => {
             <form onSubmit={handleCreateSite} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
-                  साईटचे नाव (Site Name) <span className="text-destructive">*</span>
+                  Site Name <span className="text-destructive">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="उदा. VTR Site किंवा 18 B Site"
+                  placeholder="e.g. VTR Site or 18 B Site"
                   value={newSiteName}
                   onChange={(e) => setNewSiteName(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-input/80 bg-background text-foreground text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
@@ -497,11 +501,11 @@ export const OrgTasksPage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
-                  साईट कोड (Site Code)
+                  Site Code
                 </label>
                 <input
                   type="text"
-                  placeholder="उदा. VTR किंवा 18_B"
+                  placeholder="e.g. VTR or 18_B"
                   value={newSiteCode}
                   onChange={(e) => setNewSiteCode(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-input/80 bg-background text-foreground text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 font-mono"
@@ -510,11 +514,11 @@ export const OrgTasksPage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-1.5">
-                  पत्ता / लोकेशन (Address / Location)
+                  Address / Location
                 </label>
                 <input
                   type="text"
-                  placeholder="साईटचा पत्ता किंवा स्थान"
+                  placeholder="Site address or location"
                   value={newSiteAddress}
                   onChange={(e) => setNewSiteAddress(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-input/80 bg-background text-foreground text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
@@ -528,7 +532,7 @@ export const OrgTasksPage: React.FC = () => {
                   size="sm"
                   onClick={() => setIsAddSiteOpen(false)}
                 >
-                  रद्द करा
+                  Cancel
                 </Button>
                 <Button
                   type="submit"
@@ -536,7 +540,7 @@ export const OrgTasksPage: React.FC = () => {
                   isLoading={isCreatingSite}
                   leftIcon={isCreatingSite ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 >
-                  साईट जोडा
+                  Add Site
                 </Button>
               </div>
             </form>

@@ -65,16 +65,16 @@ export const NotificationPermissionEnforcer: React.FC = () => {
       setStatus(updated);
 
       if (updated.granted && updated.areNotificationsEnabled) {
-        showToast('सूचना यशस्वीरित्या चालू केल्या आहेत! (Notifications Enabled)', 'success');
+        showToast('Notifications enabled successfully!', 'success');
         return;
       }
 
       // If still not granted or blocked, open system settings directly
       if (Capacitor.isNativePlatform()) {
         await openSystemNotificationSettings();
-        showToast('कृपया सेटिंग्जमध्ये जाऊन Notifications चालू करा.', 'info');
+        showToast('Please enable notifications in system settings.', 'info');
       } else {
-        showToast('कृपया ब्राऊझर सेटिंग्जमधून Notification परमिशन Allow करा.', 'warning');
+        showToast('Please allow notification permissions in browser settings.', 'warning');
       }
     } catch (err) {
       console.warn('Error requesting notifications:', err);
@@ -86,7 +86,7 @@ export const NotificationPermissionEnforcer: React.FC = () => {
   const handleRequestBatteryExemption = async () => {
     try {
       await requestBatteryOptimizationExemption();
-      showToast('बॅटरी परमिशनसाठी सिस्टीम डायलॉग उघडला आहे. कृपया Allow करा.', 'info');
+      showToast('Opening system dialog for battery optimization. Please allow.', 'info');
       setTimeout(() => checkStatus(), 1500);
     } catch (err) {
       console.warn('Error requesting battery exemption:', err);
@@ -96,7 +96,7 @@ export const NotificationPermissionEnforcer: React.FC = () => {
   const handleOpenAutostart = async () => {
     try {
       await openAutostartSettings();
-      showToast('ऑटोस्टार्ट सेटिंग्ज उघडल्या आहेत. कृपया TASKER ला परवानगी द्या.', 'info');
+      showToast('Opening autostart settings. Please allow TASKER permissions.', 'info');
     } catch (err) {
       console.warn('Error opening autostart:', err);
     }
@@ -135,21 +135,21 @@ export const NotificationPermissionEnforcer: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm sm:text-base font-bold text-white tracking-wide flex items-center gap-1.5">
-                    <span>सूचना (Notifications) बंद आहेत!</span>
+                    <span>Notifications are Disabled!</span>
                   </h3>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-rose-500/30 text-rose-200 border border-rose-400/30">
-                    सक्तीचे (Required)
+                    Required
                   </span>
                 </div>
 
                 <p className="mt-1 text-xs text-slate-200 leading-relaxed">
-                  टास्क वाटप (Task Assignment), पूर्ण झालेले काम आणि रिमाइंडर्स वेळेवर मिळण्यासाठी Notification चालू असणे सक्तीचे आहे. कृपया ताबडतोब Notification चालू करा.
+                  To receive task assignments, completion alerts, and timely reminders, notifications must be enabled. Please turn on notifications immediately.
                 </p>
 
                 {isBlocked && (
                   <div className="mt-2 text-[11px] text-amber-200 bg-amber-500/10 p-2 rounded-lg border border-amber-400/20 flex items-center gap-1.5">
                     <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>सेटिंग्ज पेज उघडल्यावर <strong>'Allow notifications'</strong> चालू करा.</span>
+                    <span>When settings page opens, switch <strong>'Allow notifications'</strong> to ON.</span>
                   </div>
                 )}
 
@@ -160,7 +160,7 @@ export const NotificationPermissionEnforcer: React.FC = () => {
                     className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-blue-500/25 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Bell className="w-3.5 h-3.5" />
-                    <span>{isBlocked ? 'सेटिंग्ज उघडा (Open Settings)' : 'सूचना चालू करा (Turn ON)'}</span>
+                    <span>{isBlocked ? 'Open Settings' : 'Turn ON Notifications'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
 
@@ -168,7 +168,7 @@ export const NotificationPermissionEnforcer: React.FC = () => {
                     onClick={() => setDismissedTemporarily(true)}
                     className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 font-medium text-xs transition-colors cursor-pointer"
                   >
-                    नंतर करा (Remind Later)
+                    Remind Later
                   </button>
                 </div>
               </div>
@@ -192,15 +192,15 @@ export const NotificationPermissionEnforcer: React.FC = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-bold text-white tracking-wide flex items-center gap-1.5">
-                  <span>बॅकग्राउंड नोटिफिकेशन्स गॅरंटी (100% Delivery)</span>
+                  <span>Guaranteed Background Alerts</span>
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-amber-500/30 text-amber-200 border border-amber-400/30">
-                  आवश्यक (Recommended)
+                  Recommended
                 </span>
               </div>
 
               <p className="mt-1 text-xs text-slate-200 leading-relaxed">
-                ॲप बंद असताना किंवा मोबाईल लॉक असतानाही नवीन टास्कचे नोटिफिकेशन तत्काळ येण्यासाठी <strong>'Unrestricted Battery'</strong> आणि ऑटोस्टार्ट सुरू करा.
+                To ensure instant alerts when app is closed or phone is locked, set battery to <strong>'Unrestricted'</strong> and enable autostart.
               </p>
 
               <div className="mt-3.5 flex flex-wrap items-center gap-2">
@@ -209,7 +209,7 @@ export const NotificationPermissionEnforcer: React.FC = () => {
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-xs shadow-lg shadow-orange-500/25 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <BatteryCharging className="w-3.5 h-3.5" />
-                  <span>बॅटरी सूट द्या (Allow Unrestricted)</span>
+                  <span>Allow Unrestricted Battery</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
 
@@ -217,14 +217,14 @@ export const NotificationPermissionEnforcer: React.FC = () => {
                   onClick={handleOpenAutostart}
                   className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/20 text-amber-200 font-bold text-xs transition-colors cursor-pointer"
                 >
-                  ऑटोस्टार्ट (Autostart)
+                  Autostart Settings
                 </button>
 
                 <button
                   onClick={() => setDismissedTemporarily(true)}
                   className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 font-medium text-xs transition-colors cursor-pointer"
                 >
-                  ठीक आहे (Got it)
+                  Dismiss
                 </button>
               </div>
             </div>

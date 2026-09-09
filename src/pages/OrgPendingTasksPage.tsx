@@ -99,6 +99,11 @@ export const OrgPendingTasksPage: React.FC = () => {
       if (t.is_deleted) return false;
       if (t.status === 'completed' || t.status === 'cancelled') return false;
 
+      // Delegated Subtasks Rule:
+      // A delegated subtask (parent_task_id != null) should ONLY be visible in pending view to the user assigned to it.
+      // The creator/manager tracks it inside the Main Task on the operations board.
+      if (t.parent_task_id && t.assigned_to !== user?.id) return false;
+
       // User Site Assignment Access
       if (!isAdmin && !isOwner && !isPlatformAdmin) {
         const isAssignedToUser = t.assigned_to === user?.id;
@@ -158,7 +163,7 @@ export const OrgPendingTasksPage: React.FC = () => {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            {currentOrg?.legal_name} • सर्व नियुक्त साईटवरील प्रलंबित कामे (All Site Pending Tasks — View-only for site members; Edit reserved for creator & assignee)
+            {currentOrg?.legal_name} • All Site Pending Tasks (View-only for site members; Edit reserved for creator & assignee)
           </p>
         </div>
 

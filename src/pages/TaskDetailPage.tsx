@@ -621,7 +621,7 @@ export const TaskDetailPage: React.FC = () => {
               }`}
             >
               <ListTodo className="w-3.5 h-3.5 text-primary" />
-              <span>कार्ये व पुरावे (Tasks & Proofs)</span>
+              <span>Deliverables & Proofs</span>
               {(subtasks.length > 0 || attachments.length > 0) && (
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-primary/10 text-primary font-mono">
                   {subtasks.length + attachments.length}
@@ -639,7 +639,7 @@ export const TaskDetailPage: React.FC = () => {
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5 text-indigo-500" />
-              <span>नोंदी व चर्चा (Discussion & Notes)</span>
+              <span>Discussion & Notes</span>
               {notes.length > 0 && (
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-500/10 text-indigo-500 font-mono">
                   {notes.length}
@@ -657,7 +657,7 @@ export const TaskDetailPage: React.FC = () => {
               }`}
             >
               <History className="w-3.5 h-3.5 text-slate-500" />
-              <span>इतिहास व ट्रेल (Audit & Trail)</span>
+              <span>Audit & Trail</span>
               {history.length > 0 && (
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-500/10 text-slate-500 font-mono">
                   {history.length}
@@ -668,12 +668,12 @@ export const TaskDetailPage: React.FC = () => {
 
           {/* TAB 1: Deliverables & Proofs */}
           {activeTab === 'deliverables' && (
-            <div className="space-y-4 animate-in fade-in-50 duration-200">
+            <div className="space-y-3 animate-in fade-in-50 duration-200">
               {/* Delegated Subtasks Card */}
-              <Card className="rounded-2xl border border-border bg-card shadow-xs">
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-center justify-between border-b border-border/80 pb-3">
-                    <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Card className="rounded-xl border border-border bg-card shadow-2xs">
+                <CardContent className="p-3.5 sm:p-4 space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
+                    <h2 className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-2">
                       <ListTodo className="w-4 h-4 text-primary" />
                       <span>Delegated Subtasks & Action Items</span>
                     </h2>
@@ -683,10 +683,10 @@ export const TaskDetailPage: React.FC = () => {
               </Card>
 
               {/* Attachments & Proofs Card */}
-              <Card className="rounded-2xl border border-border bg-card shadow-xs">
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-center justify-between border-b border-border/80 pb-3">
-                    <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Card className="rounded-xl border border-border bg-card shadow-2xs">
+                <CardContent className="p-3.5 sm:p-4 space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
+                    <h2 className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-2">
                       <Paperclip className="w-4 h-4 text-primary" />
                       <span>Verification Proofs & Log Books</span>
                       <span className="text-xs font-normal text-muted-foreground">({attachments.length})</span>

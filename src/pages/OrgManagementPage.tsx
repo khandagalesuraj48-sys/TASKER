@@ -116,7 +116,7 @@ export const OrgManagementPage: React.FC = () => {
         await setUserSites(targetUserId.trim(), currentOrg.id, newMemberSiteIds);
       }
 
-      showToast('सदस्य यशस्वीरित्या जोडला आणि साईट्स असाइन केल्या.', 'success');
+      showToast('Member added and sites assigned successfully.', 'success');
       setAddModalOpen(false);
       setTargetUserId('');
       setSelectedEmpId('');
@@ -161,11 +161,11 @@ export const OrgManagementPage: React.FC = () => {
     try {
       const ok = await setUserSites(siteModalMember.user_id, currentOrg.id, tempAssignedSiteIds);
       if (ok) {
-        showToast('साईट्स यशस्वीरित्या अपडेट केल्या!', 'success');
+        showToast('Sites updated successfully!', 'success');
         setSiteModalMember(null);
         await loadOrgAdminData();
       } else {
-        showToast('साईट्स अपडेट करताना त्रुटी आली.', 'error');
+        showToast('Failed to update sites.', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Failed to update sites', 'error');
@@ -178,14 +178,14 @@ export const OrgManagementPage: React.FC = () => {
   const handleCreateSiteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentOrg?.id || !newSiteName.trim() || !newSiteCode.trim()) {
-      showToast('साईट्सचे नाव आणि कोड आवश्यक आहे.', 'error');
+      showToast('Site name and code are required.', 'error');
       return;
     }
     setIsCreatingSite(true);
     try {
       const created = await createOrgSite(currentOrg.id, newSiteName.trim(), newSiteCode.trim(), newSiteAddress.trim());
       if (created) {
-        showToast(`नवीन साईट "${created.name}" तयार केली!`, 'success');
+        showToast(`New site "${created.name}" created successfully!`, 'success');
         setCreateSiteOpen(false);
         setNewSiteName('');
         setNewSiteCode('');
@@ -193,7 +193,7 @@ export const OrgManagementPage: React.FC = () => {
         await refreshSites();
         await loadOrgAdminData();
       } else {
-        showToast('साईट तयार करता आली नाही. कोड तपासा.', 'error');
+        showToast('Could not create site. Please check code or try again.', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Error creating site', 'error');

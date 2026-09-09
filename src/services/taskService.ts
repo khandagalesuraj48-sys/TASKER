@@ -266,13 +266,13 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
     try {
       const { createInAppNotification } = await import('./notificationInboxService');
       const { data: authData } = await supabase.auth.getUser();
-      const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || creator || 'व्यवस्थापक';
+      const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || creator || 'Admin';
       await createInAppNotification({
         recipient_user_id: createdTask.assigned_to,
         organization_id: createdTask.org_id,
         type: 'task_assigned',
-        title: 'नवीन टास्क नियुक्त केला (New Task Assigned)',
-        message: `${assignerName} ने तुम्हाला "${createdTask.title}" हा नवीन टास्क सोपवला आहे.`,
+        title: 'New Task Assigned',
+        message: `${assignerName} assigned you a new task: "${createdTask.title}".`,
         entity_type: 'task',
         entity_id: createdTask.id,
       });
@@ -354,13 +354,13 @@ export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Ta
     try {
       const { createInAppNotification } = await import('./notificationInboxService');
       const { data: authData } = await supabase.auth.getUser();
-      const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || 'व्यवस्थापक';
+      const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || 'Admin';
       await createInAppNotification({
         recipient_user_id: input.assigned_to,
         organization_id: updatedTask.org_id,
         type: 'task_assigned',
-        title: 'टास्क वाटप (Task Assigned / Updated)',
-        message: `${assignerName} ने तुम्हाला "${updatedTask.title}" हा टास्क सोपवला आहे.`,
+        title: 'Task Assigned / Updated',
+        message: `${assignerName} assigned you task: "${updatedTask.title}".`,
         entity_type: 'task',
         entity_id: updatedTask.id,
       });
@@ -560,7 +560,7 @@ export const canUserEditTask = (
   }
 
   // Workplace task:
-  // 1. Creator (ज्याने टास्क तयार केला)
+  // 1. Creator (User who created the task)
   if (task.user_id && task.user_id === user.id) return true;
   if (task.created_by) {
     if (user.email && task.created_by.toLowerCase() === user.email.toLowerCase()) return true;
@@ -568,7 +568,7 @@ export const canUserEditTask = (
     if (task.created_by === user.id) return true;
   }
 
-  // 2. Assignee (ज्याच्यासाठी टास्क तयार केला / नियुक्त केला)
+  // 2. Assignee (User assigned to the task)
   if (task.assigned_to && task.assigned_to === user.id) return true;
   if (task.person_name) {
     const userFullName = user.user_metadata?.full_name || '';
@@ -594,7 +594,7 @@ export const verifyTaskEditPermission = async (taskId: string): Promise<Task> =>
     .maybeSingle();
 
   if (fetchErr || !task) {
-    throw new Error('टास्क सापडला नाही. (Task not found)');
+    throw new Error('Task not found.');
   }
 
   const isPlatformAdmin = await adminService.isPlatformAdmin(currentUser.id);
@@ -613,7 +613,7 @@ export const verifyTaskEditPermission = async (taskId: string): Promise<Task> =>
 
   const allowed = canUserEditTask(task as Task, currentUser, isPlatformAdmin, isOrgAdmin);
   if (!allowed) {
-    throw new Error('परमिशन नाकारली! फक्त टास्क बनवणारे किंवा ज्यांच्यासाठी बनवले आहे तेच हा टास्क बदलू शकतात. (Only creator or assignee can edit this task.)');
+    throw new Error('Permission denied! Only the task creator or assignee can edit this task.');
   }
 
   return task as Task;
@@ -623,7 +623,7 @@ export const verifyTaskDeletePermission = async (taskId: string): Promise<Task> 
   const { data: authData } = await supabase.auth.getUser();
   const currentUser = authData?.user;
   if (!currentUser) {
-    throw new Error('कृपया प्रथम लॉगिन करा. (User not logged in)');
+    throw new Error('User not logged in.');
   }
 
   const { data: task, error: fetchErr } = await supabase
@@ -633,7 +633,7 @@ export const verifyTaskDeletePermission = async (taskId: string): Promise<Task> 
     .maybeSingle();
 
   if (fetchErr || !task) {
-    throw new Error('टास्क सापडला नाही. (Task not found)');
+    throw new Error('Task not found.');
   }
 
   const isPlatformAdmin = await adminService.isPlatformAdmin(currentUser.id);
@@ -652,7 +652,7 @@ export const verifyTaskDeletePermission = async (taskId: string): Promise<Task> 
 
   const allowed = canUserDeleteTask(task as Task, currentUser, isPlatformAdmin, isOrgAdmin);
   if (!allowed) {
-    throw new Error('परमिशन नाकारली! फक्त टास्क तयार करणारा किंवा ॲडमिनच हा टास्क डिलीट करू शकतो. (Only the task creator or admin can delete this task.)');
+    throw new Error('Permission denied! Only the task creator or admin can delete this task.');
   }
 
   return task as Task;
@@ -1202,13 +1202,13 @@ export const assignTask = async (
     if (params.assignedTo) {
       const { createInAppNotification } = await import('./notificationInboxService');
       const { data: authData } = await supabase.auth.getUser();
-      const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || 'व्यवस्थापक (Admin)';
+      const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || 'Admin';
       await createInAppNotification({
         recipient_user_id: params.assignedTo,
         organization_id: params.orgId,
         type: 'task_assigned',
-        title: 'नवीन टास्क नियुक्त केला (New Task Assigned)',
-        message: `${assignerName} ने तुम्हाला "${task ? task.title : 'Task'}" हा टास्क सोपवला आहे.${params.remark ? ` सूचना: "${params.remark.trim()}"` : ''}`,
+        title: 'New Task Assigned',
+        message: `${assignerName} assigned you task: "${task ? task.title : 'Task'}".${params.remark ? ` Instructions: "${params.remark.trim()}"` : ''}`,
         entity_type: 'task',
         entity_id: taskId,
       });

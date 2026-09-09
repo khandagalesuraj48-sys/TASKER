@@ -37,7 +37,7 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedStatus === 'completed' && !remarks.trim()) {
-      showToast('टास्क पूर्ण करताना केलेल्या कामाचा शेरा (Work Done Remarks) लिहिणे अनिवार्य आहे.', 'error');
+      showToast('Work completion remarks are mandatory when marking a task complete.', 'error');
       return;
     }
 
@@ -56,7 +56,7 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
       );
       showToast(
         selectedStatus === 'completed'
-          ? `🎉 टास्क पूर्ण झाले! कामाचा शेरा नोंदवला गेला.`
+          ? `🎉 Task marked completed! Work completion remarks recorded.`
           : `Task status updated to ${STATUS_CONFIG[selectedStatus].label}`,
         'success'
       );
@@ -144,15 +144,15 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
               <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
               <span>
                 {selectedStatus === 'completed'
-                  ? 'केलेल्या कामाचा शेरा / निकाल (Work Done Remarks)'
+                  ? 'Work Done Remarks / Outcome'
                   : selectedStatus === 'partial'
-                  ? 'कामाचा प्रगती अहवाल (Progress Remarks)'
-                  : 'शेरा / टिप्पणी (Reason / Remarks)'}
+                  ? 'Progress Remarks / Status Update'
+                  : 'Remarks / Handover Notes'}
               </span>
             </span>
             {selectedStatus === 'completed' && (
               <span className="text-[10px] text-destructive font-bold tracking-normal bg-destructive/10 px-2 py-0.5 rounded-full border border-destructive/20">
-                * अनिवार्य (Mandatory)
+                * Mandatory
               </span>
             )}
           </label>
@@ -161,10 +161,10 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
             onChange={(e) => setRemarks(e.target.value)}
             placeholder={
               selectedStatus === 'completed'
-                ? 'उदा. काम यशस्वीरीत्या पूर्ण झाले. सर्व रिपोर्ट आणि फायली तयार आहेत...'
+                ? 'e.g. Work completed successfully. All inspection reports and files are attached...'
                 : selectedStatus === 'partial'
-                ? 'उदा. ५ पैकी ३ कामे पूर्ण झाली, उर्वरित २ कामे प्रलंबित आहेत...'
-                : 'उदा. काम सुरू केले आहे, पुढील माहितीची प्रतीक्षा आहे...'
+                ? 'e.g. 3 of 5 action items completed, remaining 2 are in progress...'
+                : 'e.g. Work initiated, awaiting client confirmation...'
             }
             rows={3}
             className={`w-full rounded-lg border bg-background p-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 resize-y ${
@@ -175,8 +175,8 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
           />
           <p className="text-[11px] text-muted-foreground mt-1.5">
             {selectedStatus === 'completed'
-              ? '📢 हा शेरा टास्क तयार करणाऱ्या व्यक्तीला (Task Creator) थेट नोटिफिकेशनद्वारे पाठवला जाईल.'
-              : '💡 हा शेरा टाइमलाइनमध्ये सेव्ह होईल आणि पुढील हँडओव्हरसाठी सर्वांना स्पष्ट दिसेल.'}
+              ? '📢 This remark will be sent directly to the task creator via instant notification.'
+              : '💡 This remark will be saved in the activity timeline for transparent handover.'}
           </p>
         </div>
 

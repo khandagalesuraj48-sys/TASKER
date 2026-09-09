@@ -98,14 +98,14 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
     setIsAiParsing(true);
     try {
-      showToast('AI डॉक्युमेंट वाचत आहे, कृपया थोडा वेळ थांबा...', 'info');
+      showToast('AI is parsing document, please wait...', 'info');
       const result = await extractTaskFromDocument(file);
 
       if (result.title) setTitle(result.title);
       if (result.description) {
         let fullDesc = result.description;
         if (result.subtasks && result.subtasks.length > 0) {
-          fullDesc += '\n\nकामाचे टप्पे (Action Items):\n' + result.subtasks.map((s, i) => `${i + 1}. ${s}`).join('\n');
+          fullDesc += '\n\nAction Items / Deliverables:\n' + result.subtasks.map((s, i) => `${i + 1}. ${s}`).join('\n');
         }
         setDescription(fullDesc);
       }
@@ -127,10 +127,10 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
       // Also attach the uploaded document to selectedFiles
       setSelectedFiles((prev) => [...prev, file]);
-      showToast('✨ AI ने PDF मधून सर्व माहिती टास्क फॉर्ममध्ये भरली!', 'success');
+      showToast('✨ AI extracted task details from PDF successfully!', 'success');
     } catch (err: any) {
       console.error('AI parse error:', err);
-      showToast('AI डॉक्युमेंट वाचताना त्रुटी आली: ' + (err.message || 'Error'), 'error');
+      showToast('Failed to parse document: ' + (err.message || 'Error'), 'error');
     } finally {
       setIsAiParsing(false);
       if (aiFileInputRef.current) aiFileInputRef.current.value = '';
@@ -394,14 +394,14 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-black text-slate-900 dark:text-slate-100">
-                    ✨ AI स्मार्ट असिस्टंट (PDF Import)
+                    ✨ AI Smart Assistant (PDF Import)
                   </span>
                   <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 uppercase tracking-wider">
                     Gemini AI
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  PDF किंवा इमेज अपलोड करा — AI आपोआप शीर्षक, वर्णन व तपशील फॉर्ममध्ये भरेल
+                  Upload PDF or document image — AI automatically extracts title, description, and action items
                 </p>
               </div>
             </div>
@@ -449,7 +449,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                   Workplace Task • {currentOrg?.trade_name || currentOrg?.legal_name || 'Rachana Construction Limited'}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  हे काम संस्थेच्या वर्कप्लेस अंतर्गत जोडले जाईल.
+                  This task will be created inside the organization workplace.
                 </p>
               </div>
             </div>
@@ -465,10 +465,10 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               </div>
               <div>
                 <p className="text-xs font-bold text-foreground">
-                  Personal Space (खाजगी काम)
+                  Personal Space
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  हे काम फक्त तुमच्या खाजगी पर्सनल स्पेसमध्ये राहील.
+                  This task will stay private in your personal workspace.
                 </p>
               </div>
             </div>

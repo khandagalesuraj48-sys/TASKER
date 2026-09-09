@@ -148,7 +148,7 @@ export const AdminMembersPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight">Organization Members</h1>
           <p className="text-xs text-slate-400 mt-1">
-            सदस्यांचे नाव, संस्था, भूमिका आणि साईट्स (VTR, 18 B, C, D) व्यवस्थापित करा.
+            Manage member names, roles, organization access, and site assignments (e.g. VTR, 18 B, etc.).
           </p>
         </div>
         <div className="flex items-center gap-2">

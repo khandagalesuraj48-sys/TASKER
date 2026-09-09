@@ -124,56 +124,56 @@ export const TaskAttachments: React.FC<TaskAttachmentsProps> = ({
   const getFileBadge = (fileName: string) => {
     if (isImageFile(fileName)) {
       return (
-        <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 shrink-0">
-          <ImageIcon className="w-5 h-5" />
+        <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 shrink-0">
+          <ImageIcon className="w-4 h-4" />
         </div>
       );
     }
     if (isPdfFile(fileName)) {
       return (
-        <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 shrink-0">
-          <FileText className="w-5 h-5" />
+        <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 shrink-0">
+          <FileText className="w-4 h-4" />
         </div>
       );
     }
     if (isSpreadsheetFile(fileName)) {
       return (
-        <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 shrink-0">
-          <FileSpreadsheet className="w-5 h-5" />
+        <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 shrink-0">
+          <FileSpreadsheet className="w-4 h-4" />
         </div>
       );
     }
     if (isAudioFile(fileName)) {
       return (
-        <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 shrink-0">
-          <Music className="w-5 h-5" />
+        <div className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 shrink-0">
+          <Music className="w-4 h-4" />
         </div>
       );
     }
     if (isVideoFile(fileName)) {
       return (
-        <div className="p-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 shrink-0">
-          <Video className="w-5 h-5" />
+        <div className="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 shrink-0">
+          <Video className="w-4 h-4" />
         </div>
       );
     }
     if (isDocumentFile(fileName)) {
       return (
-        <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 shrink-0">
-          <FileText className="w-5 h-5" />
+        <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 shrink-0">
+          <FileText className="w-4 h-4" />
         </div>
       );
     }
     if (isArchiveFile(fileName)) {
       return (
-        <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 shrink-0">
-          <FileArchive className="w-5 h-5" />
+        <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 shrink-0">
+          <FileArchive className="w-4 h-4" />
         </div>
       );
     }
     return (
-      <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0">
-        <FileGeneric className="w-5 h-5" />
+      <div className="p-1.5 rounded-lg bg-muted text-muted-foreground shrink-0">
+        <FileGeneric className="w-4 h-4" />
       </div>
     );
   };
@@ -200,19 +200,19 @@ export const TaskAttachments: React.FC<TaskAttachmentsProps> = ({
             return (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-sm"
+                className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-card hover:bg-muted/30 transition-colors shadow-2xs"
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   {getFileBadge(item.file_name)}
                   <div className="min-w-0">
                     <p
-                      className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      className="text-xs font-semibold text-foreground truncate cursor-pointer hover:text-primary transition-colors"
                       onClick={() => setPreviewItem(item)}
                       title={item.file_name}
                     >
                       {item.file_name}
                     </p>
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
                       {formatFileSize(item.file_size)} • {formatDateTime(item.uploaded_at)}
                     </p>
                   </div>
@@ -222,25 +222,25 @@ export const TaskAttachments: React.FC<TaskAttachmentsProps> = ({
                   <button
                     type="button"
                     onClick={() => setPreviewItem(item)}
-                    className="p-2 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-xl transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
+                    className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors cursor-pointer"
                     title="Preview file"
                     aria-label="Preview file"
                   >
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-3.5 h-3.5" />
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleDownloadFile(item)}
                     disabled={downloadingId === item.id}
-                    className="p-2 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-xl transition-colors disabled:opacity-50 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                    className="p-1.5 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                     title="Download file"
                     aria-label="Download file"
                   >
                     {downloadingId === item.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
                     ) : (
-                      <Download className="w-4 h-4" />
+                      <Download className="w-3.5 h-3.5" />
                     )}
                   </button>
 
@@ -248,11 +248,11 @@ export const TaskAttachments: React.FC<TaskAttachmentsProps> = ({
                     <button
                       type="button"
                       onClick={() => setItemToDelete(item)}
-                      className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
+                      className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
                       title="Delete attachment"
                       aria-label="Delete attachment"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>

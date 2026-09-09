@@ -47,7 +47,10 @@ export const DashboardPage: React.FC = () => {
 
   // Filter tasks for pending work only (Pending, In Progress, Partial)
   const pendingTasks = useMemo(() => {
-    return tasks.filter((t: Task) => ['pending', 'in_progress', 'partial'].includes(t.status));
+    return tasks.filter((t: Task) => {
+      if (t.parent_task_id) return false;
+      return ['pending', 'in_progress', 'partial'].includes(t.status);
+    });
   }, [tasks]);
 
   // Tab counts

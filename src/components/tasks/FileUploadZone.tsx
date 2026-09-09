@@ -83,10 +83,10 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => !isUploading && inputRef.current?.click()}
-        className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${
+        className={`relative flex items-center justify-center gap-3 p-3 sm:p-3.5 rounded-xl border border-dashed transition-all cursor-pointer ${
           isDragOver
-            ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30'
-            : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/80 hover:border-slate-300 dark:hover:border-slate-700'
+            ? 'border-primary bg-primary/10'
+            : 'border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/40'
         } ${isUploading ? 'opacity-60 pointer-events-none' : ''}`}
       >
         <input
@@ -100,25 +100,26 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         />
 
         {isUploading ? (
-          <div className="flex flex-col items-center gap-2 py-3">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+          <div className="flex items-center gap-2 py-1">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <p className="text-xs font-semibold text-foreground">
               {uploadProgressText || 'Uploading to secure storage...'}
             </p>
           </div>
         ) : (
-          <>
-            <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 mb-2.5 shadow-sm">
-              <UploadCloud className="w-6 h-6" />
+          <div className="flex items-center gap-2.5 text-center sm:text-left">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+              <UploadCloud className="w-4 h-4" />
             </div>
-            <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 text-center">
-              Drag & drop files here, or <span className="text-blue-600 dark:text-blue-400 underline">browse</span>
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 text-center max-w-sm">
-              Supports multiple files: Images, PDF, Office Docs, Excel, Audio, Video, ZIP (Max 25MB).
-              <span className="block text-rose-500 dark:text-rose-400 font-medium mt-0.5">HTML files strictly blocked.</span>
-            </p>
-          </>
+            <div>
+              <p className="text-xs font-semibold text-foreground">
+                Drag & drop files, or <span className="text-primary underline">browse</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Images, PDF, Excel, Docs, ZIP (Max 25MB)
+              </p>
+            </div>
+          </div>
         )}
       </div>
 

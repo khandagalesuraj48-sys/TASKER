@@ -287,13 +287,13 @@ export const TaskAssignmentModal: React.FC<TaskAssignmentModalProps> = ({
                 onChange={(e) => setRemark(e.target.value)}
                 placeholder={
                   task.person_name
-                    ? `उदा. ${task.person_name} कडून हे काम झाले आहे. आता पुढील व्यक्तीने काय करायचे आहे ते येथे स्पष्ट लिहा...`
-                    : 'उदा. क्लायंटकडून कागदपत्रे गोळा करा आणि संध्याकाळी ५ वाजेपर्यंत रिपोर्ट सादर करा...'
+                    ? `e.g. Work by ${task.person_name} is complete. Next action required: ...`
+                    : 'e.g. Collect client documents and submit the final inspection report by 5 PM...'
                 }
                 className="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                💡 ही सूचना नवीन व्यक्तीला टास्क उघडल्यावर सर्वात वर ठळकपणे दिसेल, ज्यामुळे त्याचा गोंधळ होणार नाही.
+                💡 This instruction will be pinned at the top of the task for the assignee.
               </p>
             </div>
 

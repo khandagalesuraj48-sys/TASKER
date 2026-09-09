@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  GitFork, 
   Plus, 
   Trash2, 
   CheckCircle2, 
@@ -141,21 +140,20 @@ export const TaskSubtasks: React.FC<TaskSubtasksProps> = ({
           Loading delegated subtasks...
         </div>
       ) : subtasks.length === 0 ? (
-        <div className="p-6 rounded-xl border border-dashed border-border text-center space-y-2 bg-muted/20">
-          <GitFork className="w-5 h-5 text-muted-foreground mx-auto" />
+        <div className="p-3.5 rounded-xl border border-dashed border-border text-center space-y-1 bg-muted/20">
           <p className="text-xs font-semibold text-foreground">
-            No delegated subtasks yet
+            No delegated deliverables yet
           </p>
-          <p className="text-[11px] text-muted-foreground max-w-xs mx-auto">
-            You or the assignee can delegate specific deliverables (such as attaching a site log book or photo proof) to any team member.
+          <p className="text-[10px] text-muted-foreground max-w-xs mx-auto">
+            Delegate specific deliverables or site photo proofs to team members.
           </p>
           {parentTask && (
             <button
               type="button"
               onClick={() => setIsDelegateModalOpen(true)}
-              className="mt-1 text-xs text-primary hover:underline font-semibold"
+              className="mt-0.5 text-xs text-primary hover:underline font-semibold cursor-pointer"
             >
-              + Delegate First Subtask
+              + Delegate Subtask
             </button>
           )}
         </div>
@@ -169,24 +167,24 @@ export const TaskSubtasks: React.FC<TaskSubtasksProps> = ({
             return (
               <div
                 key={sub.id}
-                className={`p-3.5 rounded-xl border transition-all ${
+                className={`p-2.5 rounded-xl border transition-all ${
                   isCompleted
                     ? 'bg-emerald-500/5 border-emerald-500/20'
-                    : 'bg-card border-border shadow-xs'
+                    : 'bg-card border-border shadow-2xs'
                 }`}
               >
                 {/* Subtask Card Header */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
                     {isCompleted ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     ) : (
-                      <Circle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                      <Circle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span
-                          className={`text-xs font-semibold leading-snug ${
+                          className={`text-xs font-semibold leading-tight ${
                             isCompleted
                               ? 'line-through text-muted-foreground'
                               : 'text-foreground'
@@ -197,21 +195,21 @@ export const TaskSubtasks: React.FC<TaskSubtasksProps> = ({
 
                         <Badge
                           variant={isCompleted ? 'success' : 'warning'}
-                          className="text-[10px] px-1.5 py-0 uppercase tracking-wider"
+                          className="text-[9px] px-1.5 py-0 uppercase tracking-wider"
                         >
-                          {isCompleted ? 'Completed' : 'Pending'}
+                          {isCompleted ? 'Done' : 'Pending'}
                         </Badge>
                       </div>
 
                       {/* Description */}
                       {sub.description && (
-                        <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                        <p className="text-[10px] text-muted-foreground mt-0.5 leading-normal line-clamp-2">
                           {sub.description}
                         </p>
                       )}
 
-                      {/* Meta Information: Assignee C, Due Date */}
-                      <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] text-muted-foreground">
+                      {/* Meta Information: Assignee, Due Date */}
+                      <div className="flex flex-wrap items-center gap-2.5 mt-1.5 text-[10px] text-muted-foreground">
                         <span className="flex items-center gap-1 font-medium text-foreground">
                           <User className="w-3 h-3 text-muted-foreground" />
                           <span>{isCompleted ? `Done by: ${sub.completed_by || assigneeName}` : `Assigned to: ${assigneeName}`}</span>
@@ -225,7 +223,7 @@ export const TaskSubtasks: React.FC<TaskSubtasksProps> = ({
                         )}
 
                         {isCompleted && sub.completed_at && (
-                          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-mono text-[10px]">
+                          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-mono text-[9px]">
                             <Clock className="w-3 h-3" />
                             <span>{formatDateTime(sub.completed_at)}</span>
                           </span>
@@ -235,12 +233,12 @@ export const TaskSubtasks: React.FC<TaskSubtasksProps> = ({
                   </div>
 
                   {/* Actions: Complete with Proof or Delete */}
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     {!isCompleted && (
                       <Button
                         size="sm"
                         onClick={() => setSubtaskToComplete(sub)}
-                        className="h-6 px-2 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="h-6 px-2 text-[10px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                       >
                         <CheckCircle2 className="w-3 h-3 mr-1" />
                         Complete
@@ -250,7 +248,7 @@ export const TaskSubtasks: React.FC<TaskSubtasksProps> = ({
                     <button
                       type="button"
                       onClick={(e) => handleDelete(sub.id, e)}
-                      className="p-1 text-muted-foreground hover:text-destructive rounded-md transition-colors"
+                      className="p-1 text-muted-foreground hover:text-destructive rounded-lg transition-colors cursor-pointer"
                       title="Delete subtask"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
