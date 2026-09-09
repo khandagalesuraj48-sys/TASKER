@@ -6,7 +6,7 @@ import { PriorityBadge } from '../common/PriorityBadge';
 import { formatDateOnly, formatRelativePending, isTaskOverdue } from '../../lib/dateUtils';
 import { ChangeStatusModal } from './ChangeStatusModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { softDeleteTask, restoreTask, permanentDeleteTask, canUserDeleteTask } from '../../services/taskService';
+import { softDeleteTask, restoreTask, permanentDeleteTask, canUserDeleteTask, canUserEditTask } from '../../services/taskService';
 import { useToast } from '../../context/ToastContext';
 import { useTask } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
@@ -123,6 +123,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
               const overdue = isTaskOverdue(task.due_date, task.status);
               const taskSite = sites?.find((s) => s.id === task.site_id);
               const canDelete = canUserDeleteTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner);
+              const canEdit = canUserEditTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner);
               const isOpen = openActionId === task.id;
 
               return (
@@ -253,20 +254,24 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                                 <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                                 <span>View Details</span>
                               </button>
-                              <button
-                                onClick={() => onEdit?.(task)}
-                                className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted/70 rounded-lg flex items-center gap-2"
-                              >
-                                <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
-                                <span>Edit Task</span>
-                              </button>
-                              <button
-                                onClick={() => setActiveTaskForStatus(task)}
-                                className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted/70 rounded-lg flex items-center gap-2"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                                <span>Change Status</span>
-                              </button>
+                              {canEdit && (
+                                <>
+                                  <button
+                                    onClick={() => onEdit?.(task)}
+                                    className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted/70 rounded-lg flex items-center gap-2"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <span>Edit Task</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setActiveTaskForStatus(task)}
+                                    className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted/70 rounded-lg flex items-center gap-2"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                                    <span>Change Status</span>
+                                  </button>
+                                </>
+                              )}
                               {canDelete && (
                                 <>
                                   <div className="my-1 border-t border-border/80" />

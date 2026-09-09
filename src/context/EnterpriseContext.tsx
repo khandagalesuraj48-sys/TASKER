@@ -192,7 +192,7 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => window.removeEventListener('enterprise-context-changed', handleContextChanged);
   }, [loadData]);
 
-  // Supabase Realtime: instantly unlock workplace access or update request status without page refresh
+  // Supabase Realtime: instantly unlock workplace access, new user approvals, and live site assignments without page refresh
   useEffect(() => {
     if (!user?.id) return;
 
@@ -204,6 +204,23 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         { event: '*', schema: 'public', table: 'org_memberships' },
         () => {
           loadData();
+          window.dispatchEvent(new CustomEvent('enterprise-sites-updated'));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'org_user_sites' },
+        () => {
+          loadData();
+          window.dispatchEvent(new CustomEvent('enterprise-sites-updated'));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'org_sites' },
+        () => {
+          loadData();
+          window.dispatchEvent(new CustomEvent('enterprise-sites-updated'));
         }
       )
       .on(
@@ -218,6 +235,14 @@ export const EnterpriseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         { event: '*', schema: 'public', table: 'organizations' },
         () => {
           loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => {
+          loadData();
+          window.dispatchEvent(new CustomEvent('enterprise-sites-updated'));
         }
       )
       .subscribe();

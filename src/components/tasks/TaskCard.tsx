@@ -7,7 +7,7 @@ import { formatDateOnly, formatRelativePending, isTaskOverdue, formatDateTime } 
 import { ChangeStatusModal } from './ChangeStatusModal';
 import { QuickCompleteModal } from './QuickCompleteModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { softDeleteTask, restoreTask, permanentDeleteTask, canUserDeleteTask } from '../../services/taskService';
+import { softDeleteTask, restoreTask, permanentDeleteTask, canUserDeleteTask, canUserEditTask } from '../../services/taskService';
 import { shareTaskOnWhatsApp, speakTaskDetails, stopSpeaking } from '../../utils/taskSharingUtils';
 import { useToast } from '../../context/ToastContext';
 import { useTask } from '../../context/TaskContext';
@@ -57,6 +57,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const { isAdmin: isOrgAdmin, isOwner: isOrgOwner, sites } = useEnterprise();
 
   const canDelete = canUserDeleteTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner);
+  const canEdit = canUserEditTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner);
 
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [statusModalOpen, setStatusModalOpen] = useState<boolean>(false);
@@ -191,20 +192,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                       <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
                       <span>Open Record</span>
                     </button>
-                    <button
-                      onClick={() => onEdit?.(task)}
-                      className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>Edit Task</span>
-                    </button>
-                    <button
-                      onClick={() => setStatusModalOpen(true)}
-                      className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                      <span>Change Status</span>
-                    </button>
+                    {canEdit && (
+                      <>
+                        <button
+                          onClick={() => onEdit?.(task)}
+                          className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span>Edit Task</span>
+                        </button>
+                        <button
+                          onClick={() => setStatusModalOpen(true)}
+                          className="w-full px-2.5 py-1.5 text-left text-foreground hover:bg-muted rounded-sm flex items-center gap-2"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                          <span>Change Status</span>
+                        </button>
+                      </>
+                    )}
                     {canDelete && (
                       <>
                         <div className="my-1 border-t border-border" />
@@ -379,17 +384,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             {/* Quick Complete Action */}
             <div>
               {task.status !== 'completed' ? (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setQuickDoneOpen(true);
-                  }}
-                  className="px-2.5 py-1 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1 shadow-2xs transition-colors"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Done</span>
-                </button>
+                canEdit ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setQuickDoneOpen(true);
+                    }}
+                    className="px-2.5 py-1 rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1 shadow-2xs transition-colors"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Done</span>
+                  </button>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-sm bg-muted text-[11px] font-medium text-muted-foreground flex items-center gap-1 border border-border/60">
+                    <span>👁️ View Only</span>
+                  </span>
+                )
               ) : (
                 <button
                   type="button"

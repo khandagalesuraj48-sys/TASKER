@@ -33,16 +33,30 @@ export const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { isEnterpriseMode, setEnterpriseMode } = useEnterprise();
+  const { isEnterpriseMode } = useEnterprise();
 
-  // If directly accessing an /org/ workplace URL, ensure enterprise mode is active
+  // Strict context isolation: Personal stays in Personal, Workplace stays in Workplace
   useEffect(() => {
-    if (location.pathname.startsWith('/org/')) {
-      if (!isEnterpriseMode) {
-        setEnterpriseMode(true);
+    const p = location.pathname;
+    // Shared neutral routes accessible in both modes
+    if (p.startsWith('/settings') || p.startsWith('/tasks/') || p.startsWith('/shared/')) {
+      return;
+    }
+
+    if (isEnterpriseMode) {
+      // User is in Workplace context: redirect personal views to workplace operations
+      if (p === '/' || p === '/tasks' || p === '/completed') {
+        navigate('/org/tasks', { replace: true });
+      } else if (p === '/pending') {
+        navigate('/org/pending', { replace: true });
+      }
+    } else {
+      // User is in Personal context: strictly block workplace routes until switched
+      if (p.startsWith('/org/')) {
+        navigate('/', { replace: true });
       }
     }
-  }, [location.pathname, isEnterpriseMode, setEnterpriseMode]);
+  }, [location.pathname, isEnterpriseMode, navigate]);
 
   // Initialize native Android hardware back button handler
   useAndroidBackHandler();

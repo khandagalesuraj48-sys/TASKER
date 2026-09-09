@@ -25,10 +25,10 @@ import { DEFAULT_USER_NAME } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { useAdmin } from '../../context/AdminContext';
-import { extractTaskFromDocument, extractTaskFromSpokenText } from '../../services/aiTaskService';
+import { extractTaskFromDocument } from '../../services/aiTaskService';
 import { FileUploadZone } from './FileUploadZone';
 import { ReminderControls } from '../reminders/ReminderControls';
-import { Paperclip, X, User, Building2, UserPlus, Sparkles, FileUp, Loader2, Mic, MicOff } from 'lucide-react';
+import { Paperclip, X, User, Building2, UserPlus, Sparkles, FileUp, Loader2 } from 'lucide-react';
 
 interface TaskFormModalProps {
   isOpen: boolean;
@@ -137,109 +137,6 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
     }
   };
 
-  // Marathi Voice-to-Task State & Handlers
-  const [isListening, setIsListening] = useState<boolean>(false);
-  const recognitionRef = useRef<any>(null);
-
-  const startListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      showToast('तुमच्या ब्राउझर किंवा डिव्हाइसवर व्हॉईस इनपुट सपोर्ट उपलब्ध नाही.', 'warning');
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'mr-IN'; // Default to Marathi
-      recognition.continuous = false;
-      recognition.interimResults = false;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        showToast('🎙️ ऐकत आहे... कृपया मराठीत बोला...', 'info');
-      };
-
-      recognition.onresult = async (event: any) => {
-        const transcript = event.results?.[0]?.[0]?.transcript;
-        if (transcript) {
-          setIsListening(false);
-          await handleVoiceInput(transcript);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event);
-        setIsListening(false);
-        if (event.error !== 'no-speech') {
-          showToast(`माईक त्रुटी: ${event.error}`, 'error');
-        }
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err: any) {
-      console.error('Speech recognition start failed:', err);
-      setIsListening(false);
-      showToast('माईक सुरू करता आला नाही: ' + (err.message || 'Error'), 'error');
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {
-        // ignore
-      }
-    }
-    setIsListening(false);
-  };
-
-  const handleVoiceInput = async (spokenText: string) => {
-    setIsAiParsing(true);
-    try {
-      showToast(`Processing voice input...`, 'info');
-      const result = await extractTaskFromSpokenText(spokenText);
-
-      if (result.title) setTitle(result.title);
-      if (result.description) {
-        let fullDesc = result.description;
-        if (result.subtasks && result.subtasks.length > 0) {
-          fullDesc += '\n\nAction Steps:\n' + result.subtasks.map((s, i) => `${i + 1}. ${s}`).join('\n');
-        }
-        setDescription(fullDesc);
-      }
-      if (result.priority) setPriority(result.priority);
-      if (result.dueDate) setDueDate(result.dueDate);
-
-      if (result.suggestedSite && sites.length > 0) {
-        const query = result.suggestedSite.toLowerCase();
-        const matched = sites.find(
-          (s) =>
-            s.name.toLowerCase().includes(query) ||
-            s.code.toLowerCase().includes(query) ||
-            query.includes(s.name.toLowerCase()) ||
-            query.includes(s.code.toLowerCase())
-        );
-        if (matched) {
-          setSelectedSiteId(matched.id);
-        }
-      }
-
-      showToast('Task details filled from voice input!', 'success');
-    } catch (err: any) {
-      console.error('Voice parsing error:', err);
-      if (!title) setTitle(spokenText.slice(0, 50));
-      if (!description) setDescription(spokenText);
-      showToast('Voice input added to task.', 'info');
-    } finally {
-      setIsAiParsing(false);
-    }
-  };
 
   // Load active organization's employees when in workplace scope
   useEffect(() => {
@@ -294,7 +191,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setDueDate(initialValues?.due_date ? formatInputDate(initialValues.due_date) : '');
       setInitialNote(initialValues?.initialNote || '');
       setSelectedFiles([]);
-      const defaultScope: TaskScope = isEnterpriseMode ? 'workplace' : 'personal';
+      const defaultScope: TaskScope = (isEnterpriseMode || initialValues?.scope === 'workplace') ? 'workplace' : 'personal';
       setScope(defaultScope);
       const defaultOrg = defaultScope === 'workplace' ? (initialValues?.org_id || currentOrg?.id || availableOrgs[0]?.id || '') : '';
       setSelectedOrgId(defaultOrg);
@@ -487,7 +384,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* ✨ AI Super-Powers: Voice-to-Task & PDF Document Import Card */}
+        {/* ✨ AI Super-Powers: PDF Document Import Card */}
         <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-violet-600/10 via-purple-600/10 to-indigo-600/10 border border-violet-200 dark:border-violet-900/60 shadow-xs space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
@@ -497,43 +394,17 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-black text-slate-900 dark:text-slate-100">
-                    ✨ AI स्मार्ट असिस्टंट
+                    ✨ AI स्मार्ट असिस्टंट (PDF Import)
                   </span>
                   <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 uppercase tracking-wider">
                     Gemini AI
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  टाईप न करता मराठीत बोलून किंवा PDF फाईल अपलोड करून सेकंदात टास्क भरा
+                  PDF किंवा इमेज अपलोड करा — AI आपोआप शीर्षक, वर्णन व तपशील फॉर्ममध्ये भरेल
                 </p>
               </div>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* 🎙️ Voice-to-Task Button */}
-            <button
-              type="button"
-              disabled={isAiParsing}
-              onClick={isListening ? stopListening : startListening}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all transform active:scale-95 shadow-xs ${
-                isListening
-                  ? 'bg-rose-600 text-white animate-pulse ring-4 ring-rose-300 dark:ring-rose-950'
-                  : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-violet-950/50'
-              } disabled:opacity-50`}
-            >
-              {isListening ? (
-                <>
-                  <MicOff className="w-4 h-4 text-white" />
-                  <span>🎙️ ऐकत आहे... (थांबवण्यासाठी क्लिक करा)</span>
-                </>
-              ) : (
-                <>
-                  <Mic className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                  <span>🎙️ बोलून टास्क भरा (मराठी)</span>
-                </>
-              )}
-            </button>
 
             {/* 📄 PDF Import Button */}
             <div>
@@ -546,7 +417,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
               />
               <button
                 type="button"
-                disabled={isAiParsing || isListening}
+                disabled={isAiParsing}
                 onClick={() => aiFileInputRef.current?.click()}
                 className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 active:scale-95 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
               >
@@ -566,59 +437,43 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
           </div>
         </div>
 
-        {/* Interactive Space Switcher */}
-        {!isEditing ? (
-          <div className="p-1 rounded-xl bg-muted/60 border border-border/80 flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setScope('personal')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                scope === 'personal'
-                  ? 'bg-background text-foreground shadow-xs border border-border/60'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <User className="w-3.5 h-3.5 text-blue-500" />
-              <span>Personal Space</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">Private</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setScope('workplace')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                scope === 'workplace'
-                  ? 'bg-background text-foreground shadow-xs border border-border/60'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5 text-purple-500" />
-              <span>Workplace</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium">Team ERP</span>
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/80">
+        {/* Strict Context Display: Personal or Workplace locked */}
+        {scope === 'workplace' ? (
+          <div className="flex items-center justify-between p-3 bg-purple-500/10 dark:bg-purple-950/30 rounded-xl border border-purple-500/25">
             <div className="flex items-center gap-2.5">
-              {scope === 'workplace' ? (
-                <Building2 className="w-4 h-4 text-purple-500 shrink-0" />
-              ) : (
-                <User className="w-4 h-4 text-blue-500 shrink-0" />
-              )}
+              <div className="w-8 h-8 rounded-lg bg-purple-600/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                <Building2 className="w-4 h-4" />
+              </div>
               <div>
                 <p className="text-xs font-bold text-foreground">
-                  {scope === 'workplace' ? 'Workplace Task' : 'Personal Task'}
+                  Workplace Task • {currentOrg?.trade_name || currentOrg?.legal_name || 'Rachana Construction Limited'}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {scope === 'workplace' ? 'Organization collaboration & team assignment' : 'Private task visible strictly to you'}
+                  हे काम संस्थेच्या वर्कप्लेस अंतर्गत जोडले जाईल.
                 </p>
               </div>
             </div>
-            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-              scope === 'workplace'
-                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
-                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-            }`}>
-              {scope === 'workplace' ? 'Workplace' : 'Personal'}
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+              Workplace
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-3 bg-blue-500/10 dark:bg-blue-950/30 rounded-xl border border-blue-500/25">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-600/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <User className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-foreground">
+                  Personal Space (खाजगी काम)
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  हे काम फक्त तुमच्या खाजगी पर्सनल स्पेसमध्ये राहील.
+                </p>
+              </div>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+              Personal
             </span>
           </div>
         )}

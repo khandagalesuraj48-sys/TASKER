@@ -108,6 +108,20 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     reloadStats();
   }, [refreshKey, reloadStats]);
 
+  // Sync tasks immediately whenever enterprise sites or memberships are updated
+  useEffect(() => {
+    const handleEnterpriseSync = () => {
+      triggerRefresh();
+      reloadStats();
+    };
+    window.addEventListener('enterprise-sites-updated', handleEnterpriseSync);
+    window.addEventListener('enterprise-context-changed', handleEnterpriseSync);
+    return () => {
+      window.removeEventListener('enterprise-sites-updated', handleEnterpriseSync);
+      window.removeEventListener('enterprise-context-changed', handleEnterpriseSync);
+    };
+  }, [triggerRefresh, reloadStats]);
+
   // Reset state when user logs out
   useEffect(() => {
     if (!isAuthenticated) {

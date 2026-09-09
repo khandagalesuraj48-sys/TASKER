@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTaskById, softDeleteTask, canUserDeleteTask } from '../services/taskService';
+import { getTaskById, softDeleteTask, canUserDeleteTask, canUserEditTask } from '../services/taskService';
 import { getStatusHistory } from '../services/statusHistoryService';
 import { getNotes } from '../services/notesService';
 import { getAttachments } from '../services/attachmentService';
@@ -75,6 +75,9 @@ export const TaskDetailPage: React.FC = () => {
 
   const canDelete = task
     ? canUserDeleteTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner)
+    : false;
+  const canEdit = task
+    ? canUserEditTask(task, user, isPlatformAdmin, isOrgAdmin || isOrgOwner)
     : false;
   const [history, setHistory] = useState<TaskStatusHistory[]>([]);
   const [notes, setNotes] = useState<TaskNote[]>([]);
@@ -309,24 +312,32 @@ export const TaskDetailPage: React.FC = () => {
             <Share2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
             Share
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAssignModalOpen(true)}
-            className="h-8 text-xs font-medium"
-          >
-            <UserPlus className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-            Assign
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setEditModalOpen(true)}
-            className="h-8 text-xs font-medium"
-          >
-            <Edit2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-            Edit
-          </Button>
+          {canEdit ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAssignModalOpen(true)}
+                className="h-8 text-xs font-medium"
+              >
+                <UserPlus className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                Assign
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditModalOpen(true)}
+                className="h-8 text-xs font-medium"
+              >
+                <Edit2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                Edit
+              </Button>
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-xs font-medium text-muted-foreground border border-border/80">
+              <span>👁️ View Only (फक्त वाचनासाठी)</span>
+            </span>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -349,7 +360,7 @@ export const TaskDetailPage: React.FC = () => {
             {isExportingPdf ? 'Exporting...' : 'PDF Work-Order'}
           </Button>
 
-          {task.status !== 'completed' && (
+          {canEdit && task.status !== 'completed' && (
             <Button
               size="sm"
               className="h-8 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"

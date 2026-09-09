@@ -285,6 +285,8 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
 };
 
 export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Task> => {
+  await verifyTaskEditPermission(id);
+
   const updatePayload: Record<string, any> = {
     updated_at: new Date().toISOString(),
   };
@@ -376,6 +378,8 @@ export const updateTaskStatus = async (
   remarks?: string,
   actor: string = DEFAULT_USER_NAME
 ): Promise<Task> => {
+  await verifyTaskEditPermission(id);
+
   // 1. Try transactional RPC first (atomic status update + history entry)
   try {
     const { error: rpcError } = await supabase.rpc(
@@ -538,6 +542,81 @@ export const canUserDeleteTask = (
   }
 
   return false;
+};
+
+export const canUserEditTask = (
+  task: Pick<Task, 'user_id' | 'created_by' | 'assigned_to' | 'person_name' | 'org_id' | 'scope'>,
+  user?: { id?: string; email?: string; user_metadata?: any } | null,
+  isPlatformAdmin?: boolean,
+  isOrgAdmin?: boolean
+): boolean => {
+  if (isPlatformAdmin) return true;
+  if (isOrgAdmin) return true;
+  if (!user || !user.id) return false;
+
+  // Personal task: only creator/owner can edit
+  if (!task.org_id || task.scope === 'personal') {
+    return task.user_id === user.id;
+  }
+
+  // Workplace task:
+  // 1. Creator (ज्याने टास्क तयार केला)
+  if (task.user_id && task.user_id === user.id) return true;
+  if (task.created_by) {
+    if (user.email && task.created_by.toLowerCase() === user.email.toLowerCase()) return true;
+    if (user.user_metadata?.full_name && task.created_by.toLowerCase() === user.user_metadata.full_name.toLowerCase()) return true;
+    if (task.created_by === user.id) return true;
+  }
+
+  // 2. Assignee (ज्याच्यासाठी टास्क तयार केला / नियुक्त केला)
+  if (task.assigned_to && task.assigned_to === user.id) return true;
+  if (task.person_name) {
+    const userFullName = user.user_metadata?.full_name || '';
+    const userEmailPrefix = user.email ? user.email.split('@')[0] : '';
+    if (userFullName && task.person_name.toLowerCase() === userFullName.toLowerCase()) return true;
+    if (userEmailPrefix && task.person_name.toLowerCase() === userEmailPrefix.toLowerCase()) return true;
+  }
+
+  return false;
+};
+
+export const verifyTaskEditPermission = async (taskId: string): Promise<Task> => {
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUser = authData?.user;
+  if (!currentUser) {
+    return (await getTaskById(taskId));
+  }
+
+  const { data: task, error: fetchErr } = await supabase
+    .from('tasks')
+    .select('id, user_id, created_by, assigned_to, person_name, org_id, scope, title')
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (fetchErr || !task) {
+    throw new Error('टास्क सापडला नाही. (Task not found)');
+  }
+
+  const isPlatformAdmin = await adminService.isPlatformAdmin(currentUser.id);
+  let isOrgAdmin = false;
+  if (task.org_id) {
+    const { data: membership } = await supabase
+      .from('org_memberships')
+      .select('role')
+      .eq('org_id', task.org_id)
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if (membership && (membership.role === 'org_owner' || membership.role === 'org_admin')) {
+      isOrgAdmin = true;
+    }
+  }
+
+  const allowed = canUserEditTask(task as Task, currentUser, isPlatformAdmin, isOrgAdmin);
+  if (!allowed) {
+    throw new Error('परमिशन नाकारली! फक्त टास्क बनवणारे किंवा ज्यांच्यासाठी बनवले आहे तेच हा टास्क बदलू शकतात. (Only creator or assignee can edit this task.)');
+  }
+
+  return task as Task;
 };
 
 export const verifyTaskDeletePermission = async (taskId: string): Promise<Task> => {

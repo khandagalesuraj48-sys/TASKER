@@ -676,6 +676,10 @@ export const assignUserToSite = async (
         site_id: siteId,
       }, { onConflict: 'user_id,site_id' });
 
+    if (!error) {
+      window.dispatchEvent(new CustomEvent('enterprise-sites-updated'));
+      window.dispatchEvent(new CustomEvent('enterprise-context-changed'));
+    }
     return !error;
   } catch {
     return false;
@@ -697,6 +701,10 @@ export const removeUserFromSite = async (
       .eq('user_id', userId)
       .eq('site_id', siteId);
 
+    if (!error) {
+      window.dispatchEvent(new CustomEvent('enterprise-sites-updated'));
+      window.dispatchEvent(new CustomEvent('enterprise-context-changed'));
+    }
     return !error;
   } catch {
     return false;
@@ -736,6 +744,9 @@ export const setUserSites = async (
         return false;
       }
     }
+
+    window.dispatchEvent(new CustomEvent('enterprise-sites-updated'));
+    window.dispatchEvent(new CustomEvent('enterprise-context-changed'));
     return true;
   } catch (err) {
     console.error('Error in setUserSites:', err);

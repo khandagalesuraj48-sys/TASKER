@@ -158,7 +158,7 @@ export const OrgPendingTasksPage: React.FC = () => {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            {currentOrg?.legal_name} • Operational job site backlog and pending delegation queue
+            {currentOrg?.legal_name} • सर्व नियुक्त साईटवरील प्रलंबित कामे (All Site Pending Tasks — View-only for site members; Edit reserved for creator & assignee)
           </p>
         </div>
 
