@@ -293,7 +293,10 @@ export type MatchFieldCategory =
   | 'status_priority'
   | 'person'
   | 'status_history'
-  | 'attachment';
+  | 'attachment'
+  | 'subtask'
+  | 'site'
+  | 'id';
 
 export interface UniversalSearchResult {
   task: Task;

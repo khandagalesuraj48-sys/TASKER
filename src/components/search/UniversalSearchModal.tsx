@@ -41,6 +41,12 @@ const getMatchBadge = (field: MatchFieldCategory) => {
       return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300">Status History</span>;
     case 'attachment':
       return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300">Attachment File</span>;
+    case 'subtask':
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300">Subtask / Item</span>;
+    case 'site':
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300">Site / Location</span>;
+    case 'id':
+      return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono">Task ID / No</span>;
     default:
       return null;
   }

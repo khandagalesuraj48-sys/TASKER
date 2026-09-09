@@ -8,7 +8,6 @@ import {
   Trash2,
   Settings,
   X,
-  Plus,
   Sun,
   Moon,
   LogOut,
@@ -49,7 +48,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   useBackButton(isOpen, onClose, 30);
 
-  const { stats, openCreateModal } = useTask();
+  const { stats } = useTask();
   const { userEmail, displayName, signOut } = useAuth();
   const { effectiveTheme, toggleTheme } = useTheme();
   const {
@@ -293,29 +292,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </div>
           )
         )}
-
-        {/* Primary Action Button: Create Task */}
-        <button
-          onClick={() => {
-            openCreateModal({
-              scope: isEnterpriseMode ? 'workplace' : 'personal',
-              org_id: isEnterpriseMode ? currentOrg?.id : undefined,
-            });
-            onClose();
-          }}
-          className={cn(
-            'w-full py-2 px-3 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98]',
-            isEnterpriseMode
-              ? 'bg-workplace hover:bg-workplace/90'
-              : 'bg-primary hover:bg-primary/90'
-          )}
-          title={isEnterpriseMode ? 'New Workplace Task' : 'New Personal Task'}
-        >
-          <Plus className="w-4 h-4 shrink-0" />
-          {!isCollapsed && (
-            <span>New Task</span>
-          )}
-        </button>
 
         {/* Navigation list */}
         <div className="space-y-1 pt-1">

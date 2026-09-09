@@ -4,14 +4,12 @@ import {
   Menu,
   Search,
   Plus,
-  Radio,
   ChevronDown,
   Shield,
   Building2,
   User,
   LogOut,
   ChevronRight,
-  Mic,
 } from 'lucide-react';
 import { useTask } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
@@ -20,7 +18,6 @@ import { useEnterprise } from '../../context/EnterpriseContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useBackButton } from '../../hooks/useBackButton';
 import { NotificationBell } from '../notifications/NotificationBell';
-import { VoiceTaskModal } from '../tasks/VoiceTaskModal';
 import { cn } from '@/lib/utils';
 
 interface HeaderProps {
@@ -31,7 +28,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const {
     openCreateModal,
     openUniversalSearch,
-    isRealtimeConnected,
   } = useTask();
 
   const { userEmail, displayName, signOut } = useAuth();
@@ -50,7 +46,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
   const [profileOpen, setProfileOpen] = useState<boolean>(false);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState<boolean>(false);
-  const [voiceModalOpen, setVoiceModalOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const orgMenuRef = useRef<HTMLDivElement>(null);
 
@@ -98,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
     if (p === '/reminders') return 'Reminders';
     if (p === '/bin') return 'Recycle Bin';
     if (p === '/settings') return 'Settings';
-    if (p === '/org/tasks') return 'Operations Board';
+    if (p === '/org/tasks') return currentOrg?.legal_name || currentOrg?.trade_name || 'RACHANA CONSTRUCTION LIMITED';
     if (p === '/org/pending') return 'Site Pending Work';
     if (p === '/org/assigned-to-me') return 'My Delegated Tasks';
     if (p === '/org/created-by-me') return 'Tasks Delegated Out';
@@ -125,28 +120,43 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Desktop Breadcrumb */}
+          {/* Desktop Breadcrumb / Org Title */}
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground min-w-0">
-            <span className="font-semibold text-foreground/80 flex items-center gap-1.5">
-              {isEnterpriseMode ? (
-                <>
-                  <Building2 className="w-3.5 h-3.5 text-workplace" />
-                  <span className="truncate max-w-[140px]">{currentOrg?.trade_name || 'Enterprise'}</span>
-                </>
-              ) : (
-                <>
-                  <User className="w-3.5 h-3.5 text-primary" />
-                  <span>Personal</span>
-                </>
-              )}
-            </span>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
-            <span className="font-medium text-foreground truncate">{getPageTitle()}</span>
+            {isEnterpriseMode && location.pathname === '/org/tasks' ? (
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-6 h-6 rounded-md bg-workplace/15 text-workplace flex items-center justify-center shrink-0 border border-workplace/30">
+                  <Building2 className="w-3.5 h-3.5" />
+                </div>
+                <span className="font-extrabold text-foreground text-sm tracking-tight truncate max-w-[280px] lg:max-w-[420px]" title={currentOrg?.legal_name || currentOrg?.trade_name || undefined}>
+                  {currentOrg?.legal_name || currentOrg?.trade_name || 'RACHANA CONSTRUCTION LIMITED'}
+                </span>
+              </div>
+            ) : (
+              <>
+                <span className="font-semibold text-foreground/80 flex items-center gap-1.5">
+                  {isEnterpriseMode ? (
+                    <>
+                      <Building2 className="w-3.5 h-3.5 text-workplace shrink-0" />
+                      <span className="truncate max-w-[140px]">{currentOrg?.trade_name || currentOrg?.legal_name || 'Enterprise'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>Personal</span>
+                    </>
+                  )}
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+                <span className="font-medium text-foreground truncate">{getPageTitle()}</span>
+              </>
+            )}
           </div>
 
           {/* Mobile compact title */}
-          <div className="sm:hidden font-semibold text-xs text-foreground truncate max-w-[130px]">
-            {getPageTitle()}
+          <div className="sm:hidden font-bold text-xs text-foreground truncate max-w-[170px]">
+            {isEnterpriseMode && location.pathname === '/org/tasks'
+              ? (currentOrg?.legal_name || currentOrg?.trade_name || 'RACHANA CONSTRUCTION LIMITED')
+              : getPageTitle()}
           </div>
         </div>
 
@@ -178,17 +188,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           >
             <Search className="w-4 h-4" />
           </button>
-
-          {/* Realtime Live Sync Status */}
-          {isRealtimeConnected && (
-            <span
-              className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-semibold"
-              title="Supabase Realtime is active. Data syncs live."
-            >
-              <Radio className="w-2.5 h-2.5 text-emerald-500 animate-pulse" />
-              <span>Live Sync</span>
-            </span>
-          )}
 
           {/* Workspace Pill Switcher */}
           {canAccessWorkplace && (
@@ -274,32 +273,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             </div>
           )}
 
-          {/* AI Voice-to-Task Quick Dictation */}
-          <button
-            type="button"
-            onClick={() => setVoiceModalOpen(true)}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors flex items-center gap-1 text-xs active:scale-95"
-            title="AI Voice-to-Task (मराठी / हिंदी / English)"
-          >
-            <Mic className="w-4 h-4 text-primary animate-pulse" />
-            <span className="hidden md:inline text-[11px] font-semibold text-foreground">Voice</span>
-          </button>
-
           {/* Notification Bell with In-App Drawer Hook */}
           <NotificationBell />
 
-          {/* Quick Add Button in Header (Desktop) */}
+          {/* Single Authoritative New Task Button (Header) */}
           <button
             type="button"
             onClick={() => openCreateModal({ scope: isEnterpriseMode ? 'workplace' : 'personal' })}
             className={cn(
-              'hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold shadow-xs transition-all active:scale-95',
-              isEnterpriseMode ? 'bg-workplace hover:bg-workplace/90' : 'bg-primary hover:bg-primary/90'
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer',
+              isEnterpriseMode ? 'bg-workplace hover:bg-workplace/90 shadow-workplace/20' : 'bg-primary hover:bg-primary/90 shadow-primary/20'
             )}
-            title="Create Task"
+            title="Create New Task"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Task</span>
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span className="hidden xs:inline">New Task</span>
           </button>
 
           {/* User Profile Dropdown */}
@@ -379,13 +367,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </div>
         </div>
       </div>
-
-      {voiceModalOpen && (
-        <VoiceTaskModal
-          isOpen={voiceModalOpen}
-          onClose={() => setVoiceModalOpen(false)}
-        />
-      )}
     </header>
   );
 };

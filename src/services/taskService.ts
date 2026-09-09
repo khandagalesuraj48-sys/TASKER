@@ -835,11 +835,15 @@ export const universalSearchTasks = async (
 
   const taskIds = tasks.map((t) => t.id);
 
-  // Fetch notes, attachments metadata (strictly file_name & file_type only, NEVER file contents), and history
-  const [notesRes, attachmentsRes, historyRes] = await Promise.all([
+  // Fetch notes, attachments metadata, history, subtasks, and organization sites for deep multi-entity search
+  const [notesRes, attachmentsRes, historyRes, subtasksRes, sitesRes] = await Promise.all([
     supabase.from('task_notes').select('task_id, note').in('task_id', taskIds),
     supabase.from('task_attachments').select('task_id, file_name, file_type').in('task_id', taskIds),
     supabase.from('task_status_history').select('task_id, remarks, old_status, new_status').in('task_id', taskIds),
+    supabase.from('task_subtasks').select('task_id, title').in('task_id', taskIds),
+    filterOrgId
+      ? supabase.from('org_sites').select('id, name, code, address').eq('org_id', filterOrgId)
+      : Promise.resolve({ data: [] as any[] }),
   ]);
 
   const notesByTask = new Map<string, string[]>();
@@ -865,6 +869,18 @@ export const universalSearchTasks = async (
     historyByTask.set(h.task_id, list);
   });
 
+  const subtasksByTask = new Map<string, string[]>();
+  subtasksRes.data?.forEach((st: any) => {
+    const list = subtasksByTask.get(st.task_id) || [];
+    list.push(st.title);
+    subtasksByTask.set(st.task_id, list);
+  });
+
+  const sitesById = new Map<string, { name: string; code: string; address?: string }>();
+  sitesRes.data?.forEach((s: any) => {
+    sitesById.set(s.id, { name: s.name, code: s.code, address: s.address });
+  });
+
   const words = cleanQ.split(/\s+/).filter(Boolean);
   const results: UniversalSearchResult[] = [];
 
@@ -872,11 +888,17 @@ export const universalSearchTasks = async (
     const titleLower = t.title.toLowerCase();
     const descLower = (t.description || '').toLowerCase();
     const personLower = (t.person_name || '').toLowerCase();
+    const assignedLower = (t.assigned_to_name || '').toLowerCase();
     const statusLower = t.status.toLowerCase();
     const priorityLower = t.priority.toLowerCase();
+    const idLower = t.id.toLowerCase();
     const taskNotes = notesByTask.get(t.id) || [];
     const taskAttachments = attachmentsByTask.get(t.id) || [];
     const taskHistory = historyByTask.get(t.id) || [];
+    const taskSubtasks = subtasksByTask.get(t.id) || [];
+    const site = t.site_id ? sitesById.get(t.site_id) : undefined;
+    const siteNameLower = (site?.name || '').toLowerCase();
+    const siteCodeLower = (site?.code || '').toLowerCase();
 
     // 1. Exact task title
     if (titleLower === cleanQ) {
@@ -890,18 +912,59 @@ export const universalSearchTasks = async (
       continue;
     }
 
-    // 3. Description match
-    if (descLower.includes(cleanQ) || (words.length > 1 && words.every((w) => descLower.includes(w)))) {
+    // 3. Task ID / Code match (numbers or UUID part)
+    if (idLower.includes(cleanQ) || t.id.slice(0, 8).toLowerCase() === cleanQ.replace('#', '')) {
       results.push({
         task: t,
-        matchedField: 'description',
-        snippet: t.description?.slice(0, 120) || '',
+        matchedField: 'id',
+        snippet: `Task #${t.id.slice(0, 8)} • ${t.title}`,
+        rankScore: 2.2,
+      });
+      continue;
+    }
+
+    // 4. Site Name or Site Code match (e.g. "18 B", "VTR")
+    if (
+      site &&
+      (siteNameLower.includes(cleanQ) ||
+        siteCodeLower.includes(cleanQ) ||
+        (words.length > 1 && words.every((w) => siteNameLower.includes(w) || siteCodeLower.includes(w))))
+    ) {
+      results.push({
+        task: t,
+        matchedField: 'site',
+        snippet: `Site: ${site.name} (${site.code}) • ${t.title}`,
+        rankScore: 2.5,
+      });
+      continue;
+    }
+
+    // 5. Subtask / Checklist item match
+    const matchingSubtask = taskSubtasks.find(
+      (st) => st.toLowerCase().includes(cleanQ) || (words.length > 1 && words.every((w) => st.toLowerCase().includes(w)))
+    );
+    if (matchingSubtask) {
+      results.push({
+        task: t,
+        matchedField: 'subtask',
+        snippet: `Checklist item: ${matchingSubtask}`,
         rankScore: 3,
       });
       continue;
     }
 
-    // 4. Notes & Remarks match
+    // 6. Description match
+    if (descLower.includes(cleanQ) || (words.length > 1 && words.every((w) => descLower.includes(w)))) {
+      results.push({
+        task: t,
+        matchedField: 'description',
+        snippet: t.description?.slice(0, 120) || '',
+        rankScore: 3.5,
+      });
+      continue;
+    }
+
+    // 7. Notes & Remarks match
     const matchingNote = taskNotes.find(
       (n) => n.toLowerCase().includes(cleanQ) || (words.length > 1 && words.every((w) => n.toLowerCase().includes(w)))
     );
@@ -915,28 +978,34 @@ export const universalSearchTasks = async (
       continue;
     }
 
-    // 5. Status / Priority / Person match
-    if (personLower.includes(cleanQ) || (words.length > 1 && words.every((w) => personLower.includes(w)))) {
+    // 8. Person / Assignee match
+    if (
+      personLower.includes(cleanQ) ||
+      assignedLower.includes(cleanQ) ||
+      (words.length > 1 && words.every((w) => personLower.includes(w) || assignedLower.includes(w)))
+    ) {
+      const contactInfo = [t.person_name, t.assigned_to_name ? `Assigned: ${t.assigned_to_name}` : ''].filter(Boolean).join(' • ');
       results.push({
         task: t,
         matchedField: 'person',
-        snippet: t.person_name || '',
-        rankScore: 5,
+        snippet: contactInfo || t.person_name || '',
+        rankScore: 4.5,
       });
       continue;
     }
 
+    // 9. Status / Priority match
     if (statusLower.includes(cleanQ) || priorityLower.includes(cleanQ)) {
       results.push({
         task: t,
         matchedField: 'status_priority',
-        snippet: `Status: ${t.status} | Priority: ${t.priority}`,
+        snippet: `Status: ${t.status.toUpperCase()} | Priority: ${t.priority.toUpperCase()}`,
         rankScore: 5,
       });
       continue;
     }
 
-    // 6. History match
+    // 10. History match
     const matchingHist = taskHistory.find(
       (h) => h.toLowerCase().includes(cleanQ) || (words.length > 1 && words.every((w) => h.toLowerCase().includes(w)))
     );
@@ -950,7 +1019,7 @@ export const universalSearchTasks = async (
       continue;
     }
 
-    // 7. Attachment filename / metadata match (STRICTLY NO PDF / FILE CONTENT SEARCH)
+    // 11. Attachment filename / metadata match (STRICTLY NO PDF / FILE CONTENT SEARCH)
     const matchingAttach = taskAttachments.find(
       (a) =>
         a.file_name.toLowerCase().includes(cleanQ) ||

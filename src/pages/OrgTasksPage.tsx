@@ -208,63 +208,43 @@ export const OrgTasksPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Header Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-xl bg-card border border-border/80 shadow-2xs">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-primary" />
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">Workplace Collaboration</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black text-foreground">{currentOrg?.legal_name || 'Organization Tasks'}</h1>
-          <p className="text-xs text-muted-foreground">
-            Assigned tasks, delegated work, and real-time multi-site team collaboration.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="primary"
-            onClick={() => openCreateModal({ scope: 'workplace', org_id: currentOrg?.id, site_id: selectedSite?.id })}
-            leftIcon={<Plus className="w-4 h-4" />}
+    <div className="space-y-4">
+      {/* Top Controls Bar: Navigation Tabs + Multi-Site Switcher */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-card border border-border/80 shadow-2xs">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground shadow-xs flex items-center gap-1.5"
           >
-            Create Workplace Task
-          </Button>
+            <Building2 className="w-3.5 h-3.5" />
+            <span>All Tasks</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/org/pending')}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted/90 flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-500" />
+            <span>Pending by Site</span>
+          </button>
         </div>
-      </div>
 
-      {/* Workplace Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-border/60 pb-2">
-        <button
-          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground shadow-xs flex items-center gap-2"
-        >
-          <Building2 className="w-3.5 h-3.5" />
-          <span>All Tasks</span>
-        </button>
-        <button
-          onClick={() => navigate('/org/pending')}
-          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 flex items-center gap-2 transition-all cursor-pointer"
-        >
-          <Clock className="w-3.5 h-3.5 text-amber-500" />
-          <span>Pending by Site</span>
-        </button>
-      </div>
-
-      {/* Multi-Site Switcher Bar */}
-      <div className="p-3 bg-card rounded-xl border border-border/80 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full sm:w-auto">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground shrink-0 mr-1">
+        {/* Multi-Site Switcher Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full md:w-auto">
+          <div className="flex items-center gap-1 text-xs font-semibold text-muted-foreground shrink-0 mr-1">
             <MapPin className="w-3.5 h-3.5 text-primary" />
             <span>Sites:</span>
           </div>
 
           {(isAdmin || isOwner || isPlatformAdmin || sites.length > 1) && (
             <button
+              type="button"
               onClick={() => selectSite('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                 !selectedSite
                   ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                  : 'bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
               All Sites
@@ -276,16 +256,17 @@ export const OrgTasksPage: React.FC = () => {
             return (
               <button
                 key={s.id}
+                type="button"
                 onClick={() => selectSite(s.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
                   isSelected
                     ? 'bg-primary text-primary-foreground shadow-xs'
-                    : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                    : 'bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <span>{s.name}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${
+                  className={`text-[10px] px-1 py-0.2 rounded font-mono ${
                     isSelected
                       ? 'bg-primary-foreground/20 text-primary-foreground'
                       : 'bg-background/80 text-muted-foreground'
@@ -302,17 +283,19 @@ export const OrgTasksPage: React.FC = () => {
               ⚠️ No sites assigned to your account.
             </span>
           )}
-        </div>
 
-        {(isAdmin || isOwner) && (
-          <button
-            onClick={() => setIsAddSiteOpen(true)}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors shrink-0 flex items-center gap-1.5"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Site</span>
-          </button>
-        )}
+          {(isAdmin || isOwner) && (
+            <button
+              type="button"
+              onClick={() => setIsAddSiteOpen(true)}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors shrink-0 flex items-center gap-1 cursor-pointer ml-1"
+              title="Add New Site"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Site</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters Bar */}

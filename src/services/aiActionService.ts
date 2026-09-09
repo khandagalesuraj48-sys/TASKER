@@ -1,5 +1,5 @@
 // src/services/aiActionService.ts
-import { createTask, updateTask, updateTaskStatus, softDeleteTask } from './taskService';
+import { updateTask, updateTaskStatus, softDeleteTask } from './taskService';
 import { saveTaskReminder } from './reminderService';
 import { Task, TaskPriority, TaskReference, ReminderRecurrence } from '../types/task';
 import { formatDateTime } from '../lib/dateUtils';
@@ -202,28 +202,6 @@ function extractPriority(text: string): { priority: TaskPriority; cleaned: strin
   }
 
   return { priority, cleaned: cleaned.replace(/\s+/g, ' ').trim() };
-}
-
-/**
- * Extracts person name from text (e.g., "with Rahul", "pending with Disha", "Rahul la").
- */
-function extractPersonName(text: string): { person: string | null; cleaned: string } {
-  let person: string | null = null;
-  let cleaned = text;
-
-  const match = cleaned.match(/(?:pending with|assigned to|with|for|to)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
-  if (match) {
-    person = match[1].trim();
-    cleaned = cleaned.replace(match[0], ' ');
-  } else {
-    // Marathi style: "राहुलला", "दिशेला"
-    const mrMatch = cleaned.match(/([A-Z\u0900-\u097F][a-z\u0900-\u097F]+)(?:ला|कडे|सोबत)/i);
-    if (mrMatch && !['टास्कला', 'रिमाइंडरला', 'उद्याला'].includes(mrMatch[1])) {
-      person = mrMatch[1].trim();
-    }
-  }
-
-  return { person, cleaned: cleaned.replace(/\s+/g, ' ').trim() };
 }
 
 /**
@@ -527,92 +505,16 @@ export async function executeAIAction(
     (qLower.includes('task') && (qLower.includes('create') || qLower.includes('add') || qLower.includes('banva')));
 
   if (isCreateIntent) {
-    // Clean prefix command words
-    let workingText = rawQuery
-      .replace(/^(?:please\s+)?(?:create|add|new|make)\s+(?:a\s+)?task(?:\s*[:\-to]+)?/i, ' ')
-      .replace(/^(?:remind me to)\s+/i, ' ')
-      .replace(/^(?:task\s*[:\-])\s*/i, ' ')
-      .replace(/(?:टास्क बनवा|टास्क तयार करा|टास्क ॲड करा|नवा टास्क|टास्क टाका)/gi, ' ')
-      .trim();
+    const answer = isMarathi
+      ? `ℹ️ AI द्वारे परस्पर टास्क तयार करण्याची सुविधा डेटा सुरक्षिततेसाठी बंद केलेली आहे.\n\nनवीन टास्क तयार करण्यासाठी कृपया स्क्रीनच्या वर दिलेल्या '+ New Task' बटणाचा वापर करा.`
+      : `ℹ️ Automatic task creation via AI is disabled for data integrity.\n\nPlease use the '+ New Task' button at the top of the screen to create a new task.`;
 
-    // Check if reminder was requested
-    const wantsReminder = /remind\s*(?:me)?|रिमाइंडर/i.test(rawQuery);
-
-    // Extract Date/Time
-    const { date: dueDate, cleanedText: afterDateText, recurrence } = parseNaturalLanguageDateTime(workingText);
-    workingText = afterDateText;
-
-    // Extract Priority
-    const { priority, cleaned: afterPrioText } = extractPriority(workingText);
-    workingText = afterPrioText;
-
-    // Extract Person Name
-    const { person, cleaned: afterPersonText } = extractPersonName(workingText);
-    workingText = afterPersonText;
-
-    // Remaining string is the task title
-    let title = workingText.replace(/^[:\-–\s]+|[:\-–\s]+$/g, '').trim();
-    if (!title) {
-      title = 'New Task via TASKER AI';
-    }
-
-    try {
-      const newTask = await createTask({
-        title,
-        priority,
-        due_date: dueDate ? dueDate.toISOString() : null,
-        person_name: person || undefined,
-        description: 'Created automatically by TASKER AI 2.0',
-        status: 'pending',
-      });
-
-      let reminderText = '';
-      if (wantsReminder && dueDate) {
-        try {
-          await saveTaskReminder(newTask.id, {
-            is_enabled: true,
-            remind_at: dueDate.toISOString(),
-            recurrence_type: recurrence,
-          });
-          reminderText = isMarathi
-            ? `\n⏰ **रिमाइंडर**: ${formatDateTime(dueDate.toISOString())} साठी सेट केला आहे.`
-            : `\n⏰ **Reminder**: Scheduled for ${formatDateTime(dueDate.toISOString())}.`;
-        } catch (remErr) {
-          console.warn('Could not auto-schedule reminder on create:', remErr);
-        }
-      }
-
-      const dueFormatted = dueDate ? formatDateTime(dueDate.toISOString()) : (isMarathi ? 'दिलेली नाही' : 'None');
-      const personStr = person ? `\n- **${isMarathi ? 'कोणासोबत' : 'Pending with'}**: ${person}` : '';
-
-      const answer = isMarathi
-        ? `✅ **टास्क यशस्वीपणे तयार केला!**\n\n- **नाव**: ${newTask.title}\n- **Priority**: ${priority.toUpperCase()}\n- **Due Date**: ${dueFormatted}${personStr}${reminderText}\n\nतुम्ही खाली दिलेल्या कार्डवर टॅप करून हा टास्क उघडू शकता.`
-        : `✅ **Task Created Successfully!**\n\n- **Title**: ${newTask.title}\n- **Priority**: ${priority.toUpperCase()}\n- **Due Date**: ${dueFormatted}${personStr}${reminderText}\n\nTap the card below to view or edit this task.`;
-
-      const ref: TaskReference = {
-        id: newTask.id,
-        title: newTask.title,
-        status: newTask.status,
-        priority: newTask.priority,
-        due_date: newTask.due_date,
-      };
-
-      return {
-        handled: true,
-        answer,
-        referencedTasks: [ref],
-        actionType: 'create',
-      };
-    } catch (err: any) {
-      return {
-        handled: true,
-        answer: isMarathi
-          ? `❌ टास्क तयार करताना त्रुटी आली: ${err?.message || 'कृपया पुन्हा प्रयत्न करा.'}`
-          : `❌ Failed to create task: ${err?.message || 'Please try again.'}`,
-        referencedTasks: [],
-        actionType: 'create',
-      };
-    }
+    return {
+      handled: true,
+      answer,
+      referencedTasks: [],
+      actionType: null,
+    };
   }
 
   // ==========================================
