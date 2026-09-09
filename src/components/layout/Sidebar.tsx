@@ -38,7 +38,6 @@ import { useBackButton } from '../../hooks/useBackButton';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { APP_VERSION } from '../../constants';
-import { useAppUpdate } from '../../hooks/useAppUpdate';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -60,7 +59,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     hasApprovedOrg,
   } = useEnterprise();
   const { isPlatformAdmin } = useAdmin();
-  const { isBeta } = useAppUpdate();
   const navigate = useNavigate();
 
   // Desktop collapsible state (persisted in localStorage)
@@ -502,9 +500,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   <span className="text-[9px] font-mono text-muted-foreground px-1 py-0.2 rounded-md bg-muted border border-border/70">
                     v{APP_VERSION}
                   </span>
-                  <Badge variant={isBeta ? 'beta' : 'stable'} size="xs" dot>
-                    {isBeta ? 'Beta' : 'Stable'}
-                  </Badge>
                 </div>
                 <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">
                   {userEmail}

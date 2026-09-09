@@ -181,139 +181,41 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
 }
 
 /**
- * Fetch the latest eligible release for the current user according to their release channel.
- * Server-authoritative: Stable users receive ONLY Stable releases.
- * Beta users receive Beta releases.
- * Disabled releases and non-eligible rollout cohorts are excluded.
+ * Fetch the latest published production release.
+ * Simple, direct, and universally reliable across Android, Windows Desktop, and Web.
  */
-export async function fetchLatestRelease(
-  currentVersionCode?: number,
-  targetChannel?: 'stable' | 'beta'
-): Promise<AppRelease | null> {
-  // App updates are supported on Android and Windows Desktop. Disabled on standard Web.
-  if (!isAndroid() && !isWindowsApp()) {
-    return null;
-  }
-
+export async function fetchLatestRelease(): Promise<AppRelease | null> {
   if (!navigator.onLine || !isSupabaseConfigured()) {
     return null;
   }
 
   try {
-    const platform = isWindowsApp() ? 'windows' : 'android';
-    const versionCodeParam = typeof currentVersionCode === 'number' ? currentVersionCode : 0;
-
-    // 1. Authoritative Server RPC Check
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_eligible_app_release', {
-      p_current_version_code: versionCodeParam,
-      p_client_platform: platform,
-    });
-
-    if (!rpcError && rpcData) {
-      if (rpcData.update_available === false) {
-        return null;
-      }
-      return {
-        id: rpcData.release_id || rpcData.id,
-        version_name: rpcData.version_name,
-        version_code: Number(rpcData.version_code),
-        release_channel: rpcData.release_channel || 'stable',
-        status: rpcData.status || 'published',
-        rollout_percentage: rpcData.rollout_percentage ?? 100,
-        release_notes: rpcData.release_notes || '',
-        apk_url: rpcData.apk_url || rpcData.release_url || '',
-        release_url: rpcData.release_url || rpcData.apk_url || '',
-        windows_exe_url: rpcData.windows_exe_url || rpcData.release_url || '',
-        is_mandatory: Boolean(rpcData.is_mandatory),
-        created_at: rpcData.created_at || new Date().toISOString(),
-      };
-    }
-
-    // 2. Server-side Channel-Filtered PostgREST Fallback
-    // Determine authoritative channel of user
-    let userChannel: 'stable' | 'beta' = targetChannel || 'stable';
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id) {
-        const { data: chData } = await supabase
-          .from('user_release_channels')
-          .select('release_channel')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (chData?.release_channel === 'beta') {
-          userChannel = 'beta';
-        }
-      }
-    } catch {
-      userChannel = 'stable';
-    }
-
-    // Query app_releases strictly filtering by channel and published status
-    let query = supabase
+    // 1. Direct query: fetch latest published release
+    const { data, error } = await supabase
       .from('app_releases')
       .select('*')
-      .order('version_code', { ascending: false });
+      .eq('status', 'published')
+      .order('version_code', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    // Apply channel filter: Stable users MUST NEVER see Beta releases
-    if (userChannel === 'beta') {
-      query = query.eq('release_channel', 'beta');
-    } else {
-      query = query.or('release_channel.eq.stable,release_channel.is.null');
+    if (error || !data) {
+      return null;
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      // If table doesn't have release_channel column yet, graceful fallback to standard query
-      const { data: fallbackData } = await supabase
-        .from('app_releases')
-        .select('*')
-        .order('version_code', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!fallbackData) return null;
-      return {
-        id: fallbackData.id,
-        version_name: fallbackData.version_name,
-        version_code: Number(fallbackData.version_code),
-        release_channel: fallbackData.release_channel || 'stable',
-        status: fallbackData.status || 'published',
-        release_notes: fallbackData.release_notes || '',
-        apk_url: fallbackData.apk_url || fallbackData.release_url || '',
-        release_url: fallbackData.release_url || fallbackData.apk_url || '',
-        windows_exe_url: fallbackData.windows_exe_url || fallbackData.release_url || '',
-        is_mandatory: Boolean(fallbackData.is_mandatory),
-        created_at: fallbackData.created_at,
-      };
-    }
-
-    if (!data || data.length === 0) return null;
-
-    // Filter out disabled releases and check rollout
-    const activeReleases = data.filter((r: any) => {
-      // Must not be disabled or draft
-      if (r.status === 'disabled' || r.status === 'draft') return false;
-      return true;
-    });
-
-    if (activeReleases.length === 0) return null;
-
-    const targetRelease = activeReleases[0] as any;
     return {
-      id: targetRelease.id,
-      version_name: targetRelease.version_name,
-      version_code: Number(targetRelease.version_code),
-      release_channel: targetRelease.release_channel || userChannel,
-      status: targetRelease.status || 'published',
-      rollout_percentage: targetRelease.rollout_percentage ?? 100,
-      release_notes: targetRelease.release_notes || '',
-      apk_url: targetRelease.apk_url || targetRelease.release_url || '',
-      release_url: targetRelease.release_url || targetRelease.apk_url || '',
-      windows_exe_url: targetRelease.windows_exe_url || targetRelease.release_url || '',
-      is_mandatory: Boolean(targetRelease.is_mandatory),
-      created_at: targetRelease.created_at,
+      id: data.id,
+      version_name: data.version_name,
+      version_code: Number(data.version_code),
+      release_channel: 'stable',
+      status: data.status || 'published',
+      rollout_percentage: 100,
+      release_notes: data.release_notes || '',
+      apk_url: data.apk_url || data.release_url || '',
+      release_url: data.release_url || data.apk_url || '',
+      windows_exe_url: data.windows_exe_url || data.release_url || '',
+      is_mandatory: Boolean(data.is_mandatory),
+      created_at: data.created_at || new Date().toISOString(),
     };
   } catch (e) {
     console.warn('Unexpected error fetching latest release:', e);

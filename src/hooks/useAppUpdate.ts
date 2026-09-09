@@ -14,10 +14,6 @@ import {
   AppRelease,
   isWindowsApp,
 } from '../services/appUpdateService';
-import {
-  releaseChannelService,
-  ReleaseChannel,
-} from '../services/releaseChannelService';
 import { APP_VERSION, APP_BUILD_CODE } from '../constants';
 
 export interface AppUpdateState {
@@ -34,15 +30,10 @@ export interface AppUpdateState {
   error: string | null;
   downloadUri: string | null;
   needsInstallPermission: boolean;
-  userChannel: ReleaseChannel;
-  isBeta: boolean;
-  joinBeta: () => Promise<void>;
-  leaveBeta: () => Promise<void>;
   checkForUpdate: (resetDismissal?: boolean) => Promise<void>;
   downloadAndInstall: () => Promise<void>;
   openPermissionSettings: () => Promise<void>;
   dismissBanner: () => void;
-  refreshChannel: () => Promise<void>;
 }
 
 export const useAppUpdate = (): AppUpdateState => {
@@ -63,20 +54,9 @@ export const useAppUpdate = (): AppUpdateState => {
   const [downloadUri, setDownloadUri] = useState<string | null>(null);
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
   const [needsInstallPermission, setNeedsInstallPermission] = useState<boolean>(false);
-  const [userChannel, setUserChannel] = useState<ReleaseChannel>('stable');
 
   const isCheckingRef = useRef<boolean>(false);
   const isDownloadingRef = useRef<boolean>(false);
-
-  // Initialize installed version and user release channel
-  const refreshChannel = useCallback(async () => {
-    try {
-      const channel = await releaseChannelService.getMyReleaseChannel();
-      setUserChannel(channel);
-    } catch {
-      setUserChannel('stable');
-    }
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -85,16 +65,14 @@ export const useAppUpdate = (): AppUpdateState => {
         setInstalledVersion(version);
       }
     });
-    refreshChannel();
     return () => {
       isMounted = false;
     };
-  }, [refreshChannel]);
+  }, []);
 
   const checkForUpdate = useCallback(
     async (resetDismissal = true) => {
-      // App updates supported on Android and Windows Desktop. Never check on Web/Vercel.
-      if (!isSupportedPlatform || isCheckingRef.current || isDownloadingRef.current) {
+      if (isCheckingRef.current || isDownloadingRef.current) {
         return;
       }
 
@@ -105,7 +83,7 @@ export const useAppUpdate = (): AppUpdateState => {
         const currentInstalled = await getInstalledVersion();
         setInstalledVersion(currentInstalled);
 
-        // Fetch release strictly filtered by user's release channel
+        // Fetch latest published production release directly
         const latest = await fetchLatestRelease();
         setLatestRelease(latest);
 
@@ -129,20 +107,8 @@ export const useAppUpdate = (): AppUpdateState => {
         isCheckingRef.current = false;
       }
     },
-    [isSupportedPlatform]
+    []
   );
-
-  const joinBeta = useCallback(async () => {
-    await releaseChannelService.joinBeta();
-    await refreshChannel();
-    await checkForUpdate(true);
-  }, [refreshChannel, checkForUpdate]);
-
-  const leaveBeta = useCallback(async () => {
-    await releaseChannelService.leaveBeta();
-    await refreshChannel();
-    await checkForUpdate(true);
-  }, [refreshChannel, checkForUpdate]);
 
   const downloadAndInstall = useCallback(async () => {
     if (!isSupportedPlatform) {
@@ -332,14 +298,9 @@ export const useAppUpdate = (): AppUpdateState => {
     error,
     downloadUri,
     needsInstallPermission,
-    userChannel,
-    isBeta: userChannel === 'beta',
-    joinBeta,
-    leaveBeta,
     checkForUpdate,
     downloadAndInstall,
     openPermissionSettings,
     dismissBanner,
-    refreshChannel,
   };
 };
