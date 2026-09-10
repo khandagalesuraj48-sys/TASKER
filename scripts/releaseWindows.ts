@@ -121,7 +121,7 @@ async function uploadToSupabase(
 - Native Windows Desktop notifications, system tray support, and local storage persistence.`;
 
   // Read dynamic versionCode from android/app/build.gradle or fallback
-  let versionCode = 25;
+  let versionCode = 32;
   try {
     const gradlePath = path.join(process.cwd(), 'android', 'app', 'build.gradle');
     if (fs.existsSync(gradlePath)) {
@@ -131,24 +131,38 @@ async function uploadToSupabase(
     }
   } catch {}
 
-  await client
+  const { data: existingRow } = await client
     .from('app_releases')
-    .upsert(
-      {
+    .select('id')
+    .eq('version_code', versionCode)
+    .maybeSingle();
+
+  if (existingRow?.id) {
+    await client
+      .from('app_releases')
+      .update({
         version_name: version,
-        version_code: 24,
-        version_code: versionCode,
         release_notes: releaseNotes,
         apk_url: `${env.supabaseUrl}/storage/v1/object/public/app-releases/TASKER-v${version}.apk`,
-        release_url: `https://github.com/khandagalesuraj48-sys/TASKER/releases/tag/v${version}`,
         release_url: publicExeUrl,
         windows_exe_url: publicExeUrl,
         is_mandatory: true,
-      },
-      { onConflict: 'version_code' }
-    );
+      })
+      .eq('id', existingRow.id);
+  } else {
+    await client
+      .from('app_releases')
+      .insert({
+        version_name: version,
+        version_code: versionCode,
+        release_notes: releaseNotes,
+        apk_url: `${env.supabaseUrl}/storage/v1/object/public/app-releases/TASKER-v${version}.apk`,
+        release_url: publicExeUrl,
+        windows_exe_url: publicExeUrl,
+        is_mandatory: true,
+      });
+  }
 
-  console.log(`✔ Supabase app_releases table updated.`);
   console.log(`✔ Supabase app_releases table updated with version_code ${versionCode} and Windows URL.`);
   return publicExeUrl;
 }
@@ -334,18 +348,27 @@ async function main() {
 
   // Step 5: Publish to GitHub Releases
   console.log('\n[Step 5/5] Publishing release assets to GitHub...');
-  const apkPath = path.join(rootDir, `TASKER-v${version}.apk`);
-  const finalReleaseUrl = await publishGithubRelease(env.githubToken, repo, version, exePath, apkPath);
+  let finalReleaseUrl = `https://github.com/${repo}/releases/tag/v${version}`;
+  try {
+    const apkPath = path.join(rootDir, `TASKER-v${version}.apk`);
+    finalReleaseUrl = await publishGithubRelease(env.githubToken, repo, version, exePath, apkPath);
+  } catch (ghErr: any) {
+    console.warn(`[GitHub Release Notice] ${ghErr.message || ghErr}. Windows .exe is published to Supabase.`);
+  }
 
   // Step 6: Git commit & push
   console.log('\nStaging and pushing changes to GitHub...');
-  run('git add -A', rootDir);
   try {
-    run(`git commit -m "feat: Add TASKER Windows Desktop App v${version} (.exe) and auto-update release pipeline"`, rootDir);
-  } catch {
-    console.log('No new files to commit.');
+    run('git add -A', rootDir);
+    try {
+      run(`git commit -m "feat: Add TASKER Windows Desktop App v${version} (.exe) and auto-update release pipeline"`, rootDir);
+    } catch {
+      console.log('No new files to commit.');
+    }
+    run('git push origin main', rootDir);
+  } catch (pushErr: any) {
+    console.warn(`[Git Push Notice] ${pushErr.message || pushErr}`);
   }
-  run('git push origin main', rootDir);
 
   console.log('\n====================================================');
   console.log('RELEASE COMPLETE');
