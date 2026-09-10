@@ -108,14 +108,22 @@ export const OrgTasksPage: React.FC = () => {
       // Subtasks must NOT appear on the main operations board; they are nested inside their parent task.
       if (t.parent_task_id) return false;
 
-      // Site Assignment Restriction: regular users ONLY see tasks for their assigned sites
+      const isAssignedToMe = Boolean(user?.id && t.assigned_to === user.id);
+      const isCreatedByMe = Boolean(user?.id && t.user_id === user.id);
+
+      // Access Restriction: regular users see tasks if:
+      // 1) Assigned to them
+      // 2) Created by them
+      // 3) General workplace task without site
+      // 4) Belongs to one of their assigned sites
       if (!isAdmin && !isOwner && !isPlatformAdmin) {
-        if (!t.site_id || !userAssignedSiteIds.includes(t.site_id)) return false;
+        const isSiteAssigned = t.site_id ? userAssignedSiteIds.includes(t.site_id) : true;
+        if (!isAssignedToMe && !isCreatedByMe && !isSiteAssigned) return false;
       }
 
       if (statusFilter !== 'all' && t.status !== statusFilter) return false;
       if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
-      if (selectedSite && t.site_id !== selectedSite.id) return false;
+      if (selectedSite && t.site_id !== selectedSite.id && !isAssignedToMe) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = t.title.toLowerCase().includes(q);
@@ -125,7 +133,7 @@ export const OrgTasksPage: React.FC = () => {
       }
       return true;
     });
-  }, [tasks, statusFilter, priorityFilter, selectedSite, searchQuery, userAssignedSiteIds, isAdmin, isOwner, isPlatformAdmin]);
+  }, [tasks, statusFilter, priorityFilter, selectedSite, searchQuery, userAssignedSiteIds, isAdmin, isOwner, isPlatformAdmin, user?.id]);
 
   const handleSendJoinRequest = async () => {
     try {
@@ -241,7 +249,7 @@ export const OrgTasksPage: React.FC = () => {
             <span>Sites:</span>
           </div>
 
-          {(isAdmin || isOwner || isPlatformAdmin || sites.length > 1) && (
+          {(isAdmin || isOwner || isPlatformAdmin || sites.length > 0) && (
             <button
               type="button"
               onClick={() => selectSite('all')}

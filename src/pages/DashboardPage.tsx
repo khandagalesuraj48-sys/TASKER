@@ -10,6 +10,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { CardSkeleton, StatsSkeleton } from '../components/common/LoadingSkeleton';
 import { Button } from '../components/common/Button';
 import { useTask } from '../context/TaskContext';
+import { useAuth } from '../context/AuthContext';
 import { isTaskDueToday, isTaskOverdue, parseInTimezone } from '../lib/dateUtils';
 import {
   Clock,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
+  const { user } = useAuth();
   const { refreshKey, openCreateModal, globalSearch, stats } = useTask();
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -32,8 +34,14 @@ export const DashboardPage: React.FC = () => {
   const loadDashboardTasks = async () => {
     setIsLoading(true);
     try {
-      const data = await getTasks({ includeDeleted: false, scope: 'personal' });
-      setTasks(data);
+      const [personalTasks, assignedWorkplaceTasks] = await Promise.all([
+        getTasks({ includeDeleted: false, scope: 'personal' }),
+        user?.id ? getTasks({ includeDeleted: false, scope: 'workplace', assignedTo: user.id }) : Promise.resolve([]),
+      ]);
+      const taskMap = new Map<string, Task>();
+      personalTasks.forEach((t) => taskMap.set(t.id, t));
+      assignedWorkplaceTasks.forEach((t) => taskMap.set(t.id, t));
+      setTasks(Array.from(taskMap.values()));
     } catch (err) {
       console.error('Failed to load dashboard tasks:', err);
     } finally {
@@ -41,9 +49,11 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  const userId = user?.id;
+
   useEffect(() => {
     loadDashboardTasks();
-  }, [refreshKey]);
+  }, [refreshKey, userId]);
 
   // Filter tasks for pending work only (Pending, In Progress, Partial)
   const pendingTasks = useMemo(() => {

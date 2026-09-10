@@ -115,7 +115,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
               <p className="text-xs font-semibold text-foreground">
                 Drag & drop files, or <span className="text-primary underline">browse</span>
               </p>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Images, PDF, Excel, Docs, ZIP (Max 25MB)
               </p>
             </div>

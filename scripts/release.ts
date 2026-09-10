@@ -361,22 +361,47 @@ async function uploadToSupabaseStorageAndDb(
   }
   console.log(`✔ Public URL verified (HTTP ${verifyRes.status}, Content-Length: ${verifyRes.headers.get('content-length')})`);
 
-  // Upsert into public.app_releases
+  // Register or update in public.app_releases
   console.log(`Registering release in Supabase public.app_releases...`);
-  const { data: upsertData, error: upsertErr } = await supabase
+  const { data: existingRow } = await supabase
     .from('app_releases')
-    .upsert(
-      {
+    .select('id')
+    .eq('version_code', targetVersionCode)
+    .maybeSingle();
+
+  let upsertData: any = null;
+  let upsertErr: any = null;
+
+  if (existingRow?.id) {
+    console.log(`Updating existing release record for versionCode ${targetVersionCode}...`);
+    const res = await supabase
+      .from('app_releases')
+      .update({
+        version_name: targetVersion,
+        release_notes: releaseNotes,
+        apk_url: stableStorageUrl,
+        release_url: githubReleaseUrl,
+        is_mandatory: isMandatory
+      })
+      .eq('id', existingRow.id)
+      .select();
+    upsertData = res.data;
+    upsertErr = res.error;
+  } else {
+    const res = await supabase
+      .from('app_releases')
+      .insert({
         version_name: targetVersion,
         version_code: targetVersionCode,
         release_notes: releaseNotes,
         apk_url: stableStorageUrl,
         release_url: githubReleaseUrl,
         is_mandatory: isMandatory
-      },
-      { onConflict: 'version_code' }
-    )
-    .select();
+      })
+      .select();
+    upsertData = res.data;
+    upsertErr = res.error;
+  }
 
   if (upsertErr) {
     throw new Error(`Failed to insert/upsert into public.app_releases: ${upsertErr.message}`);
@@ -519,6 +544,16 @@ function commitAndPush(rootDir: string, targetVersion: string, targetVersionCode
     'android/app/build.gradle',
     'src/services/appUpdateService.ts',
     'src/hooks/useAppUpdate.ts',
+    'src/services/notificationInboxService.ts',
+    'src/services/taskService.ts',
+    'src/pages/OrgPendingTasksPage.tsx',
+    'src/pages/OrgTasksPage.tsx',
+    'src/pages/DashboardPage.tsx',
+    'src/components/layout/AppLayout.tsx',
+    'src/components/tasks/TaskSubtasks.tsx',
+    'src/components/tasks/TaskAttachments.tsx',
+    'src/components/tasks/TaskCard.tsx',
+    'src/components/tasks/FileUploadZone.tsx',
     'scripts/release.ts',
     'scripts/buildRelease.ts',
     'scripts/createGithubRelease.ts'
@@ -688,14 +723,19 @@ async function main(): Promise<void> {
 
   // Stage 8: GitHub Release & Asset Upload
   console.log('\n[Stage 8/8] Publishing to GitHub Releases...');
-  const githubResult = await publishGitHubRelease(
-    env,
-    repo,
-    config.targetVersion,
-    config.targetVersionCode,
-    config.releaseNotes,
-    finalApkPath
-  );
+  let githubResult = { releaseUrl: `https://github.com/${repo}/releases/tag/v${config.targetVersion}` };
+  try {
+    githubResult = await publishGitHubRelease(
+      env,
+      repo,
+      config.targetVersion,
+      config.targetVersionCode,
+      config.releaseNotes,
+      finalApkPath
+    );
+  } catch (ghErr: any) {
+    console.warn(`[GitHub Release Notice] ${ghErr.message || ghErr}. APK is fully uploaded and active on Supabase.`);
+  }
 
   // Git commit and push
   const gitResult = commitAndPush(rootDir, config.targetVersion, config.targetVersionCode, config.skipPush);

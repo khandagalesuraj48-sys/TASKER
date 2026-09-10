@@ -35,7 +35,6 @@ export const OrgPendingTasksPage: React.FC = () => {
     currentOrg,
     isMember,
     sites,
-    selectedSite,
     selectSite,
     userAssignedSiteIds,
     isAdmin,
@@ -51,21 +50,8 @@ export const OrgPendingTasksPage: React.FC = () => {
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
 
-  // Active site filter state
-  const [activeSiteFilter, setActiveSiteFilter] = useState<string>(() => {
-    if (selectedSite?.id) return selectedSite.id;
-    if (sites.length === 1) return sites[0].id;
-    return 'all';
-  });
-
-  // Keep in sync when sites load
-  useEffect(() => {
-    if (selectedSite?.id && sites.some((s) => s.id === selectedSite.id)) {
-      setActiveSiteFilter(selectedSite.id);
-    } else if (sites.length === 1) {
-      setActiveSiteFilter(sites[0].id);
-    }
-  }, [sites, selectedSite]);
+  // Active site filter state: default to 'all' so tasks assigned to the user or general tasks are never hidden
+  const [activeSiteFilter, setActiveSiteFilter] = useState<string>('all');
 
   // Load workplace tasks
   const loadPendingTasks = async () => {
@@ -99,21 +85,30 @@ export const OrgPendingTasksPage: React.FC = () => {
       if (t.is_deleted) return false;
       if (t.status === 'completed' || t.status === 'cancelled') return false;
 
+      const isAssignedToMe = Boolean(user?.id && t.assigned_to === user.id);
+      const isCreatedByMe = Boolean(user?.id && t.user_id === user.id);
+
       // Delegated Subtasks Rule:
       // A delegated subtask (parent_task_id != null) should ONLY be visible in pending view to the user assigned to it.
       // The creator/manager tracks it inside the Main Task on the operations board.
-      if (t.parent_task_id && t.assigned_to !== user?.id) return false;
+      if (t.parent_task_id && !isAssignedToMe) return false;
 
-      // User Site Assignment Access
+      // User Site Assignment Access:
+      // Admins and owners can see all. Regular users can see tasks assigned to them, created by them,
+      // general tasks without site, or tasks belonging to their assigned sites.
       if (!isAdmin && !isOwner && !isPlatformAdmin) {
-        const isAssignedToUser = t.assigned_to === user?.id;
         const isSiteAssigned = t.site_id ? userAssignedSiteIds.includes(t.site_id) : true;
-        if (!isAssignedToUser && !isSiteAssigned) return false;
+        if (!isAssignedToMe && !isCreatedByMe && !isSiteAssigned) return false;
       }
 
       // Filter by selected site dropdown
-      if (activeSiteFilter !== 'all') {
-        if (t.site_id !== activeSiteFilter) return false;
+      if (activeSiteFilter === 'assigned_to_me') {
+        if (!isAssignedToMe) return false;
+      } else if (activeSiteFilter === 'general') {
+        if (t.site_id) return false;
+      } else if (activeSiteFilter !== 'all') {
+        // Specific site selected: show tasks for that site OR tasks assigned to me for that site
+        if (t.site_id !== activeSiteFilter && !isAssignedToMe) return false;
       }
 
       // Search filter
@@ -246,37 +241,37 @@ export const OrgPendingTasksPage: React.FC = () => {
             <span>Site Filter:</span>
           </div>
 
-          {/* Single Site Badge or Multi-Site Dropdown */}
-          {sites.length === 1 && !isAdmin && !isOwner && !isPlatformAdmin ? (
-            <div className="px-2.5 py-1 rounded-sm bg-background border border-border text-xs font-semibold text-foreground flex items-center gap-1.5 shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>{sites[0].name}</span>
-              <span className="text-[10px] px-1 rounded bg-muted text-muted-foreground font-mono">
-                {sites[0].code}
-              </span>
-            </div>
-          ) : (
-            <div className="relative min-w-[200px]">
-              <select
-                value={activeSiteFilter}
-                onChange={(e) => {
-                  setActiveSiteFilter(e.target.value);
-                  selectSite(e.target.value === 'all' ? null : e.target.value);
-                }}
-                className="w-full appearance-none px-3 py-1.5 pr-8 rounded-sm border border-input bg-background text-xs font-medium text-foreground shadow-2xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-              >
-                <option value="all">
-                  All Sites ({sites.length} total)
+          <div className="relative min-w-[220px]">
+            <select
+              value={activeSiteFilter}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActiveSiteFilter(val);
+                if (val === 'all' || val === 'assigned_to_me' || val === 'general') {
+                  selectSite(null);
+                } else {
+                  selectSite(val);
+                }
+              }}
+              className="w-full appearance-none px-3 py-1.5 pr-8 rounded-sm border border-input bg-background text-xs font-semibold text-foreground shadow-2xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+            >
+              <option value="all">
+                All Pending Tasks (All Sites & General)
+              </option>
+              <option value="assigned_to_me">
+                ★ Assigned to Me
+              </option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  📍 Site: {s.name} ({s.code})
                 </option>
-                {sites.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.code})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          )}
+              ))}
+              <option value="general">
+                General Tasks (No Site Assigned)
+              </option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
         </div>
 
         {/* Quick KPI Counters */}

@@ -18,6 +18,7 @@ import { addNote } from './notesService';
 import { deleteAllTaskFiles } from './attachmentService';
 import { stopTaskReminder } from './reminderService';
 import { adminService } from './adminService';
+import { createInAppNotification } from './notificationInboxService';
 
 export const getTasks = async (options: TaskFilterOptions = {}): Promise<Task[]> => {
   const isDeleted = options.includeDeleted ?? false;
@@ -264,7 +265,6 @@ export const createTask = async (input: CreateTaskInput): Promise<Task> => {
   // Send in-app and mobile notification to assignee if assigned during creation
   if (createdTask.assigned_to) {
     try {
-      const { createInAppNotification } = await import('./notificationInboxService');
       const { data: authData } = await supabase.auth.getUser();
       const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || creator || 'Admin';
       await createInAppNotification({
@@ -352,7 +352,6 @@ export const updateTask = async (id: string, input: UpdateTaskInput): Promise<Ta
   // Send notification if task was assigned/reassigned in update
   if (input.assigned_to && input.assigned_to.trim() !== '') {
     try {
-      const { createInAppNotification } = await import('./notificationInboxService');
       const { data: authData } = await supabase.auth.getUser();
       const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || 'Admin';
       await createInAppNotification({
@@ -460,8 +459,6 @@ export const updateTaskStatus = async (
   // Send targeted in-app & mobile notification
   if (newStatus === 'completed') {
     try {
-      const { createInAppNotification } = await import('./notificationInboxService');
-
       // 1. Direct creator notification
       if (current.user_id) {
         await createInAppNotification({
@@ -1200,7 +1197,6 @@ export const assignTask = async (
   try {
     const task = await getTaskById(taskId);
     if (params.assignedTo) {
-      const { createInAppNotification } = await import('./notificationInboxService');
       const { data: authData } = await supabase.auth.getUser();
       const assignerName = authData?.user?.user_metadata?.display_name || authData?.user?.email || 'Admin';
       await createInAppNotification({

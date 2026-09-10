@@ -212,35 +212,35 @@ export const TaskAttachments: React.FC<TaskAttachmentsProps> = ({
                     >
                       {item.file_name}
                     </p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {formatFileSize(item.file_size)} • {formatDateTime(item.uploaded_at)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0 ml-2">
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
                   <button
                     type="button"
                     onClick={() => setPreviewItem(item)}
-                    className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                    className="h-8 w-8 inline-flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors cursor-pointer"
                     title="Preview file"
                     aria-label="Preview file"
                   >
-                    <Eye className="w-3.5 h-3.5" />
+                    <Eye className="w-4 h-4" />
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleDownloadFile(item)}
                     disabled={downloadingId === item.id}
-                    className="p-1.5 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                    className="h-8 w-8 inline-flex items-center justify-center text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                     title="Download file"
                     aria-label="Download file"
                   >
                     {downloadingId === item.id ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
                     ) : (
-                      <Download className="w-3.5 h-3.5" />
+                      <Download className="w-4 h-4" />
                     )}
                   </button>
 
@@ -248,11 +248,11 @@ export const TaskAttachments: React.FC<TaskAttachmentsProps> = ({
                     <button
                       type="button"
                       onClick={() => setItemToDelete(item)}
-                      className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+                      className="h-8 w-8 inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
                       title="Delete attachment"
                       aria-label="Delete attachment"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>

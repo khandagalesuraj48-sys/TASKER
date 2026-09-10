@@ -91,20 +91,36 @@ export const createInAppNotification = async (payload: {
   entity_id?: string | null;
 }): Promise<void> => {
   if (!payload.recipient_user_id) return;
+
+  // UUID validation helper to prevent Postgres 'invalid input syntax for type uuid' errors
+  const isValidUuid = (id?: string | null): boolean => {
+    if (!id || typeof id !== 'string') return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id.trim());
+  };
+
+  const safeEntityId = isValidUuid(payload.entity_id) ? payload.entity_id!.trim() : null;
+  const safeOrgId = isValidUuid(payload.organization_id) ? payload.organization_id!.trim() : null;
+
   try {
-    await supabase.from('notifications').insert({
+    const { error } = await supabase.from('notifications').insert({
       recipient_user_id: payload.recipient_user_id,
-      organization_id: payload.organization_id || null,
+      organization_id: safeOrgId,
       type: payload.type,
       title: payload.title,
       message: payload.message,
       entity_type: payload.entity_type || 'task',
-      entity_id: payload.entity_id || null,
+      entity_id: safeEntityId,
       is_read: false,
       created_at: new Date().toISOString(),
     });
+
+    if (error) {
+      console.error('Failed to insert in-app notification in Supabase:', error);
+    } else {
+      console.log('Notification dispatched successfully to user:', payload.recipient_user_id);
+    }
   } catch (err) {
-    console.warn('Failed to insert in-app notification:', err);
+    console.error('Exception inserting in-app notification:', err);
   }
 };
 
@@ -188,7 +204,7 @@ export const subscribeToNotifications = (
               const newNotif = payload.new as InAppNotification;
               onNewNotification(newNotif);
 
-              // If on Android / Native platform, push directly to system status bar with HIGH importance
+              // 1. Android / Native Platform Status Bar Push
               if (Capacitor.isNativePlatform()) {
                 try {
                   await LocalNotifications.schedule({
@@ -214,6 +230,31 @@ export const subscribeToNotifications = (
                 } catch (e) {
                   console.warn('Error scheduling local notification on arrival:', e);
                 }
+              }
+
+              // 2. Web / Desktop OS Notification Support (Chrome, Edge, Electron Windows)
+              if (
+                typeof window !== 'undefined' &&
+                'Notification' in window &&
+                Notification.permission === 'granted'
+              ) {
+                try {
+                  new Notification(newNotif.title, {
+                    body: newNotif.message,
+                    icon: '/favicon.ico',
+                  });
+                } catch (desktopNotifErr) {
+                  console.warn('Desktop notification dispatch note:', desktopNotifErr);
+                }
+              }
+
+              // 3. Dispatch global browser event for instant UI reactive sync
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(
+                  new CustomEvent('tasker:notification_received', {
+                    detail: newNotif,
+                  })
+                );
               }
             }
           } catch (payloadErr) {

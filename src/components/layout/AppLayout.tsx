@@ -6,6 +6,7 @@ import { MobileNav } from './MobileNav';
 import { useTask } from '../../context/TaskContext';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { supabase } from '../../lib/supabase';
 import { TaskFormModal } from '../tasks/TaskFormModal';
 import { UniversalSearchModal } from '../search/UniversalSearchModal';
@@ -66,6 +67,7 @@ export const AppLayout: React.FC = () => {
   // Register with Android hardware back button handler (Priority 30: Menus & Popups)
   useBackButton(mobileMenuOpen, () => setMobileMenuOpen(false), 30);
 
+  const { showToast } = useToast();
   const {
     isCreateModalOpen,
     closeCreateModal,
@@ -78,6 +80,7 @@ export const AppLayout: React.FC = () => {
     openAIDrawer,
     closeAIDrawer,
     stats,
+    triggerRefresh,
   } = useTask();
 
   // Global Realtime Notifications & Resume Sync
@@ -100,6 +103,8 @@ export const AppLayout: React.FC = () => {
       // 4. Realtime subscription for immediate push
       unsubscribe = subscribeToNotifications(user.id, (notif) => {
         console.log('Realtime notification received in AppLayout:', notif.title);
+        showToast(`🔔 ${notif.title}: ${notif.message}`, 'info');
+        triggerRefresh();
       });
 
       // 4. Foreground / Resume sync
