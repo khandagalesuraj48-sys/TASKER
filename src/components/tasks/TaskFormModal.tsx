@@ -104,8 +104,13 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
       if (result.title) setTitle(result.title);
       if (result.description) {
         let fullDesc = result.description;
-        if (result.subtasks && result.subtasks.length > 0) {
-          fullDesc += '\n\nAction Items / Deliverables:\n' + result.subtasks.map((s, i) => `${i + 1}. ${s}`).join('\n');
+        if (
+          result.subtasks &&
+          result.subtasks.length > 0 &&
+          !fullDesc.toLowerCase().includes('action items') &&
+          !fullDesc.toLowerCase().includes('deliverables')
+        ) {
+          fullDesc += '\n\n### 🎯 ACTION ITEMS / DELIVERABLES:\n' + result.subtasks.map((s, i) => `${i + 1}. ${s}`).join('\n');
         }
         setDescription(fullDesc);
       }
