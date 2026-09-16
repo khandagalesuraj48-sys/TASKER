@@ -100,6 +100,13 @@ function loadEnv(rootDir: string): EnvConfig {
   let githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || null;
   if (!githubToken) {
     try {
+      githubToken = execSync('gh auth token', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+    } catch {
+      // Try git credential fill
+    }
+  }
+  if (!githubToken) {
+    try {
       const creds = execSync('git credential fill', {
         input: 'protocol=https\nhost=github.com\n\n',
         encoding: 'utf8',
@@ -541,9 +548,14 @@ function commitAndPush(rootDir: string, targetVersion: string, targetVersionCode
   // Stage versioned source files only (never .env, *.apk, *.keystore)
   const filesToStage = [
     'package.json',
+    'package-lock.json',
     'android/app/build.gradle',
+    'src/constants/index.ts',
     'src/services/appUpdateService.ts',
     'src/hooks/useAppUpdate.ts',
+    'src/services/aiTaskService.ts',
+    'src/components/tasks/TaskFormModal.tsx',
+    'electron/main.cjs',
     'src/services/notificationInboxService.ts',
     'src/services/taskService.ts',
     'src/pages/OrgPendingTasksPage.tsx',
@@ -555,6 +567,7 @@ function commitAndPush(rootDir: string, targetVersion: string, targetVersionCode
     'src/components/tasks/TaskCard.tsx',
     'src/components/tasks/FileUploadZone.tsx',
     'scripts/release.ts',
+    'scripts/releaseWindows.ts',
     'scripts/buildRelease.ts',
     'scripts/createGithubRelease.ts'
   ];
