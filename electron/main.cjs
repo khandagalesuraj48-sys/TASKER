@@ -175,7 +175,15 @@ function setupIpc() {
   // Download Windows update (.exe) with streaming progress reporting
   ipcMain.handle('download-update', async (event, downloadUrl) => {
     try {
-      const urlObj = new URL(downloadUrl);
+      let resolvedUrl = downloadUrl;
+      if (typeof resolvedUrl === 'string' && resolvedUrl.includes('/releases/tag/')) {
+        const tagMatch = resolvedUrl.match(/\/releases\/tag\/v?([^\/?#]+)/);
+        if (tagMatch) {
+          const ver = tagMatch[1];
+          resolvedUrl = `https://github.com/khandagalesuraj48-sys/TASKER/releases/download/v${ver}/TASKER-Setup-${ver}.exe`;
+        }
+      }
+      const urlObj = new URL(resolvedUrl);
       const fileName = path.basename(urlObj.pathname) || 'TASKER-Setup-Update.exe';
       const targetPath = path.join(os.tmpdir(), fileName);
 
@@ -186,7 +194,7 @@ function setupIpc() {
         }
       } catch {}
 
-      const response = await fetch(downloadUrl, {
+      const response = await fetch(resolvedUrl, {
         headers: {
           'User-Agent': 'TASKER-Desktop-Update-Engine',
           'Accept': '*/*',

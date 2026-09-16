@@ -132,10 +132,14 @@ export const useAppUpdate = (): AppUpdateState => {
     // Handle Windows Desktop Update via Electron
     if (isDesktop && (window as any).electron?.downloadUpdate) {
       try {
+        const cleanVer = (latestRelease.version_name || '').replace(/^v/i, '');
+        const directGithubExeUrl = `https://github.com/khandagalesuraj48-sys/TASKER/releases/download/v${cleanVer}/TASKER-Setup-${cleanVer}.exe`;
         const exeUrl =
-          (latestRelease as any).windows_exe_url ||
-          latestRelease.release_url ||
-          `https://xargfforwknnicudigxs.supabase.co/storage/v1/object/public/app-releases/TASKER-Setup-${latestRelease.version_name}.exe`;
+          (latestRelease as any).windows_exe_url?.endsWith('.exe')
+            ? (latestRelease as any).windows_exe_url
+            : latestRelease.release_url?.endsWith('.exe')
+              ? latestRelease.release_url
+              : directGithubExeUrl;
 
         // Subscribe to download progress from Electron
         const unsubscribe = (window as any).electron.onUpdateProgress?.((pct: number) => {
