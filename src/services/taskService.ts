@@ -604,6 +604,12 @@ export const verifyTaskEditPermission = async (taskId: string): Promise<Task> =>
 };
 
 export const verifyTaskDeletePermission = async (taskId: string): Promise<Task> => {
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUser = authData?.user;
+  if (!currentUser) {
+    throw new Error('User not logged in.');
+  }
+
   const { data: task, error: fetchErr } = await supabase
     .from('tasks')
     .select('id, user_id, created_by, org_id, title')
@@ -614,6 +620,25 @@ export const verifyTaskDeletePermission = async (taskId: string): Promise<Task> 
     throw new Error('Task not found.');
   }
 
+  const isPlatformAdmin = await adminService.isPlatformAdmin(currentUser.id);
+  let isOrgAdmin = false;
+  if (task.org_id) {
+    const { data: membership } = await supabase
+      .from('org_memberships')
+      .select('role')
+      .eq('org_id', task.org_id)
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if (membership && (membership.role === 'org_owner' || membership.role === 'org_admin')) {
+      isOrgAdmin = true;
+    }
+  }
+
+  const allowed = canUserDeleteTask(task as Task, currentUser, isPlatformAdmin, isOrgAdmin);
+  if (!allowed) {
+    throw new Error('Permission denied! Only the task creator or admin can delete this task.');
+  }
+
   // Universal task deletion: all users are permitted to delete/soft-delete tasks
   return task as Task;
 };
@@ -622,6 +647,7 @@ export const softDeleteTask = async (
   id: string,
   actor: string = DEFAULT_USER_NAME
 ): Promise<void> => {
+  // Enforce delete authorization: Creator or Admin ONLY
   await verifyTaskDeletePermission(id);
 
   // 1. Try direct update
@@ -637,7 +663,7 @@ export const softDeleteTask = async (
 
   // Fallback to server RPC if direct update encounters RLS/trigger restriction
   if (error) {
-    console.warn('Direct soft delete update encountered error, attempting delete_task_universal RPC:', error.message);
+    console.warn('Direct soft delete update encountered error, attempting delete_task_universal RPC:', (error as any)?.message);
     const { error: rpcErr } = await supabase.rpc('delete_task_universal', {
       p_task_id: id,
       p_actor: actor,
@@ -645,7 +671,7 @@ export const softDeleteTask = async (
     });
     if (rpcErr) {
       console.error('Error moving task to bin via RPC:', rpcErr);
-      throw new Error(error.message || 'Unable to move task to Bin.');
+      throw new Error((error as any)?.message || 'Unable to move task to Bin.');
     }
   }
 
@@ -692,6 +718,7 @@ export const restoreTask = async (id: string): Promise<void> => {
 };
 
 export const permanentDeleteTask = async (id: string): Promise<void> => {
+  // Enforce delete authorization: Creator or Admin ONLY
   await verifyTaskDeletePermission(id);
 
   // 1. Delete from database first (cascades related DB metadata)
@@ -702,7 +729,7 @@ export const permanentDeleteTask = async (id: string): Promise<void> => {
 
   // Fallback to server RPC if direct delete encounters restriction
   if (error) {
-    console.warn('Direct permanent delete encountered error, attempting delete_task_universal RPC:', error.message);
+    console.warn('Direct permanent delete encountered error, attempting delete_task_universal RPC:', (error as any)?.message);
     const { error: rpcErr } = await supabase.rpc('delete_task_universal', {
       p_task_id: id,
       p_actor: 'Permanent Delete',
@@ -710,7 +737,7 @@ export const permanentDeleteTask = async (id: string): Promise<void> => {
     });
     if (rpcErr) {
       console.error('Error permanently deleting task via RPC:', rpcErr);
-      throw new Error(error.message || 'Unable to permanently delete task.');
+      throw new Error((error as any)?.message || 'Unable to permanently delete task.');
     }
   }
 

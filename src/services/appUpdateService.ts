@@ -150,8 +150,6 @@ export async function getInstalledVersion(): Promise<{ versionName: string; vers
     try {
       const versionName = await (window as any).electron.getVersion();
       return { versionName: versionName || APP_VERSION, versionCode: APP_BUILD_CODE };
-      const code = versionName === '1.0.21' ? 24 : versionName === '1.0.20' ? 23 : APP_BUILD_CODE;
-      return { versionName: versionName || APP_VERSION, versionCode: code };
     } catch (e) {
       console.warn('Electron getVersion failed:', e);
     }
@@ -223,15 +221,24 @@ export async function fetchLatestRelease(): Promise<AppRelease | null> {
   }
 }
 
-/**
- * Compares installed version code or semver with latest release.
- */
 export function isUpdateAvailable(
   installedCode: number,
   latest?: AppRelease | null,
   installedVersionName?: string
 ): boolean {
   if (!latest) return false;
+
+  // 1. Windows Desktop: Strictly compare SemVer version names
+  // Prevents false positive updates triggered by Android versionCode discrepancies
+  if (isWindowsApp()) {
+    const currentVer = installedVersionName || APP_VERSION;
+    if (latest.version_name && currentVer) {
+      return compareSemver(latest.version_name, currentVer) > 0;
+    }
+    return false;
+  }
+
+  // 2. Android: Check integer versionCode first, then SemVer
   if (typeof latest.version_code === 'number' && typeof installedCode === 'number') {
     if (latest.version_code > installedCode) return true;
   }

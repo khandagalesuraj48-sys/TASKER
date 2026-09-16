@@ -57,6 +57,13 @@ function loadEnv(rootDir: string) {
   let githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || null;
   if (!githubToken) {
     try {
+      githubToken = execSync('gh auth token', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+    } catch {
+      // Try git credential fill
+    }
+  }
+  if (!githubToken) {
+    try {
       const creds = execSync('git credential fill', {
         input: 'protocol=https\nhost=github.com\n\n',
         encoding: 'utf8',
@@ -303,6 +310,21 @@ async function main() {
   const env = loadEnv(rootDir);
   if (!env.githubToken) {
     throw new Error('GitHub token not found in git credential manager or GITHUB_TOKEN environment variable.');
+  }
+
+  // Ensure constants are synced
+  const constantsPath = path.join(rootDir, 'src', 'constants', 'index.ts');
+  if (fs.existsSync(constantsPath)) {
+    let constContent = fs.readFileSync(constantsPath, 'utf8');
+    constContent = constContent.replace(/export const APP_VERSION = '[^']+';/, `export const APP_VERSION = '${version}';`);
+    let vCode = 33;
+    try {
+      const gradle = fs.readFileSync(path.join(rootDir, 'android', 'app', 'build.gradle'), 'utf8');
+      const m = gradle.match(/versionCode\s+(\d+)/);
+      if (m) vCode = parseInt(m[1], 10);
+    } catch {}
+    constContent = constContent.replace(/export const APP_BUILD_CODE = \d+;/, `export const APP_BUILD_CODE = ${vCode};`);
+    fs.writeFileSync(constantsPath, constContent, 'utf8');
   }
 
   const skipBuild = process.argv.includes('--skip-build');

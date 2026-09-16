@@ -172,63 +172,82 @@ function setupIpc() {
     return false;
   });
 
-  // Download Windows update (.exe) with progress reporting
+  // Download Windows update (.exe) with streaming progress reporting
   ipcMain.handle('download-update', async (event, downloadUrl) => {
-    return new Promise((resolve, reject) => {
+    try {
+      const urlObj = new URL(downloadUrl);
+      const fileName = path.basename(urlObj.pathname) || 'TASKER-Setup-Update.exe';
+      const targetPath = path.join(os.tmpdir(), fileName);
+
+      // Clean up previous temp file if exists
       try {
-        const urlObj = new URL(downloadUrl);
-        const fileName = path.basename(urlObj.pathname) || 'TASKER-Update.exe';
-        const targetPath = path.join(os.tmpdir(), fileName);
+        if (fs.existsSync(targetPath)) {
+          fs.unlinkSync(targetPath);
+        }
+      } catch {}
 
-        const fileStream = fs.createWriteStream(targetPath);
-        const request = net.request(downloadUrl);
+      const response = await fetch(downloadUrl, {
+        headers: {
+          'User-Agent': 'TASKER-Desktop-Update-Engine',
+          'Accept': '*/*',
+        },
+        redirect: 'follow',
+      });
 
-        request.on('redirect', () => {
-          request.followRedirect();
-        });
-
-        request.on('response', (response) => {
-          if (response.statusCode >= 400) {
-            reject(new Error(`Failed to download update: HTTP ${response.statusCode}`));
-            return;
-          }
-
-          const totalBytes = parseInt(response.headers['content-length'] || '0', 10);
-          let receivedBytes = 0;
-
-          response.on('data', (chunk) => {
-            receivedBytes += chunk.length;
-            fileStream.write(chunk);
-            if (totalBytes > 0) {
-              const percent = Math.round((receivedBytes / totalBytes) * 100);
-              event.sender.send('update-progress', percent);
-            }
-          });
-
-          response.on('end', () => {
-            fileStream.end();
-            event.sender.send('update-progress', 100);
-            resolve(targetPath);
-          });
-        });
-
-        request.on('error', (err) => {
-          fileStream.destroy();
-          fs.unlink(targetPath, () => {});
-          reject(err);
-        });
-
-        request.end();
-      } catch (e) {
-        reject(e);
+      if (!response.ok) {
+        throw new Error(`Failed to download update: HTTP ${response.status} ${response.statusText}`);
       }
-    });
+
+      const contentLength = response.headers.get('content-length');
+      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+      let receivedBytes = 0;
+
+      const fileStream = fs.createWriteStream(targetPath);
+      const reader = response.body.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          receivedBytes += value.length;
+          fileStream.write(Buffer.from(value));
+          if (totalBytes > 0) {
+            const percent = Math.min(100, Math.round((receivedBytes / totalBytes) * 100));
+            event.sender.send('update-progress', percent);
+          }
+        }
+      }
+
+      await new Promise((resolve, reject) => {
+        fileStream.end(() => resolve());
+        fileStream.on('error', reject);
+      });
+
+      event.sender.send('update-progress', 100);
+      return targetPath;
+    } catch (e) {
+      console.error('Download update error in Electron main:', e);
+      throw e;
+    }
   });
 
   // Install downloaded update and exit
   ipcMain.handle('install-update', async (event, filePath) => {
     if (!fs.existsSync(filePath)) {
       throw new Error(`Update installer not found at ${filePath}`);
+    }
+
+    const stat = fs.statSync(filePath);
+    if (stat.size < 1000) {
+      throw new Error('Invalid or corrupted installer file downloaded.');
+    }
+
+    if (Notification.isSupported()) {
+      new Notification({
+        title: 'TASKER Update',
+        body: 'Installing latest TASKER update, please wait...',
+        icon: getIconPath(),
+      }).show();
     }
 
     // Launch installer detached
@@ -241,7 +260,7 @@ function setupIpc() {
     isQuitting = true;
     setTimeout(() => {
       app.quit();
-    }, 500);
+    }, 600);
 
     return true;
   });
