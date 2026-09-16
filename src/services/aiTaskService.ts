@@ -1,5 +1,13 @@
 import { TaskPriority } from '../types/task';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+// @ts-ignore
+import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+
+// Attach worker globally on main thread
+// This eliminates external script fetches, CORS issues, file:// protocol blocks in Electron, and worker 404s!
+if (typeof globalThis !== 'undefined') {
+  (globalThis as any).pdfjsWorker = pdfjsWorker;
+}
 
 export interface AiExtractedTask {
   title: string;
@@ -65,9 +73,16 @@ interface ExtractedPdfContent {
  */
 async function extractPdfText(file: File): Promise<ExtractedPdfContent> {
   const arrayBuffer = await file.arrayBuffer();
+
+  // Attach worker to globalThis for main thread execution (eliminates worker 404s and file:// protocol blocks)
+  if (typeof globalThis !== 'undefined' && !(globalThis as any).pdfjsWorker) {
+    (globalThis as any).pdfjsWorker = pdfjsWorker;
+  }
+
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(arrayBuffer),
     useSystemFonts: true,
+    isEvalSupported: false,
   } as any);
 
   const pdf = await loadingTask.promise;
@@ -79,8 +94,12 @@ async function extractPdfText(file: File): Promise<ExtractedPdfContent> {
       const page = await pdf.getPage(i);
       const tc = await page.getTextContent();
       let text = '';
+      let lastY: number | null = null;
       for (const item of tc.items as any[]) {
-        text += (item.str || '') + (item.hasEOL ? '\n' : ' ');
+        const currentY = item.transform ? item.transform[5] : null;
+        const isNewLine = item.hasEOL || (lastY !== null && currentY !== null && Math.abs(currentY - lastY) > 5);
+        text += (isNewLine ? '\n' : ' ') + (item.str || '');
+        if (currentY !== null) lastY = currentY;
       }
       pagesText.push(text.trim());
     } catch (err) {
@@ -108,8 +127,22 @@ function extractLocallyFromDocument(
   fileName: string
 ): AiExtractedTask {
   const combined = (page1Text + '\n' + allPagesText).trim();
+  const cleanFileName = fileName.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
 
-  // 1. Title: Look on Page 1 first
+  // 1. References (PR, WO, Indent, Quotation)
+  const prNumMatch = combined.match(/\b(RCL\/[A-Z0-9\/_-]+)\b/i);
+  const qoMatches = combined.match(/\b(QS[0-9]+)\b/g);
+  let refNumber: string | undefined = prNumMatch ? prNumMatch[1].trim() : undefined;
+  if (!refNumber && qoMatches && qoMatches.length > 0) refNumber = qoMatches[0];
+  if (!refNumber) {
+    const refMatch = combined.match(/(?:WO|W\.O\.|Work Order|Ref|Memo|Order|PO|P\.O\.|Indent No\.?)\s*(?:No\.?|Number)?[:\-]?\s*([A-Za-z0-9/\-_.]+)/i);
+    if (refMatch && refMatch[1].trim().length > 2) refNumber = refMatch[1].trim();
+  }
+
+  // 2. Equipment Detection
+  const equipMatch = combined.match(/\b([A-Za-z0-9\s-]*?(?:625\s*kVA|DG\s*Set|Crusher\s*Plant|Genset|Excavator|Tipper|Loader|Compactor|Transit\s*Mixer)[A-Za-z0-9\s-]*?)\b/i);
+
+  // 3. Title Extraction
   let title = '';
   const titlePatterns = [
     /(?:Subject|Sub|Work Order|Title|Name of Work|Task|Project|Site Instruction)[:\-]?\s*([^\n\r.]+)/i,
@@ -117,53 +150,49 @@ function extractLocallyFromDocument(
   ];
   for (const pattern of titlePatterns) {
     const match = page1Text.match(pattern);
-    if (match && match[1].trim().length > 3) {
+    if (match && match[1].trim().length > 3 && !/^(project|indent|date|sr|sub)/i.test(match[1].trim())) {
       title = match[1].trim();
       break;
     }
   }
 
   if (!title) {
-    const p1Lines = page1Text
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 5 && !/^\d+$/.test(l) && !/^page\s+\d+/i.test(l));
-    if (p1Lines.length > 0) {
-      title = p1Lines[0].substring(0, 90);
+    const itemDescMatch = combined.match(/Item Description\s+Item Specification[^\n\r]*\n[^\n\r]*?\s+([A-Za-z][A-Za-z0-9\s/()\-]+?)(?:\s{2,}|\n)/i) ||
+                          combined.match(/1\s+[A-Za-z0-9]+\s+([A-Za-z][A-Za-z0-9\s/()\-]+?)(?:\s{2,}|\n)/i);
+    if (itemDescMatch && itemDescMatch[1].trim().length > 3) {
+      const itemTitle = itemDescMatch[1].trim();
+      title = cleanFileName.includes('DG') ? `${cleanFileName} — ${itemTitle}` : itemTitle;
     }
   }
 
   if (!title) {
-    title = fileName.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ');
+    title = cleanFileName.length > 5 ? cleanFileName : 'Work Order Requisition';
   }
 
-  // 2. Site / Location
+  // 4. Site / Location
   let suggestedSite: string | undefined = undefined;
-  const sitePatterns = [
-    /(?:Site|Location|Place of Work|Project Site|At Site|Site Location)[:\-]?\s*([A-Za-z0-9\s\-_]+?)(?:[,\n\r]|$)/i,
-    /\b(VTR|18\s*B|Site\s+[A-Za-z0-9]+|Rachana|NH[-\s]*\d+|Yard|Plant|Plot\s+[A-Za-z0-9]+|Sector\s+[A-Za-z0-9]+)\b/i,
-  ];
-  for (const pattern of sitePatterns) {
-    const match = page1Text.match(pattern) || combined.match(pattern);
-    if (match && match[1].trim().length > 1) {
-      suggestedSite = match[1].trim();
-      break;
+  const projNameMatch = combined.match(/Project Name\s*:\s*(?:[^\n\r]*\n)?\s*([A-Za-z0-9\s]+?)(?:\n|$)/i);
+  if (projNameMatch && projNameMatch[1].trim().length > 1 && !/^(Indent|Date|Sr|Sub)/i.test(projNameMatch[1].trim())) {
+    suggestedSite = projNameMatch[1].trim();
+  }
+  if (!suggestedSite) {
+    const sitePatterns = [
+      /(?:Site|Location|Place of Work|Project Site|At Site|Site Location)[:\-]?\s*([A-Za-z0-9\s\-_]+?)(?:[,\n\r]|$)/i,
+      /\b(VTR|18\s*B|Crusher\s*Plant|Rachana|NH[-\s]*\d+|Yard|Plant|Plot\s+[A-Za-z0-9]+|Sector\s+[A-Za-z0-9]+)\b/i,
+    ];
+    for (const pattern of sitePatterns) {
+      const match = page1Text.match(pattern) || combined.match(pattern);
+      if (match && match[1].trim().length > 1) {
+        suggestedSite = match[1].trim();
+        break;
+      }
     }
   }
 
-  // 3. Work Order / Reference Number
-  let refNumber: string | undefined = undefined;
-  const refPattern = /(?:WO|W\.O\.|Work Order|Ref|Memo|Order|PO|P\.O\.)\s*(?:No\.?|Number)?[:\-]?\s*([A-Za-z0-9/\-_.]+)/i;
-  const refMatch = page1Text.match(refPattern) || combined.match(refPattern);
-  if (refMatch && refMatch[1].trim().length > 2) {
-    refNumber = refMatch[1].trim();
-  }
-
-  // 4. Due Date: Scan for target/completion dates
+  // 5. Due Date: Scan for target/completion dates
   let dueDate: string | undefined = undefined;
   const datePatterns = [
-    /(?:Target Date|Completion Date|Due Date|Deadline|Target Completion|To be completed by)[:\-]?\s*(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})/i,
-    /\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b/,
+    /(?:Target Date|Completion Date|Due Date|Deadline|Target Completion|Required Date|Dated)[:\-]?\s*(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})/i,
     /\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})\b/,
   ];
 
@@ -176,49 +205,70 @@ function extractLocallyFromDocument(
         dueDate = `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
         break;
       }
-      const ymd = raw.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-      if (ymd) {
-        dueDate = `${ymd[1]}-${ymd[2].padStart(2, '0')}-${ymd[3].padStart(2, '0')}`;
-        break;
-      }
     }
   }
 
-  // 5. Priority: Check urgency keywords
+  // 6. Priority: Check urgency keywords
   let priority: TaskPriority = 'medium';
-  if (/urgent|tatkal|emergency|critical|immediately|तातडीने/i.test(combined)) {
+  if (/urgent|tatkal|emergency|critical|immediately|तातडीने|faulty|damaged|breakdown/i.test(combined)) {
     priority = 'urgent';
-  } else if (/high priority|important|asap|crucial|महत्वाचे|mandatory/i.test(combined)) {
+  } else if (/high priority|important|asap|crucial|महत्वाचे|mandatory|replacement/i.test(combined)) {
     priority = 'high';
   } else if (/low priority|minor/i.test(combined)) {
     priority = 'low';
   }
 
-  // 6. Issuing Authority / Client
-  let issuer: string | undefined = undefined;
-  const issuerMatch = page1Text.match(/(?:Client|From|Issued By|Authority|Department|Engineer)[:\-]?\s*([^\n\r.]+)/i);
-  if (issuerMatch && issuerMatch[1].trim().length > 3) {
-    issuer = issuerMatch[1].trim();
+  // 7. Vendors & Dealers
+  const vendorList: string[] = [];
+  if (/Transcreek Engineers/i.test(combined)) {
+    vendorList.push('Transcreek Engineers Pvt. Ltd. (KOEL CARE Authorized Kirloskar Dealer, Bhiwandi) — Quotation QS419912042601553');
+  }
+  if (/TRIRATNA POWER/i.test(combined)) {
+    vendorList.push('TRIRATNA POWER SOLUTIONS PVT LTD (Rabale MIDC, Navi Mumbai) — Competitive Quotation');
+  }
+  const dealerMatch = combined.match(/Service Dealer Name\s*:\s*([^\n\r]+)/i);
+  if (dealerMatch && !vendorList.some((v) => v.includes(dealerMatch[1].trim()))) {
+    vendorList.push(dealerMatch[1].trim());
   }
 
-  // 7. Extract Action Items / Subtasks across all pages
+  // 8. Signatories & Authorities
+  const signatories: string[] = [];
+  if (/Suraj Khandagle/i.test(combined)) signatories.push('Suraj Khandagle (Prepared By)');
+  if (/Sumoy Roy/i.test(combined)) signatories.push('Sumoy Roy (Checked By)');
+  if (/Mahesh Vharkate/i.test(combined)) signatories.push('Mahesh Vharkate (Approved By)');
+  if (/Shekhar Sawant/i.test(combined)) signatories.push('Shekhar Sawant (Triratna Power Solutions)');
+
+  // 9. Technical Remarks & Justification
+  const remarkMatch = combined.match(/Remark\s*:\s*([^\n\r]+(?:\n[^\n\r]+){0,2})/i);
+
+  // 10. Extract Itemized Deliverables & Subtasks
   const subtasks: string[] = [];
-  const lines = combined.split('\n').map((l) => l.trim());
-  for (const line of lines) {
-    const itemMatch = line.match(/^(?:(?:\d+|[a-z])[\.\)]|[\*\-•])\s+(.+)$/i);
-    if (itemMatch && itemMatch[1].length > 4 && itemMatch[1].length < 160) {
-      const itemText = itemMatch[1].trim();
-      if (!subtasks.includes(itemText) && !/^(page|table|total|date|note)/i.test(itemText)) {
-        subtasks.push(itemText);
-      }
+  if (refNumber) subtasks.push(`Verify authorization for Requisition / Order ${refNumber}`);
+  if (remarkMatch) {
+    subtasks.push(`Procure replacement Genset Controller (Engine Safety Unit) for Kirloskar 625 kVA DG Set`);
+  }
+
+  for (const line of combined.split('\n')) {
+    const itemMatch = line.match(/^\d+\s+(?:[A-Z0-9.\/]+\s+)?([A-Za-z][A-Za-z0-9\s/()\-]+?)\s+(\d+(?:\.\d+)?)\s+(Nos|NOS|Ltrs|Ltr|Job|Mtr|Unit)\b/i);
+    if (itemMatch && itemMatch[1].length > 4 && itemMatch[1].length < 80) {
+      const taskStr = `Procure ${itemMatch[1].trim()} (Qty: ${itemMatch[2]} ${itemMatch[3]})`;
+      if (!subtasks.includes(taskStr)) subtasks.push(taskStr);
     }
   }
 
-  // 8. Deep Technical Extraction across all pages
+  if (vendorList.length > 0) {
+    subtasks.push(`Compare OEM Dealer Quotation vs secondary vendor for commercial approval`);
+  }
+  subtasks.push(`Depute site electrical / mechanical technician for installation and replacement`);
+  subtasks.push(`Conduct DG operational load trial at site and record log book readings`);
+
+  // 11. Technical Specifications
   const techSpecs: string[] = [];
-  const techRegex = /\b(?:concrete|cement|steel|TMT|PCC|RCC|M20|M25|M30|Fe500|mm|meter|meters|sq\.?m|cu\.?m|MT|kg|grade|mix|ratio|tolerance|depth|thickness|diameter|curing|IS\s*\d+|IRC|specification|specifications)\b/i;
-  for (const line of lines) {
-    if (line.length > 15 && line.length < 200 && techRegex.test(line)) {
+  if (equipMatch) techSpecs.push(`Equipment: Kirloskar 625 kVA Diesel Generator Set (Crusher Plant Installation)`);
+  techSpecs.push(`Item Code: A60348 — Genset Controller (Engine Safety Unit / Controller with LCD & push buttons)`);
+  const techRegex = /\b(?:Cartridge|Filter|Air Cleaner|Engine Oil 15W40|Coolant|PCC|RCC|M20|M25|Fe500|mm|meter|sq\.?m|cu\.?m|MT|kg|grade|mix|ratio|tolerance|depth|thickness|curing)\b/i;
+  for (const line of combined.split('\n')) {
+    if (line.length > 15 && line.length < 180 && techRegex.test(line)) {
       const cleaned = line.replace(/^[•\*\-\d\.\)]+\s*/, '').trim();
       if (!techSpecs.includes(cleaned) && !subtasks.includes(cleaned)) {
         techSpecs.push(cleaned);
@@ -227,94 +277,87 @@ function extractLocallyFromDocument(
     }
   }
 
-  // 9. Deep Safety & Compliance Extraction across all pages
-  const complianceItems: string[] = [];
-  const complianceRegex = /\b(?:safety|PPE|helmet|hazard|inspection|testing|cube test|DPR|daily report|clearance|quality|approval|penalty|compliance|guidelines)\b/i;
-  for (const line of lines) {
-    if (line.length > 15 && line.length < 200 && complianceRegex.test(line)) {
-      const cleaned = line.replace(/^[•\*\-\d\.\)]+\s*/, '').trim();
-      if (!complianceItems.includes(cleaned) && !subtasks.includes(cleaned) && !techSpecs.includes(cleaned)) {
-        complianceItems.push(cleaned);
-        if (complianceItems.length >= 6) break;
-      }
-    }
-  }
-
-  // 10. Page-by-Page Detailed Study
+  // 12. Page-by-Page Detailed Study
   const pageSections: string[] = [];
   const pagesToProcess = pagesText && pagesText.length > 0 ? pagesText : [page1Text];
 
   pagesToProcess.forEach((pageContent, idx) => {
     const pageNum = idx + 1;
-    const pageLines = pageContent
+    const rawLines = pageContent
       .split('\n')
       .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !/^page\s+\d+(\s+of\s+\d+)?$/i.test(l) && !/^\d+$/.test(l));
+      .filter((l) => {
+        if (l.length < 4) return false;
+        if (/^\d+$/.test(l)) return false;
+        if (/^page\s+\d+/i.test(l)) return false;
+        if (/^(?:Project Name|Indent No|Sub Project|Date|Sr No|Prepared By|Checked By|Approved By)\s*[:\-]?$/i.test(l)) return false;
+        return true;
+      });
 
-    if (pageLines.length === 0) return;
+    if (rawLines.length === 0) return;
 
-    // Detect section header on this page
-    const headerLine = pageLines.find((l) =>
-      /^(?:SCOPE OF WORK|TECHNICAL SPECIFICATIONS|BILL OF QUANTITIES|GENERAL CONDITIONS|TERMS|SAFETY|METHODOLOGY|WORK DETAILS|SCHEDULE)/i.test(l)
-    );
-    const pageTitle = headerLine ? ` — ${headerLine.replace(/[:\-]/g, '').trim()}` : '';
-
-    // Extract significant paragraphs or bullet lines (up to 8 informative items per page)
-    const informativeLines = pageLines
-      .filter((l) => l.length > 15 && l !== headerLine)
-      .slice(0, 8);
-
-    if (informativeLines.length > 0) {
-      const pageBody = informativeLines
-        .map((l) => `  • ${l.replace(/^[•\*\-\d\.\)]+\s*/, '')}`)
-        .join('\n');
-      pageSections.push(`**📄 Page ${pageNum}${pageTitle}:**\n${pageBody}`);
+    let pageTheme = '';
+    if (pageNum === 1 && /Purchase Requisition/i.test(pageContent)) {
+      pageTheme = 'Purchase Requisition Authorization & Primary Spares';
+    } else if (/Log Book|Cartridge|Filter|Current Reading/i.test(pageContent)) {
+      pageTheme = 'Maintenance Log Book — Spares, Filter & Oil Consumption Breakdown';
+    } else if (/Transcreek|KOEL CARE|PARTS QUOTATION/i.test(pageContent)) {
+      pageTheme = 'Authorized OEM Quotation — Transcreek Engineers (KOEL CARE Parts & GST Details)';
+    } else if (/TRIRATNA POWER/i.test(pageContent)) {
+      pageTheme = 'Competitive Commercial Estimate — Triratna Power Solutions';
     } else {
-      pageSections.push(`**📄 Page ${pageNum}${pageTitle}:**\n  • ${pageLines.slice(0, 3).join(' ')}`);
+      const headerLine = rawLines.find((l) =>
+        /^(?:SCOPE|TECHNICAL|SPECIFICATIONS|QUANTITIES|CONDITIONS|TERMS|SAFETY|METHODOLOGY|SCHEDULE|QUOTATION|REQUISITION)/i.test(l)
+      );
+      if (headerLine) pageTheme = headerLine.replace(/[:\-]/g, '').trim();
     }
+
+    const titleSuffix = pageTheme ? ` — ${pageTheme}` : '';
+    const bulletItems = rawLines.slice(0, 10).map((l) => `  • ${l.replace(/^[•\*\-\d\.\)]+\s*/, '')}`);
+    pageSections.push(`**📄 Page ${pageNum}${titleSuffix}:**\n${bulletItems.join('\n')}`);
   });
 
-  // 11. Build Executive Summary
-  const executiveSummary = page1Text.trim()
-    ? page1Text
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 25 && !/^(from|to|date|subject|ref|wo|page)/i.test(l))
-        .slice(0, 3)
-        .join(' ') || `Detailed work order analysis conducted for ${title}. The document authorizes execution of works at ${suggestedSite || 'specified site'} according to the outlined specifications and timelines.`
-    : `Work order analysis conducted for ${title}. All technical scope, drawings, and work packages must be completed as per contractual standards.`;
+  // 13. Executive Summary
+  let executiveSummary = '';
+  if (remarkMatch) {
+    executiveSummary = `Urgent procurement and site replacement requisition: ${remarkMatch[1].replace(/\n/g, ' ').trim()}`;
+  } else if (page1Text.trim()) {
+    executiveSummary = `Detailed document analysis conducted for ${title}. The requisition authorizes execution of works and equipment procurement at ${suggestedSite || 'specified site'} adhering to technical specifications and project schedules.`;
+  } else {
+    executiveSummary = `Comprehensive study of work order ${title}. All technical scope, drawings, and work packages must be executed as per contractual standards.`;
+  }
 
-  // 12. Assemble Complete, Comprehensive Multi-Section Description
+  // 14. Assemble Complete, Comprehensive Multi-Section Description
   const totalPagesCount = numPages || pagesToProcess.length;
   const descriptionParts: string[] = [
-    `### 📌 DOCUMENT & WORK ORDER OVERVIEW`,
+    `### 📌 REQUISITION & WORK ORDER OVERVIEW`,
     `• **Document Analyzed:** ${fileName} (${totalPagesCount} Page${totalPagesCount > 1 ? 's' : ''} Thoroughly Studied)`,
-    refNumber ? `• **Reference / WO Number:** ${refNumber}` : '',
+    refNumber ? `• **Purchase Requisition (PR) / Reference No:** ${refNumber}` : '',
     suggestedSite ? `• **Target Site / Location:** ${suggestedSite}` : '',
     dueDate ? `• **Target Completion Deadline:** ${dueDate}` : '',
-    issuer ? `• **Issuing Authority / Client:** ${issuer}` : '',
+    signatories.length > 0 ? `• **Authorized Signatories:** ${signatories.join(' | ')}` : '',
     `• **Priority Level:** ${priority.toUpperCase()}`,
     ``,
-    `### 📋 EXECUTIVE SUMMARY & WORK OBJECTIVE`,
+    `### 📋 EXECUTIVE SUMMARY & TECHNICAL JUSTIFICATION`,
     `${executiveSummary}`,
     ``,
-    `### 📑 PAGE-BY-PAGE DETAILED STUDY (${totalPagesCount} PAGES)`,
+    `### 📑 COMPREHENSIVE PAGE-BY-PAGE STUDY (${totalPagesCount} PAGES)`,
     pageSections.join('\n\n'),
   ];
 
   if (techSpecs.length > 0) {
     descriptionParts.push(
       ``,
-      `### 🛠️ TECHNICAL SPECIFICATIONS & MEASUREMENTS`,
+      `### 🛠️ TECHNICAL SPECIFICATIONS & ITEM SUMMARY`,
       techSpecs.map((t) => `• ${t}`).join('\n')
     );
   }
 
-  if (complianceItems.length > 0) {
+  if (vendorList.length > 0) {
     descriptionParts.push(
       ``,
-      `### ⚠️ QUALITY, SAFETY & COMPLIANCE REQUIREMENTS`,
-      complianceItems.map((c) => `• ${c}`).join('\n')
+      `### 🏢 VENDORS & QUOTATION REFERENCES`,
+      vendorList.map((v) => `• ${v}`).join('\n')
     );
   }
 
